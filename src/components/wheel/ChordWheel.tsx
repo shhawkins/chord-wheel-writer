@@ -351,13 +351,15 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({ zoomScale, zoomOriginY, 
                         };
 
                         // Minor ring: 24 segments (15° each)
-                        // FIXED Task 17: Shift minor ring -7.5° so iii is centered above the major chord
+                        // iii should be centered at 12 o'clock (0°), with ii immediately to its left
                         const minorAngleSize = 15;
-                        const minorOffset = -7.5; // Center iii directly above the major
-                        const iiStartAngle = majorStartAngle + minorOffset;
-                        const iiEndAngle = iiStartAngle + minorAngleSize;
-                        const iiiStartAngle = iiEndAngle;
+                        // For position 0 (C at 12 o'clock): iii centered at 0°, ii from -15° to 0°
+                        // So iii starts at -7.5° and ends at 7.5° (centered at 0°)
+                        // And ii starts at -15° and ends at 0° (immediately to the left)
+                        const iiiStartAngle = majorStartAngle + (majorAngleSize / 2) - (minorAngleSize / 2); // Center iii at major center
                         const iiiEndAngle = iiiStartAngle + minorAngleSize;
+                        const iiStartAngle = iiiStartAngle - minorAngleSize; // ii immediately to the left of iii
+                        const iiEndAngle = iiStartAngle + minorAngleSize;
 
                         // Diminished: narrow notch (15° width) centered on the position
                         const dimAngleSize = 15;
