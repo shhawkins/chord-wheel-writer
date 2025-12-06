@@ -12,14 +12,15 @@ interface WheelSegmentProps {
     endAngle: number;
     color: string;
     label: string;
-    subLabel?: string;
     chord: Chord;
     isSelected: boolean;
     isDiatonic: boolean;
     isSecondary?: boolean;
     onClick: (chord: Chord) => void;
     ringType?: 'major' | 'minor' | 'diminished';
-    wheelRotation?: number;  // Task 20: Pass wheel rotation for text orientation
+    wheelRotation?: number;
+    romanNumeral?: string;  // Roman numeral to display for diatonic chords
+    voicingSuggestion?: string;  // Voicing suggestions like "maj7, maj9"
 }
 
 export const WheelSegment: React.FC<WheelSegmentProps> = ({
@@ -31,14 +32,15 @@ export const WheelSegment: React.FC<WheelSegmentProps> = ({
     endAngle,
     color,
     label,
-    subLabel,
     chord,
     isSelected,
     isDiatonic,
     isSecondary = false,
     onClick,
     ringType = 'major',
-    wheelRotation = 0
+    wheelRotation = 0,
+    romanNumeral,
+    voicingSuggestion
 }) => {
     const path = describeSector(cx, cy, innerRadius, outerRadius, startAngle, endAngle);
 
@@ -50,20 +52,11 @@ export const WheelSegment: React.FC<WheelSegmentProps> = ({
     const textX = textPos.x;
     const textY = textPos.y;
 
-    // Task 20: Calculate text rotation accounting for wheel rotation
-    // The wheel rotates the entire SVG group, so we need to counter-rotate text
-    // to keep it upright, PLUS flip it if it would be upside down on screen
-    
-    // Calculate the absolute screen angle of this segment after wheel rotation
+    // Calculate text rotation accounting for wheel rotation
     const absoluteAngle = midAngle + wheelRotation;
     const normalizedAbsoluteAngle = ((absoluteAngle % 360) + 360) % 360;
     
-    // Text should be counter-rotated by the wheel rotation to stay upright
-    // Plus flipped 180° if in the bottom half of the screen
-    let textRotation = -wheelRotation;  // Counter-rotate to undo wheel rotation
-    
-    // If the segment is in the bottom half of the screen (after wheel rotation),
-    // we need to flip the text so it's not upside down
+    let textRotation = -wheelRotation;
     if (normalizedAbsoluteAngle > 90 && normalizedAbsoluteAngle < 270) {
         textRotation += 180;
     }
@@ -105,18 +98,22 @@ export const WheelSegment: React.FC<WheelSegmentProps> = ({
 
     const segmentStyle = getSegmentStyle();
     
-    const getFontSize = () => {
-        const segmentSpan = endAngle - startAngle;
-        if (ringType === 'diminished') return '9px';
-        if (ringType === 'minor') {
-            return segmentSpan <= 15 ? '10px' : '12px';
-        }
-        return '13px';
+    // Font sizes based on ring type
+    const getMainFontSize = () => {
+        if (ringType === 'diminished') return '11px';
+        if (ringType === 'minor') return '12px';
+        return '14px';
     };
 
     const isHighlighted = isDiatonic || isSecondary;
     const textColor = isHighlighted ? '#000000' : 'rgba(255,255,255,0.7)';
     const textWeight = isDiatonic ? 'bold' : (isSecondary ? '600' : 'normal');
+
+    // Position for numeral (below main label)
+    const numeralY = textY + (ringType === 'diminished' ? 10 : ringType === 'minor' ? 11 : 12);
+    
+    // Position for voicing suggestion (above main label, smaller)
+    const voicingY = textY - (ringType === 'diminished' ? 10 : ringType === 'minor' ? 11 : 14);
 
     return (
         <g
@@ -141,6 +138,24 @@ export const WheelSegment: React.FC<WheelSegmentProps> = ({
                     isHighlighted && "hover:brightness-105"
                 )}
             />
+            
+            {/* Voicing suggestion (top, small) - only for diatonic chords */}
+            {isDiatonic && voicingSuggestion && ringType !== 'diminished' && (
+                <text
+                    x={textX}
+                    y={voicingY}
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                    fill="rgba(0,0,0,0.5)"
+                    fontSize={ringType === 'minor' ? '6px' : '7px'}
+                    className="pointer-events-none select-none"
+                    transform={`rotate(${textRotation}, ${textX}, ${voicingY})`}
+                >
+                    {voicingSuggestion}
+                </text>
+            )}
+            
+            {/* Main chord label */}
             <text
                 x={textX}
                 y={textY}
@@ -148,24 +163,27 @@ export const WheelSegment: React.FC<WheelSegmentProps> = ({
                 dominantBaseline="middle"
                 fill={textColor}
                 fontWeight={textWeight}
-                fontSize={getFontSize()}
+                fontSize={getMainFontSize()}
                 className="pointer-events-none select-none"
                 transform={`rotate(${textRotation}, ${textX}, ${textY})`}
             >
                 {label}
             </text>
-            {subLabel && (
+            
+            {/* Roman numeral (bottom, smaller) - only for diatonic chords */}
+            {isDiatonic && romanNumeral && (
                 <text
                     x={textX}
-                    y={textY + 14}
+                    y={numeralY}
                     textAnchor="middle"
                     dominantBaseline="middle"
-                    fill="rgba(0,0,0,0.5)"
-                    fontSize="9px"
+                    fill="rgba(0,0,0,0.6)"
+                    fontSize={ringType === 'diminished' ? '7px' : ringType === 'minor' ? '8px' : '9px'}
+                    fontStyle="italic"
                     className="pointer-events-none select-none"
-                    transform={`rotate(${textRotation}, ${textX}, ${textY + 14})`}
+                    transform={`rotate(${textRotation}, ${textX}, ${numeralY})`}
                 >
-                    {subLabel}
+                    {romanNumeral}
                 </text>
             )}
         </g>

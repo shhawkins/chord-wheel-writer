@@ -48,14 +48,18 @@ export const ChordDetails: React.FC = () => {
         ? (previewVariant ? getChordNotes(selectedChord.root, previewVariant) : selectedChord.notes)
         : [];
 
-    // Play chord variation
+    // Play chord variation - keep notes visible for 2 seconds after click
     const handleVariationClick = (variant: string) => {
         if (!selectedChord) return;
         const variantNotes = getChordNotes(selectedChord.root, variant);
         playChord(variantNotes);
         setPreviewVariant(variant);
+        // Keep the variant notes visible for 2 seconds (matches chord sustain)
         setTimeout(() => setPreviewVariant(null), 2000);
     };
+    
+    // Notes to display - either preview variant or the selected chord's notes
+    // These stay visible until changed
 
     // Get interval name based on chord quality and position
     const getIntervalName = (index: number, quality?: string): string => {

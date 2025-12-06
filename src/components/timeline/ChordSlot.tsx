@@ -87,14 +87,11 @@ export const ChordSlot: React.FC<ChordSlotProps> = ({ slot, sectionId }) => {
                         backgroundColor: chordColor,
                     }}
                     className={clsx(
-                        "w-full h-full rounded flex flex-col items-center justify-center font-bold shadow cursor-grab active:cursor-grabbing select-none",
+                        "w-full h-full rounded flex items-center justify-center font-bold shadow cursor-grab active:cursor-grabbing select-none",
                         isDragging ? "opacity-50" : "opacity-100"
                     )}
                 >
                     <span className="text-sm text-black/80">{slot.chord.symbol}</span>
-                    {slot.chord.numeral && (
-                        <span className="text-[9px] text-black/50 font-normal">{slot.chord.numeral}</span>
-                    )}
                 </div>
             )}
         </div>

@@ -170,6 +170,28 @@ export const ChordWheel: React.FC = () => {
         return '';
     };
 
+    // Get voicing suggestions for diatonic chords (matching physical wheel)
+    const getVoicingSuggestion = (posIndex: number, type: 'major' | 'ii' | 'iii' | 'dim'): string => {
+        const relPos = getRelativePosition(posIndex);
+        
+        if (type === 'major') {
+            if (relPos === 0) return 'maj7, maj9, maj13 or 6';  // I
+            if (relPos === 1) return '7, 9, 11, sus4, 13';       // V
+            if (relPos === 11) return 'maj7, maj9, maj13 or 6'; // IV
+        }
+        if (type === 'ii') {
+            if (relPos === 0) return 'm7, m9, m11, m6';  // ii
+            if (relPos === 1) return 'm7, m9, m11';      // vi
+        }
+        if (type === 'iii') {
+            if (relPos === 0) return 'm7';  // iii
+        }
+        if (type === 'dim') {
+            if (relPos === 0) return 'm7♭5 (ø7)';  // vii°
+        }
+        return '';
+    };
+
     return (
         <div className="relative flex flex-col items-center justify-center w-full h-full max-w-[540px] max-h-[540px] aspect-square p-2">
             <svg
@@ -295,6 +317,8 @@ export const ChordWheel: React.FC = () => {
                                     onClick={handleChordClick}
                                     ringType="major"
                                     wheelRotation={wheelRotation}
+                                    romanNumeral={majorIsDiatonic ? getRomanNumeral(i, 'major') : undefined}
+                                    voicingSuggestion={majorIsDiatonic ? getVoicingSuggestion(i, 'major') : undefined}
                                 />
 
                                 {/* MIDDLE RING: ii chord (left 15° slot) */}
@@ -313,6 +337,8 @@ export const ChordWheel: React.FC = () => {
                                     onClick={handleChordClick}
                                     ringType="minor"
                                     wheelRotation={wheelRotation}
+                                    romanNumeral={iiIsDiatonic ? getRomanNumeral(i, 'ii') : undefined}
+                                    voicingSuggestion={iiIsDiatonic ? getVoicingSuggestion(i, 'ii') : undefined}
                                 />
 
                                 {/* MIDDLE RING: iii chord (right 15° slot) */}
@@ -331,6 +357,8 @@ export const ChordWheel: React.FC = () => {
                                     onClick={handleChordClick}
                                     ringType="minor"
                                     wheelRotation={wheelRotation}
+                                    romanNumeral={iiiIsDiatonic ? getRomanNumeral(i, 'iii') : undefined}
+                                    voicingSuggestion={iiiIsDiatonic ? getVoicingSuggestion(i, 'iii') : undefined}
                                 />
 
                                 {/* OUTER RING: Diminished chord (narrow 15° notch, centered) */}
@@ -349,6 +377,8 @@ export const ChordWheel: React.FC = () => {
                                     onClick={handleChordClick}
                                     ringType="diminished"
                                     wheelRotation={wheelRotation}
+                                    romanNumeral={dimIsDiatonic ? getRomanNumeral(i, 'dim') : undefined}
+                                    voicingSuggestion={dimIsDiatonic ? getVoicingSuggestion(i, 'dim') : undefined}
                                 />
                             </g>
                         );

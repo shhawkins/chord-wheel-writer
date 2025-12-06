@@ -92,44 +92,45 @@ function App() {
   return (
     <div className="h-screen w-screen flex flex-col bg-bg-primary text-text-primary overflow-hidden">
       {/* Header */}
-      <header className="h-12 border-b border-border-subtle flex items-center justify-between px-5 bg-bg-secondary shrink-0 z-10">
-        <div className="flex items-center gap-3">
-          <div className="w-7 h-7 rounded bg-gradient-to-br from-accent-primary to-purple-600 flex items-center justify-center shadow-lg">
-            <Music size={14} className="text-white" />
+      <header className="h-12 border-b border-border-subtle flex items-center justify-between px-4 bg-bg-secondary shrink-0 z-10">
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="w-6 h-6 rounded bg-gradient-to-br from-accent-primary to-purple-600 flex items-center justify-center shadow-lg">
+            <Music size={12} className="text-white" />
           </div>
-          <h1 className="font-bold text-base tracking-tight">Songwriter's Wheel</h1>
+          <h1 className="font-bold text-sm tracking-tight hidden sm:block">Songwriter's Wheel</h1>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 bg-bg-tertiary px-2.5 py-1 rounded-full border border-border-subtle">
-            <span className="text-[10px] text-text-muted uppercase font-bold">Key</span>
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 bg-bg-tertiary px-2 py-1 rounded-full border border-border-subtle">
+            <span className="text-[9px] text-text-muted uppercase font-bold">Key</span>
             <span className="font-bold text-accent-primary text-sm">{selectedKey}</span>
           </div>
 
           {/* Roman Numeral Toggle */}
           <button
             onClick={toggleRomanNumerals}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-bold uppercase transition-colors ${
+            className={`px-2 py-1 rounded-full border text-[9px] font-bold transition-colors ${
               showRomanNumerals 
                 ? 'bg-accent-primary text-white border-accent-primary' 
                 : 'bg-bg-tertiary text-text-secondary border-border-subtle hover:border-text-muted'
             }`}
+            title="Toggle Roman Numerals"
           >
-            <span>I ii iii</span>
+            I ii iii
           </button>
 
-          <div className="h-5 w-px bg-border-medium" />
+          <div className="h-4 w-px bg-border-medium" />
 
-          <button className="flex items-center gap-1.5 text-xs text-text-secondary hover:text-text-primary transition-colors">
-            <Save size={14} />
-            <span>Save</span>
+          <button className="flex items-center gap-1 text-[11px] text-text-secondary hover:text-text-primary transition-colors px-1.5 py-1">
+            <Save size={12} />
+            <span className="hidden sm:inline">Save</span>
           </button>
           <button
             onClick={handleExport}
-            className="flex items-center gap-1.5 text-xs bg-text-primary text-bg-primary px-2.5 py-1 rounded font-medium hover:bg-white transition-colors"
+            className="flex items-center gap-1 text-[11px] bg-text-primary text-bg-primary px-2 py-1 rounded font-medium hover:bg-white transition-colors"
           >
-            <Download size={14} />
-            <span>Export PDF</span>
+            <Download size={12} />
+            <span className="hidden sm:inline">Export</span>
           </button>
         </div>
       </header>
