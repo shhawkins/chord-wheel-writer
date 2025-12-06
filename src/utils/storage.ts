@@ -14,7 +14,14 @@ const CURRENT_SONG_KEY = 'chordWheelCurrentSongId';
 export const getSavedSongs = (): Song[] => {
     try {
         const stored = localStorage.getItem(STORAGE_KEY);
-        return stored ? JSON.parse(stored) : [];
+        if (!stored) return [];
+        const songs = JSON.parse(stored);
+        // Convert ISO strings back to Date objects
+        return songs.map((song: any) => ({
+            ...song,
+            createdAt: new Date(song.createdAt),
+            updatedAt: new Date(song.updatedAt)
+        }));
     } catch (error) {
         console.error('Error loading saved songs:', error);
         return [];
@@ -30,18 +37,20 @@ export const saveSong = (song: Song): void => {
         const songs = getSavedSongs();
         const existingIndex = songs.findIndex(s => s.id === song.id);
         
+        // Convert Date objects to ISO strings for storage
         const songToSave = {
             ...song,
-            updatedAt: new Date().toISOString()
+            updatedAt: new Date().toISOString(),
+            createdAt: song.createdAt instanceof Date ? song.createdAt.toISOString() : song.createdAt
         };
         
         if (existingIndex >= 0) {
-            songs[existingIndex] = songToSave;
+            songs[existingIndex] = songToSave as any; // Type assertion needed for storage
         } else {
             songs.push({
                 ...songToSave,
                 createdAt: new Date().toISOString()
-            });
+            } as any);
         }
         
         localStorage.setItem(STORAGE_KEY, JSON.stringify(songs));
@@ -60,8 +69,14 @@ export const loadSong = (songId: string): Song | null => {
         const song = songs.find(s => s.id === songId);
         if (song) {
             localStorage.setItem(CURRENT_SONG_KEY, songId);
+            // Ensure dates are Date objects
+            return {
+                ...song,
+                createdAt: song.createdAt instanceof Date ? song.createdAt : new Date(song.createdAt),
+                updatedAt: song.updatedAt instanceof Date ? song.updatedAt : new Date(song.updatedAt)
+            };
         }
-        return song || null;
+        return null;
     } catch (error) {
         console.error('Error loading song:', error);
         return null;

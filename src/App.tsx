@@ -7,7 +7,7 @@ import { useSongStore } from './store/useSongStore';
 import { Download, Save, Music, GripHorizontal, ChevronDown, ChevronUp, Plus, Minus, Clock, FolderOpen, FilePlus, Trash2 } from 'lucide-react';
 import * as Tone from 'tone';
 import jsPDF from 'jspdf';
-import { saveSong, getSavedSongs, loadSong, deleteSong } from './utils/storage';
+import { saveSong, getSavedSongs, deleteSong } from './utils/storage';
 import type { Song } from './types';
 
 function App() {

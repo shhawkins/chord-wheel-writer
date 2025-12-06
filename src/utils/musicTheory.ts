@@ -60,18 +60,7 @@ export interface Chord {
     symbol: string;
 }
 
-const CHORD_FORMULAS: Record<string, number[]> = {
-    major: [0, 4, 7],
-    minor: [0, 3, 7],
-    diminished: [0, 3, 6],
-    augmented: [0, 4, 8],
-    major7: [0, 4, 7, 11],
-    minor7: [0, 3, 7, 10],
-    dominant7: [0, 4, 7, 10],
-    halfDiminished7: [0, 3, 6, 10],
-    sus2: [0, 2, 7],
-    sus4: [0, 5, 7],
-};
+// CHORD_FORMULAS removed - using EXTENDED_CHORD_FORMULAS instead
 
 const CHORD_SYMBOLS: Record<string, string> = {
     major: '',

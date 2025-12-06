@@ -9,7 +9,6 @@ import {
     type Chord 
 } from '../../utils/musicTheory';
 import { WheelSegment } from './WheelSegment';
-import { polarToCartesian } from '../../utils/geometry';
 import { RotateCw, RotateCcw, Lock, Unlock } from 'lucide-react';
 import { playChord } from '../../utils/audioEngine';
 
@@ -37,7 +36,6 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({ zoomScale, zoomOriginY, 
     // In fixed mode, wheel doesn't rotate - calculate highlight offset instead
     const effectiveRotation = wheelMode === 'rotating' ? wheelRotation : 0;
     const keyIndex = CIRCLE_OF_FIFTHS.indexOf(selectedKey);
-    const highlightOffset = wheelMode === 'fixed' ? keyIndex : 0;
     
     const lastTouchDistance = useRef<number | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -322,22 +320,7 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({ zoomScale, zoomOriginY, 
         return '';
     };
 
-    // Button zoom controls
-    const handleZoomIn = useCallback(() => {
-        setZoomScale(prev => {
-            const newScale = Math.min(2.5, prev + 0.3);
-            setZoomOriginY(newScale > 1.3 ? 38 : 50);
-            return newScale;
-        });
-    }, []);
-    
-    const handleZoomOut = useCallback(() => {
-        setZoomScale(prev => {
-            const newScale = Math.max(1, prev - 0.3);
-            setZoomOriginY(newScale > 1.3 ? 38 : 50);
-            return newScale;
-        });
-    }, []);
+    // Zoom controls are handled via touch/scroll events
 
     return (
         <div 
