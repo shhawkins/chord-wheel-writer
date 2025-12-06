@@ -17,6 +17,8 @@ export const ChordWheel: React.FC = () => {
     const {
         selectedKey,
         setKey,
+        wheelRotation,
+        rotateWheel,
         addChordToSlot,
         selectedSectionId,
         selectedSlotId,
@@ -49,10 +51,9 @@ export const ChordWheel: React.FC = () => {
         return '';
     }, [keySig]);
 
-    // Calculate wheel rotation based on selected key
+    // Task 35: Use cumulative rotation from store (avoids wrap-around animation issues)
     // The wheel rotates so the selected key appears at the TOP (under position I)
     const keyIndex = CIRCLE_OF_FIFTHS.indexOf(selectedKey);
-    const calculatedRotation = -keyIndex * 30; // Negative because we rotate the wheel to bring the key to top
 
     const handleChordClick = (chord: Chord) => {
         playChord(chord.notes);
@@ -90,13 +91,14 @@ export const ChordWheel: React.FC = () => {
     };
 
     const handleRotate = (direction: 'cw' | 'ccw') => {
-        // Change key - wheel will auto-rotate to position
+        // Task 35: Use cumulative rotation to avoid wrap-around animation
         const currentIndex = CIRCLE_OF_FIFTHS.indexOf(selectedKey);
         const newIndex = direction === 'cw'
             ? (currentIndex + 1) % 12
             : (currentIndex - 1 + 12) % 12;
 
         setKey(CIRCLE_OF_FIFTHS[newIndex]);
+        rotateWheel(direction);  // Update cumulative rotation
     };
 
     // Check if a position is within the highlighted triangle (diatonic)
@@ -186,7 +188,7 @@ export const ChordWheel: React.FC = () => {
                 {/* ROTATING WHEEL - rotates based on selected key */}
                 <g
                     style={{
-                        transform: `rotate(${calculatedRotation}deg)`,
+                        transform: `rotate(${wheelRotation}deg)`,
                         transformOrigin: `${cx}px ${cy}px`,
                         transition: 'transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)'
                     }}
@@ -247,8 +249,10 @@ export const ChordWheel: React.FC = () => {
                         };
 
                         // Minor ring: 24 segments (15° each)
+                        // FIXED Task 17: Shift minor ring -7.5° so iii is centered above the major chord
                         const minorAngleSize = 15;
-                        const iiStartAngle = majorStartAngle;
+                        const minorOffset = -7.5; // Center iii directly above the major
+                        const iiStartAngle = majorStartAngle + minorOffset;
                         const iiEndAngle = iiStartAngle + minorAngleSize;
                         const iiiStartAngle = iiEndAngle;
                         const iiiEndAngle = iiiStartAngle + minorAngleSize;

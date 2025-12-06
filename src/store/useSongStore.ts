@@ -10,8 +10,9 @@ interface SongState {
 
     // Wheel state
     selectedKey: string;
-    wheelRotation: number;
+    wheelRotation: number;        // Cumulative rotation (not reset at 360°)
     showRomanNumerals: boolean;
+    chordPanelVisible: boolean;   // Task 18: Toggle chord panel visibility
 
     // Selection state
     selectedChord: Chord | null;
@@ -26,8 +27,9 @@ interface SongState {
 
     // Actions
     setKey: (key: string) => void;
-    rotateWheel: (degrees: number) => void;
+    rotateWheel: (direction: 'cw' | 'ccw') => void;  // Fixed Task 35: Use direction-based rotation
     toggleRomanNumerals: () => void;
+    toggleChordPanel: () => void;  // Task 18
 
     setSelectedChord: (chord: Chord | null) => void;
     setSelectedSlot: (sectionId: string | null, slotId: string | null) => void;
@@ -92,6 +94,7 @@ export const useSongStore = create<SongState>()(
             selectedKey: 'C',
             wheelRotation: 0,
             showRomanNumerals: false,
+            chordPanelVisible: true,
             selectedChord: null,
             selectedSectionId: null,
             selectedSlotId: null,
@@ -101,8 +104,14 @@ export const useSongStore = create<SongState>()(
             instrument: 'piano',
 
             setKey: (key) => set({ selectedKey: key }),
-            rotateWheel: (degrees) => set({ wheelRotation: degrees }),
+            
+            // Task 35: Use cumulative rotation to avoid wrap-around animation issues
+            rotateWheel: (direction) => set((state) => ({
+                wheelRotation: state.wheelRotation + (direction === 'cw' ? -30 : 30)
+            })),
+            
             toggleRomanNumerals: () => set((state) => ({ showRomanNumerals: !state.showRomanNumerals })),
+            toggleChordPanel: () => set((state) => ({ chordPanelVisible: !state.chordPanelVisible })),
 
             setSelectedChord: (chord) => set({ selectedChord: chord }),
             setSelectedSlot: (sectionId, slotId) => set({ selectedSectionId: sectionId, selectedSlotId: slotId }),

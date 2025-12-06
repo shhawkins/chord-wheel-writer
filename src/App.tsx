@@ -160,8 +160,8 @@ function App() {
           </div>
         </div>
 
-        {/* Right: Details Panel */}
-        <div className="shrink-0 z-20 shadow-xl w-72 bg-bg-secondary border-l border-border-subtle overflow-hidden">
+        {/* Right: Details Panel - Task 18: Now handles its own width/visibility */}
+        <div className="shrink-0 z-20 shadow-xl">
           <ChordDetails />
         </div>
       </div>
