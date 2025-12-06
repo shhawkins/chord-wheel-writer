@@ -13,7 +13,6 @@ interface SongState {
     wheelRotation: number;        // Cumulative rotation (not reset at 360°)
     chordPanelVisible: boolean;   // Toggle chord panel visibility
     timelineVisible: boolean;     // Toggle timeline visibility
-    wheelZoomed: boolean;         // Toggle chord wheel zoom
 
     // Selection state
     selectedChord: Chord | null;
@@ -31,7 +30,6 @@ interface SongState {
     rotateWheel: (direction: 'cw' | 'ccw') => void;  // Cumulative rotation
     toggleChordPanel: () => void;
     toggleTimeline: () => void;
-    toggleWheelZoom: () => void;
 
     setSelectedChord: (chord: Chord | null) => void;
     setSelectedSlot: (sectionId: string | null, slotId: string | null) => void;
@@ -97,7 +95,6 @@ export const useSongStore = create<SongState>()(
             wheelRotation: 0,
             chordPanelVisible: true,
             timelineVisible: true,
-            wheelZoomed: false,
             selectedChord: null,
             selectedSectionId: null,
             selectedSlotId: null,
@@ -115,7 +112,6 @@ export const useSongStore = create<SongState>()(
             
             toggleChordPanel: () => set((state) => ({ chordPanelVisible: !state.chordPanelVisible })),
             toggleTimeline: () => set((state) => ({ timelineVisible: !state.timelineVisible })),
-            toggleWheelZoom: () => set((state) => ({ wheelZoomed: !state.wheelZoomed })),
 
             setSelectedChord: (chord) => set({ selectedChord: chord }),
             setSelectedSlot: (sectionId, slotId) => set({ selectedSectionId: sectionId, selectedSlotId: slotId }),

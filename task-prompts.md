@@ -26,6 +26,8 @@ The following tasks have been completed in V2/V3:
 | Task 25: Fix Theory Note Styling | ✅ Done | Proper text wrapping |
 | Task 29: Add Wheel Info Display | ✅ Done | Numerals and voicings on wheel |
 | Task 35: Fix Rotation Wrap-Around | ✅ Done | Cumulative rotation |
+| Task 41: Timeline Hide Toggle | ✅ Done | Collapsible timeline section |
+| Task 42: Chord Wheel Zoom | ✅ Done | Pinch-to-zoom on wheel |
 
 ---
 
@@ -407,39 +409,36 @@ The chord viewer has polished, consistent spacing throughout.
 
 ---
 
-## Task 41: Add Timeline Hide Toggle
+## Task 41: Add Timeline Hide Toggle ✅ COMPLETED
 
-### Context
-Users can hide the chord viewer panel, but not the timeline. For users focused on the wheel, being able to hide the timeline would be useful.
+### Implementation
+Timeline can now be collapsed/expanded:
 
-### Your Task
-Add ability to collapse/hide the timeline:
+1. **When visible**: Resize handle with "Hide" button on the right
+2. **When hidden**: Compact bar showing "Timeline" button to expand
+3. State stored in Zustand (`timelineVisible`)
+4. Chord wheel expands to fill available space when timeline is hidden
 
-1. Add a toggle button to collapse the timeline section
-2. When hidden, the chord wheel can expand to fill more space
-3. Remember the state (localStorage or store)
-4. Smooth animation for showing/hiding
-
-### Expected Outcome
-Users can toggle the timeline visibility to focus on the chord wheel.
+### Code Location
+- `src/store/useSongStore.ts` - `timelineVisible` state and `toggleTimeline` action
+- `src/App.tsx` - Conditional rendering based on timeline visibility
 
 ---
 
-## Task 42: Add Chord Wheel Zoom View
+## Task 42: Add Chord Wheel Zoom View ✅ COMPLETED
 
-### Context
-The voicings and numerals on the wheel can be small and hard to read. A zoom feature would help users see the in-key chords more clearly.
+### Implementation
+Pinch-to-zoom implemented on the chord wheel:
 
-### Your Task
-Add a zoom button for the chord wheel:
+1. **Touch devices**: Pinch with two fingers to zoom in/out
+2. **Desktop**: Hold Ctrl/Cmd and scroll to zoom
+3. Zoom range: 1x to 2.5x
+4. When zoomed past 1.3x, the view focuses on the top diatonic chords (origin shifts to 38%)
+5. Smooth 150ms transition animation
+6. Shows "Pinch to zoom" hint when at 1x scale
 
-1. Add a zoom toggle button near the wheel
-2. When zoomed, focus on the top portion showing the 7 diatonic chords
-3. Could be implemented as a larger viewBox or CSS transform
-4. Ensure labels remain readable at both zoom levels
-
-### Expected Outcome
-Users can zoom in on the chord wheel to see diatonic chord details more clearly.
+### Code Location
+- `src/components/wheel/ChordWheel.tsx` - Touch event handlers and zoom state
 
 ---
 

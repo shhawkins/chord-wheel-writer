@@ -254,6 +254,7 @@ Let's follow what happens when a user clicks a chord on the wheel:
 2. **Maps through CIRCLE_OF_FIFTHS** - an array of the 12 keys in order: C, G, D, A, E, B, F#, Db, Ab, Eb, Bb, F
 3. **For each key, renders WheelSegment** components for the major, minor, and diminished chords
 4. **Adds a rotation transformation** so the wheel can spin when keys change
+5. **Pinch-to-zoom** - Touch gestures or Ctrl+scroll to zoom in on diatonic chords
 
 ```tsx
 // Simplified structure
@@ -409,13 +410,17 @@ interface SongState {
   // Data
   currentSong: Song;           // The song being edited
   selectedKey: string;         // Currently selected key (C, G, etc.)
-  wheelRotation: number;       // How much the wheel has rotated
+  wheelRotation: number;       // Cumulative wheel rotation in degrees
+  chordPanelVisible: boolean;  // Toggle chord details panel
+  timelineVisible: boolean;    // Toggle timeline visibility
   selectedChord: Chord | null; // Currently selected chord for details
   isPlaying: boolean;          // Is playback active?
   tempo: number;               // Beats per minute
   
   // Actions (ways to change data)
   setKey: (key: string) => void;
+  toggleChordPanel: () => void;
+  toggleTimeline: () => void;
   addChordToSlot: (chord, sectionId, slotId) => void;
   addSection: (type) => void;
   // ... more actions

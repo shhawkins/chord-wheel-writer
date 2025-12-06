@@ -869,8 +869,17 @@ SVG path generation:
 Zustand store with all app state:
 - `selectedKey` — Current key (C, G, D, etc.)
 - `wheelRotation` — Cumulative wheel rotation in degrees
+- `chordPanelVisible` — Show/hide the chord details panel
+- `timelineVisible` — Show/hide the timeline
 - `currentSong` — Song object with sections and chords
-- Actions: `setKey()`, `rotateWheel()`, `addChordToSlot()`, etc.
+- Actions: `setKey()`, `rotateWheel()`, `toggleChordPanel()`, `toggleTimeline()`, `addChordToSlot()`, etc.
+
+### Touch Gestures
+The chord wheel supports pinch-to-zoom:
+- **Mobile**: Pinch with two fingers to zoom in/out
+- **Desktop**: Hold Ctrl/Cmd and scroll to zoom
+- Zoom range: 1x to 2.5x
+- When zoomed, the view focuses on the top diatonic chords
 
 Welcome to the team! 🎵
 

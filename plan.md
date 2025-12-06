@@ -24,6 +24,8 @@ After thorough analysis of the codebase against the physical Chord Wheel, I've i
 | **Chord Panel** | ✅ Done | Resizable with show/hide toggle |
 | **Chord Variations** | ✅ Done | Playback and display working |
 | **Theory Notes** | ✅ Done | Context-aware explanations in panel |
+| **Timeline Toggle** | ✅ Done | Hide/show timeline with button |
+| **Pinch-to-Zoom** | ✅ Done | Touch/scroll zoom on chord wheel |
 
 ### 🔧 Remaining Tasks
 

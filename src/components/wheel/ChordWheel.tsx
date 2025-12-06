@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useRef, useCallback } from 'react';
 import { useSongStore } from '../../store/useSongStore';
 import { 
     MAJOR_POSITIONS,
@@ -10,7 +10,7 @@ import {
 } from '../../utils/musicTheory';
 import { WheelSegment } from './WheelSegment';
 import { polarToCartesian } from '../../utils/geometry';
-import { RotateCw, RotateCcw, ZoomIn, ZoomOut } from 'lucide-react';
+import { RotateCw, RotateCcw } from 'lucide-react';
 import { playChord } from '../../utils/audioEngine';
 
 export const ChordWheel: React.FC = () => {
@@ -23,10 +23,59 @@ export const ChordWheel: React.FC = () => {
         selectedSectionId,
         selectedSlotId,
         currentSong,
-        setSelectedChord,
-        wheelZoomed,
-        toggleWheelZoom
+        setSelectedChord
     } = useSongStore();
+    
+    // Pinch-to-zoom state
+    const [zoomScale, setZoomScale] = useState(1);
+    const [zoomOriginY, setZoomOriginY] = useState(50); // percentage
+    const lastTouchDistance = useRef<number | null>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
+    
+    // Handle touch events for pinch zoom
+    const handleTouchStart = useCallback((e: React.TouchEvent) => {
+        if (e.touches.length === 2) {
+            const dx = e.touches[0].clientX - e.touches[1].clientX;
+            const dy = e.touches[0].clientY - e.touches[1].clientY;
+            lastTouchDistance.current = Math.sqrt(dx * dx + dy * dy);
+        }
+    }, []);
+    
+    const handleTouchMove = useCallback((e: React.TouchEvent) => {
+        if (e.touches.length === 2 && lastTouchDistance.current !== null) {
+            e.preventDefault();
+            const dx = e.touches[0].clientX - e.touches[1].clientX;
+            const dy = e.touches[0].clientY - e.touches[1].clientY;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            const scaleDelta = distance / lastTouchDistance.current;
+            lastTouchDistance.current = distance;
+            
+            setZoomScale(prev => {
+                const newScale = Math.max(1, Math.min(2.5, prev * scaleDelta));
+                // Adjust origin based on zoom level (focus on top when zoomed in)
+                setZoomOriginY(newScale > 1.3 ? 38 : 50);
+                return newScale;
+            });
+        }
+    }, []);
+    
+    const handleTouchEnd = useCallback(() => {
+        lastTouchDistance.current = null;
+    }, []);
+    
+    // Mouse wheel zoom for desktop
+    const handleWheel = useCallback((e: React.WheelEvent) => {
+        if (e.ctrlKey || e.metaKey) {
+            e.preventDefault();
+            const delta = e.deltaY > 0 ? 0.9 : 1.1;
+            setZoomScale(prev => {
+                const newScale = Math.max(1, Math.min(2.5, prev * delta));
+                setZoomOriginY(newScale > 1.3 ? 38 : 50);
+                return newScale;
+            });
+        }
+    }, []);
 
     const colors = getWheelColors();
 
@@ -194,21 +243,26 @@ export const ChordWheel: React.FC = () => {
     };
 
     return (
-        <div className="relative flex flex-col items-center justify-center w-full h-full max-w-[540px] max-h-[540px] aspect-square p-2">
-            {/* Zoom toggle button - positioned outside wheel in upper right */}
-            <button
-                onClick={toggleWheelZoom}
-                className="absolute top-0 right-0 z-10 p-1.5 bg-bg-elevated/80 backdrop-blur-sm rounded-lg border border-border-subtle hover:bg-bg-tertiary transition-colors"
-                title={wheelZoomed ? "Zoom out" : "Zoom in on diatonic chords"}
-            >
-                {wheelZoomed ? <ZoomOut size={14} className="text-text-secondary" /> : <ZoomIn size={14} className="text-text-secondary" />}
-            </button>
+        <div 
+            ref={containerRef}
+            className="relative flex flex-col items-center justify-center w-full h-full max-w-[540px] max-h-[540px] aspect-square p-2 touch-none"
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            onWheel={handleWheel}
+        >
+            {/* Zoom hint - only show when not zoomed */}
+            {zoomScale === 1 && (
+                <div className="absolute top-0 right-0 z-10 px-2 py-1 bg-bg-elevated/60 backdrop-blur-sm rounded-bl-lg text-[8px] text-text-muted pointer-events-none">
+                    Pinch to zoom
+                </div>
+            )}
 
             <div 
-                className="w-full h-full transition-transform duration-300 ease-out overflow-hidden"
+                className="w-full h-full transition-transform duration-150 ease-out overflow-hidden"
                 style={{
-                    transform: wheelZoomed ? 'scale(2.0)' : 'scale(1)',
-                    transformOrigin: 'center 42%'
+                    transform: `scale(${zoomScale})`,
+                    transformOrigin: `center ${zoomOriginY}%`
                 }}
             >
                 <svg
