@@ -355,12 +355,12 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({ zoomScale, zoomOriginY, 
                         const minorAngleSize = 15;
                         // For position 0 (C at 12 o'clock): iii centered at 0°, ii immediately to its left
                         // So iii spans from -7.5° to 7.5° (centered at 0°)
-                        // And ii spans from -15° to -7.5° (immediately to the left, touching iii)
+                        // And ii spans from -15° to -7.5° (immediately to the left, touching iii at -7.5°)
                         const majorCenterAngle = majorStartAngle + (majorAngleSize / 2); // Center of major chord (0° for position 0)
                         const iiiStartAngle = majorCenterAngle - (minorAngleSize / 2); // Center iii at major center (-7.5°)
                         const iiiEndAngle = iiiStartAngle + minorAngleSize; // iii ends at 7.5°
-                        const iiEndAngle = iiiStartAngle; // ii ends where iii starts (-7.5°)
-                        const iiStartAngle = iiEndAngle - minorAngleSize; // ii starts 15° to the left (-22.5°)
+                        const iiEndAngle = iiiStartAngle; // ii ends where iii starts (-7.5°, touching)
+                        const iiStartAngle = iiEndAngle - minorAngleSize; // ii starts 15° to the left (-15°)
 
                         // Diminished: narrow notch (15° width) centered on the position
                         const dimAngleSize = 15;
