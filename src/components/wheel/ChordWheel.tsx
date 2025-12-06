@@ -195,20 +195,20 @@ export const ChordWheel: React.FC = () => {
 
     return (
         <div className="relative flex flex-col items-center justify-center w-full h-full max-w-[540px] max-h-[540px] aspect-square p-2">
-            {/* Zoom toggle button */}
+            {/* Zoom toggle button - positioned outside wheel in upper right */}
             <button
                 onClick={toggleWheelZoom}
-                className="absolute top-2 right-2 z-10 p-2 bg-bg-elevated/80 backdrop-blur-sm rounded-lg border border-border-subtle hover:bg-bg-tertiary transition-colors"
+                className="absolute top-0 right-0 z-10 p-1.5 bg-bg-elevated/80 backdrop-blur-sm rounded-lg border border-border-subtle hover:bg-bg-tertiary transition-colors"
                 title={wheelZoomed ? "Zoom out" : "Zoom in on diatonic chords"}
             >
-                {wheelZoomed ? <ZoomOut size={16} className="text-text-secondary" /> : <ZoomIn size={16} className="text-text-secondary" />}
+                {wheelZoomed ? <ZoomOut size={14} className="text-text-secondary" /> : <ZoomIn size={14} className="text-text-secondary" />}
             </button>
 
             <div 
                 className="w-full h-full transition-transform duration-300 ease-out overflow-hidden"
                 style={{
-                    transform: wheelZoomed ? 'scale(1.6)' : 'scale(1)',
-                    transformOrigin: 'center 35%'
+                    transform: wheelZoomed ? 'scale(2.0)' : 'scale(1)',
+                    transformOrigin: 'center 42%'
                 }}
             >
                 <svg

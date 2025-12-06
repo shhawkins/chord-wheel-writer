@@ -89,18 +89,7 @@ export const Timeline: React.FC = () => {
 
     return (
         <div className="w-full h-full flex flex-col">
-            {/* Compact header */}
-            <div className="flex items-center justify-between px-3 py-1.5 border-b border-border-subtle bg-bg-secondary shrink-0">
-                <h2 className="text-xs font-semibold text-text-muted uppercase tracking-wider">Timeline</h2>
-                <button
-                    onClick={() => addSection('verse')}
-                    className="flex items-center gap-1 px-2 py-1 rounded bg-bg-elevated hover:bg-bg-tertiary text-[10px] font-medium transition-colors"
-                >
-                    <Plus size={12} />
-                    Add
-                </button>
-            </div>
-
+            {/* Content area - no header, just the sections */}
             <div
                 className="flex-1 overflow-x-auto px-3 py-2"
                 ref={(el) => {
