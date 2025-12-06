@@ -97,12 +97,36 @@ export function normalizeNote(note: string): string {
     return note;
 }
 
+// Map short variation names to full quality names
+const QUALITY_ALIASES: Record<string, string> = {
+    '7': 'dominant7',
+    'maj7': 'major7',
+    'm7': 'minor7',
+    'dim': 'diminished',
+    'dim7': 'halfDiminished7',
+    'm7b5': 'halfDiminished7',
+    'add9': 'add9',
+    '9': 'ninth',
+    '11': 'eleventh',
+};
+
+// Extended chord formulas including add9, 9, 11
+const EXTENDED_CHORD_FORMULAS: Record<string, number[]> = {
+    ...CHORD_FORMULAS,
+    add9: [0, 4, 7, 14],  // Root, 3rd, 5th, 9th (octave + 2)
+    ninth: [0, 4, 7, 10, 14],  // Dominant 9 = 7 + 9
+    eleventh: [0, 4, 7, 10, 14, 17],  // Dominant 11 = 7 + 9 + 11
+};
+
 export function getChordNotes(root: string, quality: string): string[] {
     const normalizedRoot = normalizeNote(root);
     const rootIndex = NOTES.indexOf(normalizedRoot);
     if (rootIndex === -1) return [];
 
-    const formula = CHORD_FORMULAS[quality] || CHORD_FORMULAS.major;
+    // Resolve quality alias
+    const resolvedQuality = QUALITY_ALIASES[quality] || quality;
+    const formula = EXTENDED_CHORD_FORMULAS[resolvedQuality] || CHORD_FORMULAS[resolvedQuality] || CHORD_FORMULAS.major;
+    
     return formula.map(interval => NOTES[(rootIndex + interval) % 12]);
 }
 

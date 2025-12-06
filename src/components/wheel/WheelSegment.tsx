@@ -16,9 +16,10 @@ interface WheelSegmentProps {
     chord: Chord;
     isSelected: boolean;
     isDiatonic: boolean;
-    isSecondary?: boolean; // Secondary dominants (II, III) - half highlight
+    isSecondary?: boolean;
     onClick: (chord: Chord) => void;
     ringType?: 'major' | 'minor' | 'diminished';
+    wheelRotation?: number;  // Task 20: Pass wheel rotation for text orientation
 }
 
 export const WheelSegment: React.FC<WheelSegmentProps> = ({
@@ -36,36 +37,39 @@ export const WheelSegment: React.FC<WheelSegmentProps> = ({
     isDiatonic,
     isSecondary = false,
     onClick,
-    ringType = 'major'
+    ringType = 'major',
+    wheelRotation = 0
 }) => {
     const path = describeSector(cx, cy, innerRadius, outerRadius, startAngle, endAngle);
 
-    // Calculate center of the segment for text placement using the same coordinate system
+    // Calculate center of the segment for text placement
     const midAngle = (startAngle + endAngle) / 2;
     const textRadius = (innerRadius + outerRadius) / 2;
     
-    // Use polarToCartesian for consistent positioning (it already handles the -90 offset)
     const textPos = polarToCartesian(cx, cy, textRadius, midAngle);
     const textX = textPos.x;
     const textY = textPos.y;
 
-    // Calculate text rotation to keep it readable
-    // In our coordinate system, 0° is at top, angles increase clockwise
-    // Text should be rotated so it's always readable (not upside down)
-    let textRotation = midAngle;
-    // If text is in the bottom half (angles roughly 90 to 270)
-    // we need to flip it
-    const normalizedAngle = ((midAngle % 360) + 360) % 360;
-    if (normalizedAngle > 90 && normalizedAngle < 270) {
+    // Task 20: Calculate text rotation accounting for wheel rotation
+    // The wheel rotates the entire SVG group, so we need to counter-rotate text
+    // to keep it upright, PLUS flip it if it would be upside down on screen
+    
+    // Calculate the absolute screen angle of this segment after wheel rotation
+    const absoluteAngle = midAngle + wheelRotation;
+    const normalizedAbsoluteAngle = ((absoluteAngle % 360) + 360) % 360;
+    
+    // Text should be counter-rotated by the wheel rotation to stay upright
+    // Plus flipped 180° if in the bottom half of the screen
+    let textRotation = -wheelRotation;  // Counter-rotate to undo wheel rotation
+    
+    // If the segment is in the bottom half of the screen (after wheel rotation),
+    // we need to flip the text so it's not upside down
+    if (normalizedAbsoluteAngle > 90 && normalizedAbsoluteAngle < 270) {
         textRotation += 180;
     }
 
     // Adjust color based on ring type and diatonic/secondary status
     const getSegmentStyle = () => {
-        // Determine highlight level:
-        // - isDiatonic: full saturation and opacity
-        // - isSecondary: half saturation (for II, III secondary dominants)
-        // - neither: dim/muted
         let baseOpacity = 0.35;
         let baseSaturation = 0.5;
         
@@ -73,23 +77,21 @@ export const WheelSegment: React.FC<WheelSegmentProps> = ({
             baseOpacity = 1;
             baseSaturation = 1;
         } else if (isSecondary) {
-            baseOpacity = 0.7; // Partial opacity for secondary dominants
-            baseSaturation = 0.65; // Half saturation
+            baseOpacity = 0.7;
+            baseSaturation = 0.65;
         }
         
-        // Parse HSL color and adjust
         const hslMatch = color.match(/hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/);
         if (hslMatch) {
             const h = parseInt(hslMatch[1]);
             const s = Math.round(parseInt(hslMatch[2]) * baseSaturation);
             const l = parseInt(hslMatch[3]);
             
-            // Adjust lightness based on ring type
             let adjustedL = l;
             if (ringType === 'minor') {
-                adjustedL = Math.max(l - 8, 30); // Slightly darker for minor
+                adjustedL = Math.max(l - 8, 30);
             } else if (ringType === 'diminished') {
-                adjustedL = Math.max(l - 15, 25); // Darker for diminished
+                adjustedL = Math.max(l - 15, 25);
             }
             
             return {
@@ -103,18 +105,15 @@ export const WheelSegment: React.FC<WheelSegmentProps> = ({
 
     const segmentStyle = getSegmentStyle();
     
-    // Font size based on ring type and segment size
     const getFontSize = () => {
         const segmentSpan = endAngle - startAngle;
         if (ringType === 'diminished') return '9px';
         if (ringType === 'minor') {
-            // Smaller font for 15° segments
             return segmentSpan <= 15 ? '10px' : '12px';
         }
         return '13px';
     };
 
-    // Text color - darker for diatonic/secondary (more visible), lighter for non-diatonic
     const isHighlighted = isDiatonic || isSecondary;
     const textColor = isHighlighted ? '#000000' : 'rgba(255,255,255,0.7)';
     const textWeight = isDiatonic ? 'bold' : (isSecondary ? '600' : 'normal');

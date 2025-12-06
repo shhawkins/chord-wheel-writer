@@ -15,20 +15,20 @@ export const ChordDetails: React.FC = () => {
         return (
             <button
                 onClick={toggleChordPanel}
-                className="h-full w-8 flex items-center justify-center bg-bg-secondary border-l border-border-subtle hover:bg-bg-tertiary transition-colors"
+                className="h-full w-6 flex items-center justify-center bg-bg-secondary border-l border-border-subtle hover:bg-bg-tertiary transition-colors shrink-0"
                 title="Show chord details"
             >
-                <ChevronLeft size={16} className="text-text-muted" />
+                <ChevronLeft size={14} className="text-text-muted" />
             </button>
         );
     }
 
     if (!selectedChord) {
         return (
-            <div className="w-72 h-full flex flex-col bg-bg-secondary border-l border-border-subtle">
+            <div className="w-64 h-full flex flex-col bg-bg-secondary border-l border-border-subtle shrink-0">
                 {/* Header with hide button */}
                 <div className="p-3 border-b border-border-subtle flex justify-between items-center shrink-0">
-                    <span className="text-xs text-text-muted uppercase tracking-wider font-bold">Chord Details</span>
+                    <span className="text-[10px] text-text-muted uppercase tracking-wider font-bold">Details</span>
                     <button
                         onClick={toggleChordPanel}
                         className="p-1 hover:bg-bg-tertiary rounded transition-colors"
@@ -37,9 +37,9 @@ export const ChordDetails: React.FC = () => {
                         <ChevronRight size={14} className="text-text-muted" />
                     </button>
                 </div>
-                <div className="flex-1 flex items-center justify-center p-6 text-center">
-                    <p className="text-sm text-text-muted">
-                        Select a chord from the wheel or timeline to view details
+                <div className="flex-1 flex items-center justify-center p-4 text-center">
+                    <p className="text-xs text-text-muted">
+                        Select a chord to view details
                     </p>
                 </div>
             </div>
@@ -63,69 +63,76 @@ export const ChordDetails: React.FC = () => {
         setTimeout(() => setPreviewVariant(null), 2000);
     };
 
+    // Get interval names based on count
+    const getIntervalName = (index: number, total: number): string => {
+        const names = ['R', '3', '5', '7', '9', '11', '13'];
+        if (index < names.length) return names[index];
+        return `${index + 1}`;
+    };
+
     // Task 27: Get theory note based on chord function
     const getTheoryNote = () => {
         const numeral = selectedChord.numeral;
         
         const theoryNotes: Record<string, string> = {
-            'I': 'The tonic chord — your home base. Most songs begin and end here. It creates a sense of resolution and stability. Try adding maj7 or 6 for a jazzier sound.',
-            'ii': 'The supertonic — a pre-dominant chord that naturally leads to V. The ii-V-I progression is fundamental in jazz and pop. Works great as m7.',
-            'iii': 'The mediant — shares two notes with I and one with V. Can substitute for I or lead to vi. Often used for color and smooth voice leading.',
-            'IV': 'The subdominant — creates a "plagal" sound. The IV-I progression is the "Amen" cadence. Adds warmth and often appears in the chorus of pop songs.',
-            'V': 'The dominant — creates tension that wants to resolve to I. The V-I is the strongest resolution in tonal music. Add a 7th for extra pull.',
-            'vi': 'The relative minor — shares the same notes as the I major scale. The vi-IV-I-V is one of the most popular progressions in pop music.',
-            'vii°': 'The leading tone chord — unstable and wants to resolve to I. The diminished quality creates tension. Often used as a passing chord.',
-            'II': 'Secondary dominant (V/V) — borrows dominant function to approach V. Creates a stronger pull to V. Common in jazz and classical.',
-            'III': 'Secondary dominant (V/vi) — leads strongly to vi. Creates a dramatic shift to the relative minor.',
+            'I': 'Tonic — home base. Try maj7 or 6.',
+            'ii': 'Supertonic — leads to V. Try m7.',
+            'iii': 'Mediant — color chord. Shares notes with I.',
+            'IV': 'Subdominant — warm, stable. The "amen" chord.',
+            'V': 'Dominant — creates tension. Add 7 for pull.',
+            'vi': 'Relative minor — the sad cousin of I.',
+            'vii°': 'Leading tone — unstable, resolves to I.',
+            'II': 'V/V — secondary dominant to V.',
+            'III': 'V/vi — leads to relative minor.',
         };
 
-        return theoryNotes[numeral || ''] || 'This chord adds color and interest to your progression.';
+        return theoryNotes[numeral || ''] || 'Adds color to your progression.';
     };
 
     return (
-        <div className="w-72 h-full flex flex-col bg-bg-secondary border-l border-border-subtle overflow-hidden">
+        <div className="w-64 h-full flex flex-col bg-bg-secondary border-l border-border-subtle overflow-hidden shrink-0">
             {/* Header */}
-            <div className="p-4 border-b border-border-subtle relative shrink-0">
+            <div className="p-3 border-b border-border-subtle shrink-0">
                 <div className="flex justify-between items-start">
-                    <div>
-                        <div className="flex items-baseline gap-2 mb-1">
-                            <h2 className="text-2xl font-bold text-text-primary">
+                    <div className="min-w-0 flex-1">
+                        <div className="flex items-baseline gap-2 mb-0.5">
+                            <h2 className="text-xl font-bold text-text-primary truncate">
                                 {selectedChord.symbol}
                             </h2>
                             {selectedChord.numeral && (
-                                <span className="text-lg text-text-muted font-serif italic">
+                                <span className="text-sm text-text-muted font-serif italic shrink-0">
                                     {selectedChord.numeral}
                                 </span>
                             )}
                         </div>
-                        <p className="text-xs text-text-muted">
-                            in key of <span className="font-bold text-text-primary">{selectedKey}</span>
+                        <p className="text-[10px] text-text-muted">
+                            Key of <span className="font-bold">{selectedKey}</span>
                         </p>
                     </div>
-                    <div className="flex gap-1">
+                    <div className="flex gap-0.5 shrink-0 ml-2">
                         <button
                             onClick={() => setSelectedChord(null)}
                             className="p-1 hover:bg-bg-tertiary rounded transition-colors"
-                            title="Clear selection"
+                            title="Clear"
                         >
-                            <X size={14} className="text-text-muted" />
+                            <X size={12} className="text-text-muted" />
                         </button>
                         <button
                             onClick={toggleChordPanel}
                             className="p-1 hover:bg-bg-tertiary rounded transition-colors"
-                            title="Hide panel"
+                            title="Hide"
                         >
-                            <ChevronRight size={14} className="text-text-muted" />
+                            <ChevronRight size={12} className="text-text-muted" />
                         </button>
                     </div>
                 </div>
             </div>
 
             {/* Scrollable content */}
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto min-h-0">
                 {/* Piano */}
-                <div className="p-4 border-b border-border-subtle">
-                    <h3 className="text-[10px] font-bold text-text-muted uppercase tracking-wider mb-3">
+                <div className="p-3 border-b border-border-subtle">
+                    <h3 className="text-[9px] font-bold text-text-muted uppercase tracking-wider mb-2">
                         Voicing {previewVariant && <span className="text-accent-primary">({previewVariant})</span>}
                     </h3>
                     <PianoKeyboard
@@ -133,28 +140,32 @@ export const ChordDetails: React.FC = () => {
                         rootNote={selectedChord.root}
                         color={chordColor}
                     />
-                    <div className="mt-3 flex justify-around text-xs">
+                    {/* Notes display - flexible grid that wraps */}
+                    <div className="mt-2 flex flex-wrap justify-center gap-1">
                         {displayNotes.map((note, i) => (
-                            <div key={i} className="flex flex-col items-center">
+                            <div 
+                                key={i} 
+                                className="flex flex-col items-center px-1.5 py-0.5 bg-bg-elevated rounded text-[10px]"
+                            >
                                 <span className="font-bold text-text-primary">{note}</span>
-                                <span className="text-[10px] text-text-muted">
-                                    {i === 0 ? 'Root' : i === 1 ? '3rd' : i === 2 ? '5th' : i === 3 ? '7th' : `${i + 1}th`}
+                                <span className="text-[8px] text-text-muted">
+                                    {getIntervalName(i, displayNotes.length)}
                                 </span>
                             </div>
                         ))}
                     </div>
                 </div>
 
-                {/* Extensions & Modifications */}
-                <div className="p-4 border-b border-border-subtle">
-                    <h3 className="text-[10px] font-bold text-text-muted uppercase tracking-wider mb-3">
+                {/* Variations */}
+                <div className="p-3 border-b border-border-subtle">
+                    <h3 className="text-[9px] font-bold text-text-muted uppercase tracking-wider mb-2">
                         Variations
                     </h3>
-                    <div className="grid grid-cols-3 gap-1.5">
+                    <div className="grid grid-cols-3 gap-1">
                         {['7', 'maj7', 'm7', 'sus2', 'sus4', 'dim', 'add9', '9', '11'].map((ext) => (
                             <button
                                 key={ext}
-                                className={`px-2 py-1.5 rounded text-[10px] font-medium transition-colors border ${
+                                className={`px-1.5 py-1 rounded text-[9px] font-medium transition-colors border ${
                                     previewVariant === ext 
                                         ? 'bg-accent-primary text-white border-accent-primary' 
                                         : 'bg-bg-elevated hover:bg-bg-tertiary text-text-secondary hover:text-text-primary border-border-subtle'
@@ -167,13 +178,13 @@ export const ChordDetails: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Task 25: Fixed Theory Info styling */}
-                <div className="p-4">
-                    <div className="p-3 bg-bg-elevated rounded-lg border border-border-subtle">
-                        <h3 className="text-[10px] font-bold text-accent-primary uppercase tracking-wider mb-2">
-                            Theory Note
+                {/* Theory Note */}
+                <div className="p-3">
+                    <div className="p-2 bg-bg-elevated rounded border border-border-subtle">
+                        <h3 className="text-[9px] font-bold text-accent-primary uppercase tracking-wider mb-1">
+                            Theory
                         </h3>
-                        <p className="text-xs text-text-secondary leading-relaxed">
+                        <p className="text-[10px] text-text-secondary leading-relaxed break-words">
                             {getTheoryNote()}
                         </p>
                     </div>

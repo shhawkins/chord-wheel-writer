@@ -294,6 +294,7 @@ export const ChordWheel: React.FC = () => {
                                     isSecondary={majorIsSecondary}
                                     onClick={handleChordClick}
                                     ringType="major"
+                                    wheelRotation={wheelRotation}
                                 />
 
                                 {/* MIDDLE RING: ii chord (left 15° slot) */}
@@ -311,6 +312,7 @@ export const ChordWheel: React.FC = () => {
                                     isDiatonic={iiIsDiatonic}
                                     onClick={handleChordClick}
                                     ringType="minor"
+                                    wheelRotation={wheelRotation}
                                 />
 
                                 {/* MIDDLE RING: iii chord (right 15° slot) */}
@@ -328,6 +330,7 @@ export const ChordWheel: React.FC = () => {
                                     isDiatonic={iiiIsDiatonic}
                                     onClick={handleChordClick}
                                     ringType="minor"
+                                    wheelRotation={wheelRotation}
                                 />
 
                                 {/* OUTER RING: Diminished chord (narrow 15° notch, centered) */}
@@ -345,6 +348,7 @@ export const ChordWheel: React.FC = () => {
                                     isDiatonic={dimIsDiatonic}
                                     onClick={handleChordClick}
                                     ringType="diminished"
+                                    wheelRotation={wheelRotation}
                                 />
                             </g>
                         );
