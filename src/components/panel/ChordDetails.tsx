@@ -1,7 +1,7 @@
 import { useSongStore } from '../../store/useSongStore';
 import { PianoKeyboard } from './PianoKeyboard';
 import { getWheelColors, getChordNotes } from '../../utils/musicTheory';
-import { GripVertical, ChevronRight, ChevronLeft } from 'lucide-react';
+import { PanelRightClose, PanelRight, GripVertical } from 'lucide-react';
 import { playChord } from '../../utils/audioEngine';
 import { useState, useCallback, useEffect } from 'react';
 
@@ -75,56 +75,94 @@ export const ChordDetails: React.FC = () => {
     };
 
     // Get interval name based on chord quality and position
+    // When previewing a variant, use the variant's intervals, not the base chord
     const getIntervalName = (index: number, quality?: string): string => {
         const variant = previewVariant || '';
         
-        // Determine chord family
-        const isMinor = quality === 'minor' || variant.includes('m') && !variant.includes('maj');
-        const isDiminished = quality === 'diminished' || variant === 'dim' || variant.includes('dim7');
-        const isHalfDim = variant.includes('m7b5') || variant.includes('m7♭5') || variant.includes('ø');
-        const isSus2 = variant === 'sus2';
-        const isSus4 = variant === 'sus4' || variant === '7sus4';
-        const is6th = variant === '6' || variant === 'm6';
-        const isDom = variant === '7' || variant === '9' || variant === '11' || variant === '13';
-        const isMaj7 = variant.includes('maj');
+        // If there's a preview variant, prioritize variant-specific interval names
+        if (variant) {
+            // Suspended chords
+            if (variant === 'sus2') {
+                return ['R', '2', '5'][index] || `${index + 1}`;
+            }
+            if (variant === 'sus4') {
+                return ['R', '4', '5'][index] || `${index + 1}`;
+            }
+            if (variant === '7sus4') {
+                return ['R', '4', '5', '♭7'][index] || `${index + 1}`;
+            }
+            
+            // Diminished variants
+            if (variant === 'dim' || variant === 'dim7') {
+                return ['R', '♭3', '♭5', '𝄫7'][index] || `${index + 1}`;
+            }
+            if (variant === 'm7b5' || variant === 'm7♭5' || variant === 'ø7') {
+                return ['R', '♭3', '♭5', '♭7'][index] || `${index + 1}`;
+            }
+            
+            // 6th chords
+            if (variant === '6') {
+                return ['R', '3', '5', '6'][index] || `${index + 1}`;
+            }
+            if (variant === 'm6') {
+                return ['R', '♭3', '5', '6'][index] || `${index + 1}`;
+            }
+            
+            // Major 7th family
+            if (variant === 'maj7') {
+                return ['R', '3', '5', '7'][index] || `${index + 1}`;
+            }
+            if (variant === 'maj9') {
+                return ['R', '3', '5', '7', '9'][index] || `${index + 1}`;
+            }
+            if (variant === 'maj11') {
+                return ['R', '3', '5', '7', '9', '11'][index] || `${index + 1}`;
+            }
+            if (variant === 'maj13') {
+                return ['R', '3', '5', '7', '9', '11', '13'][index] || `${index + 1}`;
+            }
+            
+            // Minor 7th family  
+            if (variant === 'm7') {
+                return ['R', '♭3', '5', '♭7'][index] || `${index + 1}`;
+            }
+            if (variant === 'm9') {
+                return ['R', '♭3', '5', '♭7', '9'][index] || `${index + 1}`;
+            }
+            if (variant === 'm11') {
+                return ['R', '♭3', '5', '♭7', '9', '11'][index] || `${index + 1}`;
+            }
+            
+            // Dominant 7th family
+            if (variant === '7') {
+                return ['R', '3', '5', '♭7'][index] || `${index + 1}`;
+            }
+            if (variant === '9') {
+                return ['R', '3', '5', '♭7', '9'][index] || `${index + 1}`;
+            }
+            if (variant === '11') {
+                return ['R', '3', '5', '♭7', '9', '11'][index] || `${index + 1}`;
+            }
+            if (variant === '13') {
+                return ['R', '3', '5', '♭7', '9', '11', '13'][index] || `${index + 1}`;
+            }
+            
+            // Add9 (no 7th)
+            if (variant === 'add9') {
+                return ['R', '3', '5', '9'][index] || `${index + 1}`;
+            }
+        }
         
-        // Build interval names based on chord type
-        if (isDiminished) {
-            const names = ['R', '♭3', '♭5', '𝄫7'];
-            return names[index] || `${index + 1}`;
+        // No variant - use base chord quality
+        if (quality === 'diminished') {
+            return ['R', '♭3', '♭5'][index] || `${index + 1}`;
         }
-        if (isHalfDim) {
-            const names = ['R', '♭3', '♭5', '♭7'];
-            return names[index] || `${index + 1}`;
-        }
-        if (isSus2) {
-            const names = ['R', '2', '5'];
-            return names[index] || `${index + 1}`;
-        }
-        if (isSus4) {
-            const names = ['R', '4', '5', '♭7'];
-            return names[index] || `${index + 1}`;
-        }
-        if (is6th) {
-            const names = isMinor ? ['R', '♭3', '5', '6'] : ['R', '3', '5', '6'];
-            return names[index] || `${index + 1}`;
-        }
-        if (isMinor) {
-            const names = ['R', '♭3', '5', '♭7', '9', '11', '13'];
-            return names[index] || `${index + 1}`;
-        }
-        if (isDom) {
-            const names = ['R', '3', '5', '♭7', '9', '11', '13'];
-            return names[index] || `${index + 1}`;
-        }
-        if (isMaj7) {
-            const names = ['R', '3', '5', '7', '9', '11', '13'];
-            return names[index] || `${index + 1}`;
+        if (quality === 'minor') {
+            return ['R', '♭3', '5'][index] || `${index + 1}`;
         }
         
-        // Default major
-        const names = ['R', '3', '5', '7', '9', '11', '13'];
-        return names[index] || `${index + 1}`;
+        // Default: major triad
+        return ['R', '3', '5'][index] || `${index + 1}`;
     };
 
     // Get theory note
@@ -194,21 +232,16 @@ export const ChordDetails: React.FC = () => {
         return suggestions[numeral || ''] || { extensions: [], description: 'Try different extensions to find your sound' };
     };
 
-    // Collapsed state - vertical bar with show button (matches timeline style)
+    // Collapsed state - just show a button
     if (!chordPanelVisible) {
         return (
-            <div className="w-6 h-full bg-bg-secondary border-l border-border-subtle flex flex-col items-center justify-center shrink-0">
-                <button
-                    onClick={toggleChordPanel}
-                    className="py-3 w-full flex flex-col items-center gap-1 text-[9px] text-text-muted hover:text-text-primary hover:bg-bg-tertiary transition-colors"
-                    title="Show chord details"
-                >
-                    <ChevronLeft size={12} />
-                    <span className="uppercase tracking-wider font-bold writing-mode-vertical" style={{ writingMode: 'vertical-rl', textOrientation: 'mixed' }}>
-                        Details
-                    </span>
-                </button>
-            </div>
+            <button
+                onClick={toggleChordPanel}
+                className="h-full px-2 flex items-center justify-center bg-bg-secondary border-l border-border-subtle hover:bg-bg-tertiary transition-colors"
+                title="Show chord details"
+            >
+                <PanelRight size={18} className="text-text-muted" />
+            </button>
         );
     }
 
@@ -217,36 +250,31 @@ export const ChordDetails: React.FC = () => {
             className="h-full flex bg-bg-secondary border-l border-border-subtle"
             style={{ width: panelWidth }}
         >
-            {/* Resize handle with hide button - matches timeline style */}
+            {/* Resize handle */}
             <div 
-                className={`w-6 flex flex-col items-center border-r border-border-subtle transition-colors ${isResizing ? 'bg-accent-primary/20' : ''}`}
+                className={`w-2 flex items-center justify-center cursor-ew-resize hover:bg-bg-tertiary transition-colors ${isResizing ? 'bg-accent-primary/20' : ''}`}
+                onMouseDown={handleMouseDown}
             >
-                <div 
-                    className="flex-1 w-full cursor-ew-resize flex items-center justify-center hover:bg-bg-tertiary transition-colors"
-                    onMouseDown={handleMouseDown}
-                >
-                    <GripVertical size={12} className="text-text-muted" />
-                </div>
-                <button
-                    onClick={toggleChordPanel}
-                    className="py-2 w-full flex flex-col items-center gap-0.5 text-[8px] text-text-muted hover:text-text-primary hover:bg-bg-tertiary transition-colors border-t border-border-subtle"
-                    title="Hide panel"
-                >
-                    <ChevronRight size={10} />
-                    <span className="uppercase tracking-wider font-bold">Hide</span>
-                </button>
+                <GripVertical size={12} className="text-text-muted" />
             </div>
 
             {/* Panel content */}
             <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-                {/* Header with chord info */}
-                <div className="px-3 py-2 border-b border-border-subtle shrink-0">
+                {/* Header with single hide button */}
+                <div className="p-3 border-b border-border-subtle flex justify-between items-center shrink-0">
                     <span className="text-[10px] text-text-muted uppercase tracking-wider font-bold">
                         {selectedChord ? selectedChord.symbol : 'Chord Details'}
                         {selectedChord?.numeral && (
                             <span className="ml-2 font-serif italic text-text-secondary">{selectedChord.numeral}</span>
                         )}
                     </span>
+                    <button
+                        onClick={toggleChordPanel}
+                        className="p-1 hover:bg-bg-tertiary rounded transition-colors"
+                        title="Hide panel"
+                    >
+                        <PanelRightClose size={16} className="text-text-muted" />
+                    </button>
                 </div>
 
                 {/* Content */}
