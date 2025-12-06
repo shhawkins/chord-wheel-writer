@@ -6,8 +6,7 @@ import {
     getChordNotes,
     getKeySignature,
     CIRCLE_OF_FIFTHS,
-    type Chord,
-    MINOR_RING_CHORDS
+    type Chord 
 } from '../../utils/musicTheory';
 import { WheelSegment } from './WheelSegment';
 import { polarToCartesian } from '../../utils/geometry';
@@ -458,40 +457,6 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({ zoomScale, zoomOriginY, 
                                     segmentId={`dim-${i}`}
                                 />
                             </g>
-                        );
-                    })}
-                    {/* Minor Ring (Static Order) */}
-                    {MINOR_RING_CHORDS.map((minor, idx) => {
-                        // 0 deg is right/east; -90 deg is vertical/north/top.
-                        const angleSize = 15;
-                        const startAngle = idx * angleSize - 90;
-                        const endAngle = startAngle + angleSize;
-                        const baseColor = colors[minor.replace('m', '').replace('b', '')] || colors.C;
-                        return (
-                            <WheelSegment
-                                key={`minor-${minor}-${idx}`}
-                                cx={cx}
-                                cy={cy}
-                                innerRadius={minorInnerRadius}
-                                outerRadius={minorOuterRadius}
-                                startAngle={startAngle}
-                                endAngle={endAngle}
-                                color={baseColor}
-                                label={minor}
-                                chord={{
-                                    root: minor.replace('m', ''),
-                                    quality: 'minor',
-                                    numeral: '',
-                                    notes: getChordNotes(minor.replace('m', ''), 'minor'),
-                                    symbol: minor
-                                }}
-                                isSelected={false}
-                                isDiatonic={false} // Static ring, highlight handled separately if needed
-                                onClick={handleChordClick}
-                                ringType="minor"
-                                wheelRotation={wheelRotation}
-                                segmentId={`minor-${idx}`}
-                            />
                         );
                     })}
                 </g>

@@ -154,8 +154,8 @@ function App() {
               zoomOriginY={wheelZoomOrigin} 
               onZoomChange={handleZoomChange} 
             />
-            {/* Zoom controls in frame corner */}
-            <div className="absolute top-2 right-2 flex gap-1 z-10">
+            {/* Zoom controls in frame corner - positioned away from wheel */}
+            <div className="absolute top-3 right-3 flex gap-1 z-20">
               <button
                 onClick={handleZoomOut}
                 disabled={wheelZoom <= 1}

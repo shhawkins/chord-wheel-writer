@@ -31,19 +31,24 @@ export interface MajorPosition {
 /**
  * The 12 major positions with their associated ii, iii, and vii° chords
  */
+/**
+ * The 12 major positions with their associated ii, iii, and vii° chords
+ * Minor ring order (24 slots, starting from Dm left of Em at 12 o'clock):
+ * Dm Em | Am Bm | Em F#m | Bm C#m | F#m G#m | C#m D#m | G#m A#m | Ebm Fm | Bbm Cm | Fm Gm | Cm Dm | Gm Am
+ */
 export const MAJOR_POSITIONS: MajorPosition[] = [
-    { major: 'C',  ii: 'Dm',  iii: 'Em',   diminished: 'B°' },
-    { major: 'G',  ii: 'Am',  iii: 'Bm',   diminished: 'F#°' },
-    { major: 'D',  ii: 'Em',  iii: 'F#m',  diminished: 'C#°' },
-    { major: 'A',  ii: 'Bm',  iii: 'C#m',  diminished: 'G#°' },
-    { major: 'E',  ii: 'C#m', iii: 'G#m',  diminished: 'D#°' },
-    { major: 'B',  ii: 'G#m', iii: 'D#m',  diminished: 'A#°' },
-    { major: 'F#', ii: 'G#m', iii: 'A#m',  diminished: 'E#°' },
-    { major: 'Db', ii: 'Ebm', iii: 'Fm',   diminished: 'C°' },
-    { major: 'Ab', ii: 'Bbm', iii: 'Cm',   diminished: 'G°' },
-    { major: 'Eb', ii: 'Fm',  iii: 'Gm',   diminished: 'D°' },
-    { major: 'Bb', ii: 'Cm',  iii: 'Dm',   diminished: 'A°' },
-    { major: 'F',  ii: 'Gm',  iii: 'Am',   diminished: 'E°' },
+    { major: 'C',  ii: 'Dm',  iii: 'Em',   diminished: 'B°' },   // Position 0
+    { major: 'G',  ii: 'Am',  iii: 'Bm',   diminished: 'F#°' },  // Position 1
+    { major: 'D',  ii: 'Em',  iii: 'F#m',  diminished: 'C#°' },  // Position 2
+    { major: 'A',  ii: 'Bm',  iii: 'C#m',  diminished: 'G#°' },  // Position 3
+    { major: 'E',  ii: 'F#m', iii: 'G#m',  diminished: 'D#°' },  // Position 4 (FIXED: was C#m, G#m)
+    { major: 'B',  ii: 'C#m', iii: 'D#m',  diminished: 'A#°' },  // Position 5 (FIXED: was G#m, D#m)
+    { major: 'F#', ii: 'G#m', iii: 'A#m',  diminished: 'E#°' },  // Position 6
+    { major: 'Db', ii: 'Ebm', iii: 'Fm',   diminished: 'C°' },   // Position 7
+    { major: 'Ab', ii: 'Bbm', iii: 'Cm',   diminished: 'G°' },   // Position 8
+    { major: 'Eb', ii: 'Fm',  iii: 'Gm',   diminished: 'D°' },   // Position 9
+    { major: 'Bb', ii: 'Cm',  iii: 'Dm',   diminished: 'A°' },   // Position 10
+    { major: 'F',  ii: 'Gm',  iii: 'Am',   diminished: 'E°' },   // Position 11
 ];
 
 
@@ -276,15 +281,3 @@ export function getWheelColors() {
         F: 'hsl(28, 85%, 55%)',     // Orange
     };
 }
-
-// CHORD WHEEL MINOR RING ORDER (as on physical chord wheel, NOT local to key)
-// This is the absolute 24-order for the minor ring; each step advances by a fifth
-export const MINOR_RING_CHORDS = [
-  'Dm', 'Em', 'Am', 'Bm', 'Em', 'F#m',
-  'Bm', 'C#m', 'F#m', 'G#m', 'C#m', 'D#m',
-  'G#m', 'A#m', 'Ebm', 'Fm', 'Bbm', 'Cm',
-  'Fm', 'Gm', 'Cm', 'Dm', 'Gm', 'Am',
-];
-// This order ensures that, as the wheel spins, Em is always at the true top, Dm left, etc.,
-// matching the physical chord wheel that musicians use. The mapping is static for display purposes
-// and is not tied to diatonic relationships for the current key.
