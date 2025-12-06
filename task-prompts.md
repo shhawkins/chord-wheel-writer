@@ -34,6 +34,7 @@ The following tasks have been completed in V2/V3:
 | Task 30: Save/Load Songs | ✅ Done | localStorage with dropdown menu |
 | Task 33: Song Duration | ✅ Done | Shows MM:SS in header |
 | Task 40: Chord Viewer Spacing | ✅ Done | Improved padding and typography |
+| Task 21: Fixed Wheel Mode | ✅ Done | Toggle between rotating and fixed wheel |
 | Task 26: FAQ/Help Modal | ✅ Done | Comprehensive chord wheel guide modal |
 
 ---
@@ -44,32 +45,14 @@ The following tasks have been completed in V2/V3:
 
 ---
 
-## Task 21: Add Fixed Wheel View Mode
+## Task 21: Add Fixed Wheel View Mode ✅ COMPLETED
 
-### Context
-Currently the wheel rotates and the highlighted diatonic chords always appear at the top. Some users may prefer a fixed wheel where the wheel doesn't spin, but the highlights move around to show the new key's diatonic chords.
-
-### Your Task
-Implement two view modes:
-
-**Mode 1 - Rotating Wheel (current behavior):**
-- Wheel spins when key changes
-- In-key chords always appear at the top
-- Labels stay horizontal via counter-rotation
-
-**Mode 2 - Fixed Wheel:**
-- Wheel stays stationary (C always at top)
-- When key changes, highlighting moves to different positions
-- Simpler text handling since wheel doesn't rotate
-
-### Implementation Details
-1. Add `wheelMode: 'rotating' | 'fixed'` to the store
-2. Add a toggle button in the UI (perhaps near the wheel)
-3. In fixed mode, set `wheelRotation = 0` always
-4. Update highlighting logic to highlight correct positions without rotation
-
-### Expected Outcome
-Users can choose between a rotating wheel (key at top) or a fixed wheel (C at top with moving highlights).
+### Implementation
+- Added `wheelMode` state ('rotating' | 'fixed') to store
+- Added lock/unlock toggle button in wheel center
+- In rotating mode: wheel spins, key always at top
+- In fixed mode: wheel stays still (C at top), highlights move
+- Toggle persists across sessions
 
 ---
 
