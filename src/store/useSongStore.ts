@@ -11,6 +11,7 @@ interface SongState {
     // Wheel state
     selectedKey: string;
     wheelRotation: number;        // Cumulative rotation (not reset at 360°)
+    wheelMode: 'rotating' | 'fixed';  // Rotating = wheel spins, Fixed = highlights move
     chordPanelVisible: boolean;   // Toggle chord panel visibility
     timelineVisible: boolean;     // Toggle timeline visibility
 
@@ -28,6 +29,7 @@ interface SongState {
     // Actions
     setKey: (key: string) => void;
     rotateWheel: (direction: 'cw' | 'ccw') => void;  // Cumulative rotation
+    toggleWheelMode: () => void;
     toggleChordPanel: () => void;
     toggleTimeline: () => void;
 
@@ -96,6 +98,7 @@ export const useSongStore = create<SongState>()(
             currentSong: DEFAULT_SONG,
             selectedKey: 'C',
             wheelRotation: 0,
+            wheelMode: 'rotating' as const,
             chordPanelVisible: true,
             timelineVisible: true,
             selectedChord: null,
@@ -110,7 +113,14 @@ export const useSongStore = create<SongState>()(
             
             // Cumulative rotation to avoid wrap-around animation issues
             rotateWheel: (direction) => set((state) => ({
-                wheelRotation: state.wheelRotation + (direction === 'cw' ? -30 : 30)
+                wheelRotation: state.wheelMode === 'rotating' 
+                    ? state.wheelRotation + (direction === 'cw' ? -30 : 30)
+                    : 0  // In fixed mode, wheel doesn't rotate
+            })),
+            
+            toggleWheelMode: () => set((state) => ({ 
+                wheelMode: state.wheelMode === 'rotating' ? 'fixed' : 'rotating',
+                wheelRotation: 0  // Reset rotation when switching modes
             })),
             
             toggleChordPanel: () => set((state) => ({ chordPanelVisible: !state.chordPanelVisible })),

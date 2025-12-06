@@ -10,7 +10,7 @@ import {
 } from '../../utils/musicTheory';
 import { WheelSegment } from './WheelSegment';
 import { polarToCartesian } from '../../utils/geometry';
-import { RotateCw, RotateCcw } from 'lucide-react';
+import { RotateCw, RotateCcw, Lock, Unlock } from 'lucide-react';
 import { playChord } from '../../utils/audioEngine';
 
 interface ChordWheelProps {
@@ -24,13 +24,20 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({ zoomScale, zoomOriginY, 
         selectedKey,
         setKey,
         wheelRotation,
+        wheelMode,
         rotateWheel,
+        toggleWheelMode,
         addChordToSlot,
         selectedSectionId,
         selectedSlotId,
         currentSong,
         setSelectedChord
     } = useSongStore();
+    
+    // In fixed mode, wheel doesn't rotate - calculate highlight offset instead
+    const effectiveRotation = wheelMode === 'rotating' ? wheelRotation : 0;
+    const keyIndex = CIRCLE_OF_FIFTHS.indexOf(selectedKey);
+    const highlightOffset = wheelMode === 'fixed' ? keyIndex : 0;
     
     const lastTouchDistance = useRef<number | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -367,7 +374,7 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({ zoomScale, zoomOriginY, 
                 {/* ROTATING WHEEL - rotates based on selected key */}
                 <g
                     style={{
-                        transform: `rotate(${wheelRotation}deg)`,
+                        transform: `rotate(${effectiveRotation}deg)`,
                         transformOrigin: `${cx}px ${cy}px`,
                         transition: 'transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)'
                     }}
@@ -465,7 +472,7 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({ zoomScale, zoomOriginY, 
                                     isSecondary={majorIsSecondary}
                                     onClick={handleChordClick}
                                     ringType="major"
-                                    wheelRotation={wheelRotation}
+                                    wheelRotation={effectiveRotation}
                                     romanNumeral={majorIsDiatonic ? getRomanNumeral(i, 'major') : undefined}
                                     voicingSuggestion={majorIsDiatonic ? getVoicingSuggestion(i, 'major') : undefined}
                                     segmentId={`major-${i}`}
@@ -486,7 +493,7 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({ zoomScale, zoomOriginY, 
                                     isDiatonic={iiIsDiatonic}
                                     onClick={handleChordClick}
                                     ringType="minor"
-                                    wheelRotation={wheelRotation}
+                                    wheelRotation={effectiveRotation}
                                     romanNumeral={iiIsDiatonic ? getRomanNumeral(i, 'ii') : undefined}
                                     voicingSuggestion={iiIsDiatonic ? getVoicingSuggestion(i, 'ii') : undefined}
                                     segmentId={`ii-${i}`}
@@ -507,7 +514,7 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({ zoomScale, zoomOriginY, 
                                     isDiatonic={iiiIsDiatonic}
                                     onClick={handleChordClick}
                                     ringType="minor"
-                                    wheelRotation={wheelRotation}
+                                    wheelRotation={effectiveRotation}
                                     romanNumeral={iiiIsDiatonic ? getRomanNumeral(i, 'iii') : undefined}
                                     voicingSuggestion={iiiIsDiatonic ? getVoicingSuggestion(i, 'iii') : undefined}
                                     segmentId={`iii-${i}`}
@@ -528,7 +535,7 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({ zoomScale, zoomOriginY, 
                                     isDiatonic={dimIsDiatonic}
                                     onClick={handleChordClick}
                                     ringType="diminished"
-                                    wheelRotation={wheelRotation}
+                                    wheelRotation={effectiveRotation}
                                     romanNumeral={dimIsDiatonic ? getRomanNumeral(i, 'dim') : undefined}
                                     voicingSuggestion={dimIsDiatonic ? getVoicingSuggestion(i, 'dim') : undefined}
                                     segmentId={`dim-${i}`}
@@ -577,6 +584,23 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({ zoomScale, zoomOriginY, 
                     <circle r="9" fill="#282833" className="hover:fill-[#3a3a4a] transition-colors" />
                     <g transform="translate(-4.5, -4.5)">
                         <RotateCw size={9} color="#9898a6" />
+                    </g>
+                </g>
+                
+                {/* Wheel Mode Toggle */}
+                <g 
+                    transform={`translate(${cx}, ${cy + 52})`} 
+                    onClick={toggleWheelMode} 
+                    className="cursor-pointer"
+                    style={{ pointerEvents: 'all' }}
+                >
+                    <rect x="-18" y="-6" width="36" height="12" rx="6" fill={wheelMode === 'fixed' ? '#6366f1' : '#282833'} className="hover:brightness-110 transition-all" />
+                    <g transform="translate(-4, -4)">
+                        {wheelMode === 'fixed' ? (
+                            <Lock size={8} color="white" />
+                        ) : (
+                            <Unlock size={8} color="#9898a6" />
+                        )}
                     </g>
                 </g>
             </svg>
