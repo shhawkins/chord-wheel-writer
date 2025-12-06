@@ -21,7 +21,7 @@ A comprehensive explanation of how this codebase works, written for someone lear
 
 ## What is This App?
 
-Songwriter's Wheel is a digital version of the physical "Chord Wheel" (by Jim Fleser, published by Hal Leonard). It helps musicians:
+Songwriter's Wheel is a digital version of the classic physical Chord Wheel tool. It helps musicians:
 
 - **Visualize** music theory through an interactive circular interface
 - **Compose** chord progressions by clicking chords on the wheel
