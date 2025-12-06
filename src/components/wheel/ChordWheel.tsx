@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useRef, useCallback } from 'react';
+import React, { useMemo, useRef, useCallback } from 'react';
 import { useSongStore } from '../../store/useSongStore';
 import { 
     MAJOR_POSITIONS,
@@ -13,7 +13,13 @@ import { polarToCartesian } from '../../utils/geometry';
 import { RotateCw, RotateCcw } from 'lucide-react';
 import { playChord } from '../../utils/audioEngine';
 
-export const ChordWheel: React.FC = () => {
+interface ChordWheelProps {
+    zoomScale: number;
+    zoomOriginY: number;
+    onZoomChange: (scale: number, originY: number) => void;
+}
+
+export const ChordWheel: React.FC<ChordWheelProps> = ({ zoomScale, zoomOriginY, onZoomChange }) => {
     const {
         selectedKey,
         setKey,
@@ -26,9 +32,6 @@ export const ChordWheel: React.FC = () => {
         setSelectedChord
     } = useSongStore();
     
-    // Pinch-to-zoom state
-    const [zoomScale, setZoomScale] = useState(1);
-    const [zoomOriginY, setZoomOriginY] = useState(50); // percentage
     const lastTouchDistance = useRef<number | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     
@@ -51,14 +54,11 @@ export const ChordWheel: React.FC = () => {
             const scaleDelta = distance / lastTouchDistance.current;
             lastTouchDistance.current = distance;
             
-            setZoomScale(prev => {
-                const newScale = Math.max(1, Math.min(2.5, prev * scaleDelta));
-                // Adjust origin based on zoom level (focus on top when zoomed in)
-                setZoomOriginY(newScale > 1.3 ? 38 : 50);
-                return newScale;
-            });
+            const newScale = Math.max(1, Math.min(2.5, zoomScale * scaleDelta));
+            const newOriginY = newScale > 1.3 ? 38 : 50;
+            onZoomChange(newScale, newOriginY);
         }
-    }, []);
+    }, [zoomScale, onZoomChange]);
     
     const handleTouchEnd = useCallback(() => {
         lastTouchDistance.current = null;
@@ -69,13 +69,11 @@ export const ChordWheel: React.FC = () => {
         if (e.ctrlKey || e.metaKey) {
             e.preventDefault();
             const delta = e.deltaY > 0 ? 0.9 : 1.1;
-            setZoomScale(prev => {
-                const newScale = Math.max(1, Math.min(2.5, prev * delta));
-                setZoomOriginY(newScale > 1.3 ? 38 : 50);
-                return newScale;
-            });
+            const newScale = Math.max(1, Math.min(2.5, zoomScale * delta));
+            const newOriginY = newScale > 1.3 ? 38 : 50;
+            onZoomChange(newScale, newOriginY);
         }
-    }, []);
+    }, [zoomScale, onZoomChange]);
 
     const colors = getWheelColors();
 
@@ -268,25 +266,6 @@ export const ChordWheel: React.FC = () => {
             onTouchEnd={handleTouchEnd}
             onWheel={handleWheel}
         >
-            {/* Zoom controls - positioned outside the wheel area */}
-            <div className="absolute top-0 right-0 z-10 flex gap-0.5">
-                <button
-                    onClick={handleZoomOut}
-                    disabled={zoomScale <= 1}
-                    className="w-6 h-6 flex items-center justify-center bg-bg-elevated/70 hover:bg-bg-tertiary disabled:opacity-30 disabled:cursor-not-allowed rounded text-text-muted hover:text-text-primary text-sm font-medium transition-colors"
-                    title="Zoom out"
-                >
-                    −
-                </button>
-                <button
-                    onClick={handleZoomIn}
-                    disabled={zoomScale >= 2.5}
-                    className="w-6 h-6 flex items-center justify-center bg-bg-elevated/70 hover:bg-bg-tertiary disabled:opacity-30 disabled:cursor-not-allowed rounded text-text-muted hover:text-text-primary text-sm font-medium transition-colors"
-                    title="Zoom in"
-                >
-                    +
-                </button>
-            </div>
 
             <div 
                 className="w-full h-full transition-transform duration-150 ease-out overflow-hidden"

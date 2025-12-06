@@ -9,9 +9,10 @@ import clsx from 'clsx';
 
 interface SectionProps {
     section: ISection;
+    chordSize?: number;
 }
 
-export const Section: React.FC<SectionProps> = ({ section }) => {
+export const Section: React.FC<SectionProps> = ({ section, chordSize = 48 }) => {
     const { removeSection, duplicateSection, selectedSectionId, setSelectedSlot } = useSongStore();
 
     const {
@@ -82,13 +83,14 @@ export const Section: React.FC<SectionProps> = ({ section }) => {
             </div>
 
             {/* Measures Container */}
-            <div className="flex p-2 gap-0 overflow-x-auto flex-1">
+            <div className="flex p-1.5 gap-0 overflow-x-auto flex-1">
                 {section.measures.map((measure, idx) => (
                     <Measure
                         key={measure.id}
                         measure={measure}
                         sectionId={section.id}
                         index={idx}
+                        chordSize={chordSize}
                     />
                 ))}
             </div>

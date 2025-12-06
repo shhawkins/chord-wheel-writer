@@ -4,7 +4,7 @@ import { Timeline } from './components/timeline/Timeline';
 import { ChordDetails } from './components/panel/ChordDetails';
 import { PlaybackControls } from './components/playback/PlaybackControls';
 import { useSongStore } from './store/useSongStore';
-import { Download, Save, Music, GripHorizontal, ChevronDown, ChevronUp } from 'lucide-react';
+import { Download, Save, Music, GripHorizontal, ChevronDown, ChevronUp, Plus, Minus } from 'lucide-react';
 import * as Tone from 'tone';
 import jsPDF from 'jspdf';
 
@@ -14,6 +14,27 @@ function App() {
   // Resizable panel state - timeline height in pixels
   const [timelineHeight, setTimelineHeight] = useState(180);
   const [isResizing, setIsResizing] = useState(false);
+  
+  // Wheel zoom state
+  const [wheelZoom, setWheelZoom] = useState(1);
+  const [wheelZoomOrigin, setWheelZoomOrigin] = useState(50);
+  
+  const handleZoomChange = useCallback((scale: number, originY: number) => {
+    setWheelZoom(scale);
+    setWheelZoomOrigin(originY);
+  }, []);
+  
+  const handleZoomIn = useCallback(() => {
+    const newScale = Math.min(2.5, wheelZoom + 0.3);
+    setWheelZoom(newScale);
+    setWheelZoomOrigin(newScale > 1.3 ? 38 : 50);
+  }, [wheelZoom]);
+  
+  const handleZoomOut = useCallback(() => {
+    const newScale = Math.max(1, wheelZoom - 0.3);
+    setWheelZoom(newScale);
+    setWheelZoomOrigin(newScale > 1.3 ? 38 : 50);
+  }, [wheelZoom]);
 
   useEffect(() => {
     const startAudio = async () => {
@@ -128,7 +149,30 @@ function App() {
         <div className="flex-1 flex flex-col min-w-0 min-h-0">
           {/* Wheel Area - takes remaining space */}
           <div className="flex-1 flex items-center justify-center min-h-0 overflow-hidden bg-gradient-to-b from-bg-primary to-bg-secondary/30 relative">
-            <ChordWheel />
+            <ChordWheel 
+              zoomScale={wheelZoom} 
+              zoomOriginY={wheelZoomOrigin} 
+              onZoomChange={handleZoomChange} 
+            />
+            {/* Zoom controls in frame corner */}
+            <div className="absolute top-2 right-2 flex gap-1 z-10">
+              <button
+                onClick={handleZoomOut}
+                disabled={wheelZoom <= 1}
+                className="w-7 h-7 flex items-center justify-center bg-bg-elevated/80 backdrop-blur-sm hover:bg-bg-tertiary disabled:opacity-30 disabled:cursor-not-allowed rounded border border-border-subtle text-text-muted hover:text-text-primary transition-colors"
+                title="Zoom out"
+              >
+                <Minus size={14} />
+              </button>
+              <button
+                onClick={handleZoomIn}
+                disabled={wheelZoom >= 2.5}
+                className="w-7 h-7 flex items-center justify-center bg-bg-elevated/80 backdrop-blur-sm hover:bg-bg-tertiary disabled:opacity-30 disabled:cursor-not-allowed rounded border border-border-subtle text-text-muted hover:text-text-primary transition-colors"
+                title="Zoom in"
+              >
+                <Plus size={14} />
+              </button>
+            </div>
           </div>
 
           {/* Timeline section with toggle */}
@@ -159,7 +203,7 @@ function App() {
                 className="shrink-0 bg-bg-secondary overflow-hidden"
                 style={{ height: timelineHeight }}
               >
-                <Timeline />
+                <Timeline height={timelineHeight} />
               </div>
             </>
           ) : (

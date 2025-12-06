@@ -8,9 +8,10 @@ import { getWheelColors, normalizeNote } from '../../utils/musicTheory';
 interface ChordSlotProps {
     slot: IChordSlot;
     sectionId: string;
+    size?: number;
 }
 
-export const ChordSlot: React.FC<ChordSlotProps> = ({ slot, sectionId }) => {
+export const ChordSlot: React.FC<ChordSlotProps> = ({ slot, sectionId, size = 48 }) => {
     const { selectedSlotId, setSelectedSlot, selectedSectionId, setSelectedChord } = useSongStore();
     const colors = getWheelColors();
 
@@ -62,19 +63,23 @@ export const ChordSlot: React.FC<ChordSlotProps> = ({ slot, sectionId }) => {
 
     const chordColor = getChordColor();
 
+    // Calculate font size based on slot size
+    const fontSize = Math.max(8, Math.min(12, size * 0.22));
+
     return (
         <div
             ref={setDroppableRef}
             onClick={handleClick}
+            style={{ width: size, height: size }}
             className={clsx(
-                "w-12 h-12 rounded border-2 flex items-center justify-center transition-all relative flex-shrink-0",
+                "rounded border-2 flex items-center justify-center transition-all relative flex-shrink-0",
                 isOver ? "border-accent-primary bg-accent-glow scale-105" : "border-border-medium bg-bg-elevated",
                 isSelected ? "ring-2 ring-accent-primary ring-offset-1 ring-offset-bg-primary" : "",
                 !slot.chord && "hover:border-text-muted cursor-pointer"
             )}
         >
             {!slot.chord && (
-                <span className="text-text-muted text-base font-light select-none">+</span>
+                <span className="text-text-muted font-light select-none" style={{ fontSize: fontSize + 4 }}>+</span>
             )}
 
             {slot.chord && (
@@ -91,7 +96,12 @@ export const ChordSlot: React.FC<ChordSlotProps> = ({ slot, sectionId }) => {
                         isDragging ? "opacity-50" : "opacity-100"
                     )}
                 >
-                    <span className="text-[10px] text-black/80 truncate px-0.5">{slot.chord.symbol}</span>
+                    <span 
+                        className="text-black/80 truncate px-0.5 text-center"
+                        style={{ fontSize }}
+                    >
+                        {slot.chord.symbol}
+                    </span>
                 </div>
             )}
         </div>

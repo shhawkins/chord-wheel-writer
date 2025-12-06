@@ -21,7 +21,11 @@ import { Section } from './Section';
 import { Plus } from 'lucide-react';
 import type { Chord } from '../../utils/musicTheory';
 
-export const Timeline: React.FC = () => {
+interface TimelineProps {
+    height?: number;
+}
+
+export const Timeline: React.FC<TimelineProps> = ({ height = 180 }) => {
     const {
         currentSong,
         addSection,
@@ -29,6 +33,11 @@ export const Timeline: React.FC = () => {
         addChordToSlot,
         moveChord
     } = useSongStore();
+    
+    // Calculate chord slot size based on timeline height
+    // Reserve space for header (~28px) and padding (~12px)
+    const availableHeight = height - 40;
+    const chordSize = Math.max(32, Math.min(64, availableHeight - 24));
 
     const [activeId, setActiveId] = React.useState<string | null>(null);
     const [activeDragData, setActiveDragData] = React.useState<any>(null);
@@ -115,16 +124,16 @@ export const Timeline: React.FC = () => {
                     >
                         <div className="flex gap-3 min-w-max h-full items-stretch">
                             {currentSong.sections.map((section) => (
-                                <Section key={section.id} section={section} />
+                                <Section key={section.id} section={section} chordSize={chordSize} />
                             ))}
 
                             {/* Add Section Button - matches section height */}
                             <button
                                 onClick={() => addSection('chorus')}
-                                className="w-12 rounded-lg border-2 border-dashed border-border-medium hover:border-accent-primary hover:bg-bg-elevated transition-all flex flex-col items-center justify-center text-text-muted hover:text-accent-primary gap-1 self-stretch"
+                                className="w-10 rounded-lg border-2 border-dashed border-border-medium hover:border-accent-primary hover:bg-bg-elevated transition-all flex flex-col items-center justify-center text-text-muted hover:text-accent-primary gap-0.5 self-stretch"
                             >
-                                <Plus size={14} />
-                                <span className="text-[7px] font-medium uppercase tracking-wider">Add</span>
+                                <Plus size={12} />
+                                <span className="text-[6px] font-medium uppercase tracking-wider">Add</span>
                             </button>
                         </div>
                     </SortableContext>
