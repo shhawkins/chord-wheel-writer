@@ -30,7 +30,10 @@ The following tasks have been completed in V2/V3:
 | Task 42: Chord Wheel Zoom | ✅ Done | Pinch-to-zoom on wheel |
 | Task 22: Keyboard Delete | ✅ Done | Delete/Backspace removes chord from slot |
 | Task 23: Song Title | ✅ Done | Editable title in header, used in PDF |
+| Task 24: Custom Section Names | ✅ Done | Double-click to rename sections |
+| Task 30: Save/Load Songs | ✅ Done | localStorage with dropdown menu |
 | Task 33: Song Duration | ✅ Done | Shows MM:SS in header |
+| Task 40: Chord Viewer Spacing | ✅ Done | Improved padding and typography |
 
 ---
 
@@ -69,44 +72,22 @@ Users can choose between a rotating wheel (key at top) or a fixed wheel (C at to
 
 ---
 
-## Task 30: Implement Song Save/Load Functionality
+## Task 30: Implement Song Save/Load Functionality ✅ COMPLETED
 
-### Context
-Users currently lose their work when they close the app. The app needs the ability to save songs and load them later.
+### Implementation
+- Created `src/utils/storage.ts` with localStorage utilities
+- Added `loadSong` and `newSong` actions to Zustand store
+- Save dropdown menu in header with:
+  - Save Current Song button
+  - New Song button (with confirmation)
+  - List of saved songs with load/delete options
+  - Current song highlighted in list
+- Auto-refresh saved songs list after operations
 
-### Your Task
-Implement save/load functionality:
-
-1. Save to localStorage for simplicity
-2. Allow multiple saved songs
-3. Add UI for:
-   - "Save Song" button
-   - "Load Song" dropdown/list showing saved songs
-   - "New Song" button (with confirmation if unsaved changes)
-   - "Delete" option for saved songs
-4. Auto-save as users work (debounced)
-
-### Implementation Details
-```typescript
-// In a new file: src/utils/storage.ts
-export const saveSong = (song: Song) => {
-  const songs = getSavedSongs();
-  const index = songs.findIndex(s => s.id === song.id);
-  if (index >= 0) {
-    songs[index] = song;
-  } else {
-    songs.push(song);
-  }
-  localStorage.setItem('chordWheelSongs', JSON.stringify(songs));
-};
-
-export const getSavedSongs = (): Song[] => {
-  return JSON.parse(localStorage.getItem('chordWheelSongs') || '[]');
-};
-```
-
-### Expected Outcome
-Users can save, load, and manage multiple songs.
+### Code Location
+- `src/utils/storage.ts` - saveSong, getSavedSongs, loadSong, deleteSong
+- `src/store/useSongStore.ts` - loadSong, newSong actions
+- `src/App.tsx` - Save menu dropdown UI
 
 ---
 
@@ -173,21 +154,14 @@ Users can play back their progression with visual feedback.
 
 ---
 
-## Task 24: Add Custom Section Names
+## Task 24: Add Custom Section Names ✅ COMPLETED
 
-### Context
-Sections currently have fixed names like "Verse", "Chorus", "Bridge". Users should be able to customize these names (e.g., "Prechorus", "Verse 2", "Outro Tag").
-
-### Your Task
-Make section names editable:
-
-1. Change the section name display to an inline-editable text field
-2. Allow any custom text (reasonable max length ~30 chars)
-3. Double-click to edit
-4. Save custom names with the song
-
-### Expected Outcome
-Users can double-click a section name to edit it to any custom text.
+### Implementation
+- Added editable section names in Section.tsx
+- Double-click section name to edit
+- Enter to save, Escape to cancel
+- Uses existing updateSection action with { name: newName }
+- Max length 30 characters
 
 ---
 
@@ -356,21 +330,16 @@ The UI is cleaner without the unnecessary toggle button.
 
 ---
 
-## Task 40: Improve Chord Viewer Spacing
+## Task 40: Improve Chord Viewer Spacing ✅ COMPLETED
 
-### Context
-The chord viewer has inconsistent spacing in places, making the layout feel cramped or unbalanced.
-
-### Your Task
-Improve the chord viewer styling:
-
-1. Audit all sections for consistent padding/margins
-2. Ensure proper spacing between sections
-3. Fix any text that's too close to borders
-4. Improve visual hierarchy with better whitespace
-
-### Expected Outcome
-The chord viewer has polished, consistent spacing throughout.
+### Implementation
+- Increased padding throughout (px-3 → px-4, py-2 → py-4)
+- Larger, more readable note displays with centered layout
+- Better spacing between note pills (gap-1 → gap-2)
+- Larger font sizes for key elements
+- Min-width on note pills for consistent sizing
+- Reorganized sections (Voicing, Variations, Suggestions, Theory)
+- Improved Theory section with larger text and more padding
 
 ---
 
