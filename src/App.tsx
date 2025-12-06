@@ -256,27 +256,27 @@ function App() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-3 shrink-0 mr-2">
           {/* Song Duration (Task 33) */}
-          <div className="flex items-center gap-1 text-[10px] text-text-muted px-1.5">
-            <Clock size={10} />
+          <div className="flex items-center gap-1.5 text-[10px] text-text-muted">
+            <Clock size={11} />
             <span>{songDuration}</span>
           </div>
 
           <div className="h-4 w-px bg-border-medium" />
 
-          <div className="flex items-center gap-1.5 bg-bg-tertiary px-2 py-1 rounded-full border border-border-subtle">
+          <div className="flex items-center gap-1.5 bg-bg-tertiary px-2.5 py-1 rounded-full border border-border-subtle">
             <span className="text-[9px] text-text-muted uppercase font-bold">Key</span>
             <span className="font-bold text-accent-primary text-sm">{selectedKey}</span>
           </div>
 
           <div className="h-4 w-px bg-border-medium" />
 
-          {/* Save/Load Menu (Task 30) */}
+          {/* Save/Load Menu (Task 30) - fixed styling */}
           <div className="relative" ref={saveMenuRef}>
             <button 
               onClick={() => setShowSaveMenu(!showSaveMenu)}
-              className="flex items-center gap-1 text-[11px] text-text-secondary hover:text-text-primary transition-colors px-1.5 py-1"
+              className="flex items-center gap-1 text-[11px] text-text-secondary hover:text-text-primary transition-colors px-2 py-1"
             >
               <Save size={12} />
               <span className="hidden sm:inline">Save</span>
@@ -284,40 +284,40 @@ function App() {
             </button>
             
             {showSaveMenu && (
-              <div className="absolute right-0 top-full mt-1 w-56 bg-bg-secondary border border-border-subtle rounded-lg shadow-xl z-50 overflow-hidden">
+              <div className="absolute right-0 top-full mt-1 w-56 bg-[#1a1a24] border border-border-medium rounded-lg shadow-2xl z-50 overflow-hidden">
                 {/* Actions */}
-                <div className="p-1 border-b border-border-subtle">
+                <div className="p-1.5 border-b border-border-subtle bg-[#22222e]">
                   <button
                     onClick={handleSave}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-xs text-text-primary hover:bg-bg-tertiary rounded transition-colors"
+                    className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-200 hover:bg-[#2a2a3a] rounded transition-colors"
                   >
-                    <Save size={14} />
+                    <Save size={14} className="text-accent-primary" />
                     Save Current Song
                   </button>
                   <button
                     onClick={handleNew}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-xs text-text-primary hover:bg-bg-tertiary rounded transition-colors"
+                    className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-200 hover:bg-[#2a2a3a] rounded transition-colors"
                   >
-                    <FilePlus size={14} />
+                    <FilePlus size={14} className="text-green-400" />
                     New Song
                   </button>
                 </div>
                 
                 {/* Saved Songs List */}
-                <div className="max-h-48 overflow-y-auto">
+                <div className="max-h-48 overflow-y-auto bg-[#1a1a24]">
                   {savedSongs.length === 0 ? (
-                    <p className="px-3 py-3 text-[10px] text-text-muted text-center">No saved songs yet</p>
+                    <p className="px-3 py-4 text-[10px] text-gray-500 text-center">No saved songs yet</p>
                   ) : (
-                    <div className="p-1">
-                      <p className="px-2 py-1 text-[9px] text-text-muted uppercase tracking-wider">Saved Songs</p>
+                    <div className="p-1.5">
+                      <p className="px-2 py-1 text-[9px] text-gray-500 uppercase tracking-wider">Saved Songs</p>
                       {savedSongs.map((song) => (
                         <div
                           key={song.id}
                           onClick={() => handleLoad(song)}
                           className={`flex items-center justify-between px-3 py-2 text-xs rounded cursor-pointer transition-colors ${
                             song.id === currentSong.id 
-                              ? 'bg-accent-primary/10 text-accent-primary' 
-                              : 'text-text-primary hover:bg-bg-tertiary'
+                              ? 'bg-accent-primary/20 text-accent-primary' 
+                              : 'text-gray-300 hover:bg-[#2a2a3a]'
                           }`}
                         >
                           <div className="flex items-center gap-2 min-w-0">
@@ -326,7 +326,7 @@ function App() {
                           </div>
                           <button
                             onClick={(e) => handleDelete(song.id, song.title, e)}
-                            className="p-1 hover:bg-red-500/20 rounded text-text-muted hover:text-red-400 shrink-0"
+                            className="p-1 hover:bg-red-500/20 rounded text-gray-500 hover:text-red-400 shrink-0"
                           >
                             <Trash2 size={10} />
                           </button>

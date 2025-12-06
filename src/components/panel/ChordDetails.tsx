@@ -1,9 +1,10 @@
 import { useSongStore } from '../../store/useSongStore';
 import { PianoKeyboard } from './PianoKeyboard';
 import { getWheelColors, getChordNotes } from '../../utils/musicTheory';
-import { PanelRightClose, PanelRight, GripVertical } from 'lucide-react';
+import { PanelRightClose, PanelRight, GripVertical, HelpCircle } from 'lucide-react';
 import { playChord } from '../../utils/audioEngine';
 import { useState, useCallback, useEffect } from 'react';
+import { HelpModal } from '../HelpModal';
 
 export const ChordDetails: React.FC = () => {
     const { selectedChord, selectedKey, chordPanelVisible, toggleChordPanel } = useSongStore();
@@ -12,6 +13,7 @@ export const ChordDetails: React.FC = () => {
     const [previewNotes, setPreviewNotes] = useState<string[]>([]);
     const [panelWidth, setPanelWidth] = useState(280);
     const [isResizing, setIsResizing] = useState(false);
+    const [showHelp, setShowHelp] = useState(false);
 
     // Handle resize drag
     const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -391,7 +393,19 @@ export const ChordDetails: React.FC = () => {
                         </div>
                     </div>
                 )}
+                
+                {/* Help button at bottom right */}
+                <button
+                    onClick={() => setShowHelp(true)}
+                    className="absolute bottom-3 right-3 w-7 h-7 flex items-center justify-center bg-bg-tertiary hover:bg-accent-primary/20 border border-border-subtle rounded-full text-text-muted hover:text-accent-primary transition-colors"
+                    title="Chord Wheel Guide"
+                >
+                    <HelpCircle size={14} />
+                </button>
             </div>
+            
+            {/* Help Modal */}
+            <HelpModal isOpen={showHelp} onClose={() => setShowHelp(false)} />
         </div>
     );
 };

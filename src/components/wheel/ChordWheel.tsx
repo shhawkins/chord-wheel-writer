@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useCallback } from 'react';
+import React, { useMemo, useRef, useCallback, useState, useEffect } from 'react';
 import { useSongStore } from '../../store/useSongStore';
 import { 
     MAJOR_POSITIONS,
@@ -34,6 +34,81 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({ zoomScale, zoomOriginY, 
     
     const lastTouchDistance = useRef<number | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
+    const svgRef = useRef<SVGSVGElement>(null);
+    
+    // Drag state for rotating the wheel
+    const [isDragging, setIsDragging] = useState(false);
+    const dragStartAngle = useRef<number>(0);
+    const accumulatedRotation = useRef<number>(0);
+    
+    // Get angle from center of wheel to mouse position
+    const getAngleFromCenter = useCallback((clientX: number, clientY: number) => {
+        if (!svgRef.current) return 0;
+        const rect = svgRef.current.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+        const dx = clientX - centerX;
+        const dy = clientY - centerY;
+        return Math.atan2(dy, dx) * (180 / Math.PI);
+    }, []);
+    
+    // Handle drag to rotate wheel
+    const handleDragStart = useCallback((e: React.MouseEvent) => {
+        // Only start drag if clicking on the wheel rings, not center
+        if (!svgRef.current) return;
+        const rect = svgRef.current.getBoundingClientRect();
+        const centerX = rect.width / 2;
+        const centerY = rect.height / 2;
+        const dx = e.clientX - rect.left - centerX;
+        const dy = e.clientY - rect.top - centerY;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        const minRadius = (rect.width / 600) * 70; // Scale based on actual size
+        
+        if (distance > minRadius) {
+            setIsDragging(true);
+            dragStartAngle.current = getAngleFromCenter(e.clientX, e.clientY);
+            accumulatedRotation.current = wheelRotation;
+            e.preventDefault();
+        }
+    }, [getAngleFromCenter, wheelRotation]);
+    
+    const handleDragMove = useCallback((e: MouseEvent) => {
+        if (!isDragging) return;
+        
+        const currentAngle = getAngleFromCenter(e.clientX, e.clientY);
+        const deltaAngle = currentAngle - dragStartAngle.current;
+        
+        // Snap to 30° increments (one key) when delta exceeds threshold
+        const totalRotation = accumulatedRotation.current + deltaAngle;
+        const snappedRotation = Math.round(totalRotation / 30) * 30;
+        
+        // If we've rotated enough to change key, update
+        if (snappedRotation !== wheelRotation) {
+            const steps = Math.round((snappedRotation - wheelRotation) / 30);
+            if (steps !== 0) {
+                // Each 30° clockwise = one step counterclockwise in Circle of Fifths
+                for (let i = 0; i < Math.abs(steps); i++) {
+                    rotateWheel(steps > 0 ? 'cw' : 'ccw');
+                }
+            }
+        }
+    }, [isDragging, getAngleFromCenter, wheelRotation, rotateWheel]);
+    
+    const handleDragEnd = useCallback(() => {
+        setIsDragging(false);
+    }, []);
+    
+    // Add global mouse listeners for drag
+    useEffect(() => {
+        if (isDragging) {
+            document.addEventListener('mousemove', handleDragMove);
+            document.addEventListener('mouseup', handleDragEnd);
+            return () => {
+                document.removeEventListener('mousemove', handleDragMove);
+                document.removeEventListener('mouseup', handleDragEnd);
+            };
+        }
+    }, [isDragging, handleDragMove, handleDragEnd]);
     
     // Handle touch events for pinch zoom
     const handleTouchStart = useCallback((e: React.TouchEvent) => {
@@ -275,10 +350,12 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({ zoomScale, zoomOriginY, 
                 }}
             >
                 <svg
+                    ref={svgRef}
                     width="100%"
                     height="100%"
                     viewBox={`0 0 ${size} ${size}`}
-                    className="w-full h-full select-none"
+                    className={`w-full h-full select-none ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+                    onMouseDown={handleDragStart}
                 >
                 <defs>
                     <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">

@@ -93,7 +93,7 @@ export const Section: React.FC<SectionProps> = ({ section, chordSize = 48 }) => 
                     <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-text-muted hover:text-text-primary">
                         <GripVertical size={12} />
                     </div>
-                    {/* Editable section name (Task 24) */}
+                    {/* Editable section name (Task 24) - removed redundant type tag */}
                     {isEditingName ? (
                         <input
                             ref={inputRef}
@@ -115,9 +115,6 @@ export const Section: React.FC<SectionProps> = ({ section, chordSize = 48 }) => 
                             {section.name}
                         </span>
                     )}
-                    <span className="text-[9px] text-text-muted px-1.5 py-0.5 rounded bg-bg-tertiary border border-border-subtle uppercase">
-                        {section.type}
-                    </span>
                 </div>
 
                 <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
