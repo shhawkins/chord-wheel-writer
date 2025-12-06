@@ -89,11 +89,15 @@ export const WheelSegment: React.FC<WheelSegmentProps> = ({
 
     const segmentStyle = getSegmentStyle();
     
-    // Font size based on ring type
+    // Font size based on ring type and segment size
     const getFontSize = () => {
-        if (ringType === 'diminished') return '10px';
-        if (ringType === 'minor') return '12px';
-        return '14px';
+        const segmentSpan = endAngle - startAngle;
+        if (ringType === 'diminished') return '9px';
+        if (ringType === 'minor') {
+            // Smaller font for 15° segments
+            return segmentSpan <= 15 ? '10px' : '12px';
+        }
+        return '13px';
     };
 
     // Text color - darker for diatonic (more visible), lighter for non-diatonic

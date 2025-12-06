@@ -8,116 +8,50 @@ export const ENHARMONIC_MAP: Record<string, string> = {
 };
 
 /**
- * Each wheel position contains 3 chords:
- * - major: The major chord at this position (inner ring)
- * - minor: The relative minor of that major (middle ring)  
- * - diminished: The vii° of that major key (outer ring)
+ * WHEEL STRUCTURE (matching the physical Hal Leonard Chord Wheel):
+ * 
+ * INNER RING: 12 segments (30° each) - Major chords in Circle of Fifths order
+ * MIDDLE RING: 24 segments (15° each) - Minor chords (ii and iii for each major position)
+ * OUTER RING: 12 segments (30° each) - Diminished chords (vii° for each major)
+ * 
+ * For each major position i:
+ * - Major chord at position i
+ * - Minor slot 2i: ii chord of that major key
+ * - Minor slot 2i+1: iii chord of that major key  
+ * - Diminished chord: vii° of that major key
  */
-export interface WheelPosition {
-    major: string;
-    minor: string;
-    diminished: string;
+
+export interface MajorPosition {
+    major: string;        // The major chord (I)
+    ii: string;           // The ii chord (minor)
+    iii: string;          // The iii chord (minor)
+    diminished: string;   // The vii° chord
 }
 
 /**
- * The 12 wheel positions in Circle of Fifths order.
- * Position 0 = C (at 12 o'clock when C is selected)
+ * The 12 major positions with their associated ii, iii, and vii° chords
  */
-export const WHEEL_POSITIONS: WheelPosition[] = [
-    { major: 'C', minor: 'Am', diminished: 'B°' },
-    { major: 'G', minor: 'Em', diminished: 'F#°' },
-    { major: 'D', minor: 'Bm', diminished: 'C#°' },
-    { major: 'A', minor: 'F#m', diminished: 'G#°' },
-    { major: 'E', minor: 'C#m', diminished: 'D#°' },
-    { major: 'B', minor: 'G#m', diminished: 'A#°' },
-    { major: 'F#', minor: 'D#m', diminished: 'E#°' },
-    { major: 'Db', minor: 'Bbm', diminished: 'C°' },
-    { major: 'Ab', minor: 'Fm', diminished: 'G°' },
-    { major: 'Eb', minor: 'Cm', diminished: 'D°' },
-    { major: 'Bb', minor: 'Gm', diminished: 'A°' },
-    { major: 'F', minor: 'Dm', diminished: 'E°' },
+export const MAJOR_POSITIONS: MajorPosition[] = [
+    { major: 'C',  ii: 'Dm',  iii: 'Em',   diminished: 'B°' },
+    { major: 'G',  ii: 'Am',  iii: 'Bm',   diminished: 'F#°' },
+    { major: 'D',  ii: 'Em',  iii: 'F#m',  diminished: 'C#°' },
+    { major: 'A',  ii: 'Bm',  iii: 'C#m',  diminished: 'G#°' },
+    { major: 'E',  ii: 'C#m', iii: 'G#m',  diminished: 'D#°' },
+    { major: 'B',  ii: 'G#m', iii: 'D#m',  diminished: 'A#°' },
+    { major: 'F#', ii: 'G#m', iii: 'A#m',  diminished: 'E#°' },
+    { major: 'Db', ii: 'Ebm', iii: 'Fm',   diminished: 'C°' },
+    { major: 'Ab', ii: 'Bbm', iii: 'Cm',   diminished: 'G°' },
+    { major: 'Eb', ii: 'Fm',  iii: 'Gm',   diminished: 'D°' },
+    { major: 'Bb', ii: 'Cm',  iii: 'Dm',   diminished: 'A°' },
+    { major: 'F',  ii: 'Gm',  iii: 'Am',   diminished: 'E°' },
 ];
 
-/**
- * Identifies which wheel position and ring a chord appears in
- */
-export interface DiatonicHighlight {
-    wheelPosition: number;  // 0-11 index
-    ring: 'major' | 'minor' | 'diminished';
-    chordRoot: string;
-    numeral: string;
-}
-
-/**
- * Get the wheel position index for a given major key root
- */
-export function getWheelPositionForKey(keyRoot: string): number {
-    return CIRCLE_OF_FIFTHS.indexOf(keyRoot);
-}
-
-/**
- * Find where a chord appears on the wheel (which position and ring)
- */
-export function findChordOnWheel(chordSymbol: string): { position: number; ring: 'major' | 'minor' | 'diminished' } | null {
-    for (let i = 0; i < WHEEL_POSITIONS.length; i++) {
-        const pos = WHEEL_POSITIONS[i];
-        if (pos.major === chordSymbol) return { position: i, ring: 'major' };
-        if (pos.minor === chordSymbol) return { position: i, ring: 'minor' };
-        if (pos.diminished === chordSymbol) return { position: i, ring: 'diminished' };
-    }
-    return null;
-}
-
-/**
- * Get all 7 diatonic chords and their positions on the wheel for a given key.
- * This is the core function for highlighting the correct segments.
- */
-export function getDiatonicHighlights(key: string): DiatonicHighlight[] {
-    const diatonicChords = getDiatonicChords(key);
-    const highlights: DiatonicHighlight[] = [];
-    
-    for (const chord of diatonicChords) {
-        // Build the chord symbol to search for
-        let searchSymbol: string;
-        if (chord.quality === 'major') {
-            searchSymbol = chord.root;
-        } else if (chord.quality === 'minor') {
-            searchSymbol = chord.root + 'm';
-        } else if (chord.quality === 'diminished') {
-            searchSymbol = chord.root + '°';
-        } else {
-            continue;
-        }
-        
-        const location = findChordOnWheel(searchSymbol);
-        if (location) {
-            highlights.push({
-                wheelPosition: location.position,
-                ring: location.ring,
-                chordRoot: chord.root,
-                numeral: chord.numeral,
-            });
-        }
-    }
-    
-    return highlights;
-}
-
-/**
- * Check if a specific wheel segment (position + ring) is diatonic to the current key
- */
-export function isSegmentDiatonic(
-    wheelPosition: number, 
-    ring: 'major' | 'minor' | 'diminished', 
-    selectedKey: string
-): { isDiatonic: boolean; numeral?: string } {
-    const highlights = getDiatonicHighlights(selectedKey);
-    const match = highlights.find(h => h.wheelPosition === wheelPosition && h.ring === ring);
-    return {
-        isDiatonic: !!match,
-        numeral: match?.numeral
-    };
-}
+// Legacy export for backwards compatibility
+export const WHEEL_POSITIONS = MAJOR_POSITIONS.map(p => ({
+    major: p.major,
+    minor: p.iii, // Use iii as the "primary" minor for this position
+    diminished: p.diminished
+}));
 
 export interface Chord {
     root: string;
@@ -154,7 +88,6 @@ const CHORD_SYMBOLS: Record<string, string> = {
 };
 
 export function normalizeNote(note: string): string {
-    // Convert flats to sharps for calculation
     if (note.includes('b')) {
         const flatMap: Record<string, string> = {
             'Db': 'C#', 'Eb': 'D#', 'Gb': 'F#', 'Ab': 'G#', 'Bb': 'A#', 'Cb': 'B', 'Fb': 'E'
@@ -174,14 +107,10 @@ export function getChordNotes(root: string, quality: string): string[] {
 }
 
 export function getMajorScale(root: string): string[] {
-    const pattern = [0, 2, 4, 5, 7, 9, 11]; // W-W-H-W-W-W-H
+    const pattern = [0, 2, 4, 5, 7, 9, 11];
     const normalizedRoot = normalizeNote(root);
     const rootIndex = NOTES.indexOf(normalizedRoot);
 
-    // This returns the notes in sharp format. 
-    // Ideally we should handle flat keys correctly (e.g. F major has Bb, not A#)
-    // For simplicity in this MVP, we might stick to sharps or do a simple mapping.
-    // Let's do a simple mapping for flat keys.
     const isFlatKey = ['F', 'Bb', 'Eb', 'Ab', 'Db', 'Gb', 'Cb'].includes(root);
 
     return pattern.map(interval => {
@@ -189,7 +118,6 @@ export function getMajorScale(root: string): string[] {
         if (isFlatKey && ENHARMONIC_MAP[note] && note.includes('#')) {
             return ENHARMONIC_MAP[note];
         }
-        // Special case for F major where Bb is needed
         if (root === 'F' && note === 'A#') return 'Bb';
         return note;
     });
@@ -218,13 +146,138 @@ export function getKeySignature(key: string): { sharps: number; flats: number } 
 
     if (sharpIndex >= 0) return { sharps: sharpIndex + 1, flats: 0 };
     if (flatIndex >= 0) return { sharps: 0, flats: flatIndex + 1 };
-    return { sharps: 0, flats: 0 }; // C major
+    return { sharps: 0, flats: 0 };
+}
+
+/**
+ * Check if a minor chord symbol is diatonic to a given key
+ * Returns the roman numeral if diatonic, undefined otherwise
+ */
+export function getMinorNumeralInKey(minorSymbol: string, selectedKey: string): string | undefined {
+    const diatonicChords = getDiatonicChords(selectedKey);
+    const minorRoot = minorSymbol.replace('m', '');
+    
+    for (const chord of diatonicChords) {
+        if (chord.quality === 'minor' && chord.root === minorRoot) {
+            return chord.numeral;
+        }
+        // Check enharmonic equivalent
+        const normalizedChordRoot = normalizeNote(chord.root);
+        const normalizedMinorRoot = normalizeNote(minorRoot);
+        if (chord.quality === 'minor' && normalizedChordRoot === normalizedMinorRoot) {
+            return chord.numeral;
+        }
+    }
+    return undefined;
+}
+
+/**
+ * Check if a major chord is diatonic to the selected key
+ */
+export function getMajorNumeralInKey(majorRoot: string, selectedKey: string): string | undefined {
+    const diatonicChords = getDiatonicChords(selectedKey);
+    
+    for (const chord of diatonicChords) {
+        if (chord.quality === 'major' && chord.root === majorRoot) {
+            return chord.numeral;
+        }
+        const normalizedChordRoot = normalizeNote(chord.root);
+        const normalizedMajorRoot = normalizeNote(majorRoot);
+        if (chord.quality === 'major' && normalizedChordRoot === normalizedMajorRoot) {
+            return chord.numeral;
+        }
+    }
+    return undefined;
+}
+
+/**
+ * Check if a diminished chord is diatonic to the selected key
+ */
+export function getDimNumeralInKey(dimSymbol: string, selectedKey: string): string | undefined {
+    const diatonicChords = getDiatonicChords(selectedKey);
+    const dimRoot = dimSymbol.replace('°', '');
+    
+    for (const chord of diatonicChords) {
+        if (chord.quality === 'diminished' && chord.root === dimRoot) {
+            return chord.numeral;
+        }
+        const normalizedChordRoot = normalizeNote(chord.root);
+        const normalizedDimRoot = normalizeNote(dimRoot);
+        if (chord.quality === 'diminished' && normalizedChordRoot === normalizedDimRoot) {
+            return chord.numeral;
+        }
+    }
+    return undefined;
+}
+
+// Legacy functions for backwards compatibility
+export interface DiatonicHighlight {
+    wheelPosition: number;
+    ring: 'major' | 'minor' | 'diminished';
+    chordRoot: string;
+    numeral: string;
+}
+
+export function getWheelPositionForKey(keyRoot: string): number {
+    return CIRCLE_OF_FIFTHS.indexOf(keyRoot);
+}
+
+export function findChordOnWheel(chordSymbol: string): { position: number; ring: 'major' | 'minor' | 'diminished' } | null {
+    for (let i = 0; i < WHEEL_POSITIONS.length; i++) {
+        const pos = WHEEL_POSITIONS[i];
+        if (pos.major === chordSymbol) return { position: i, ring: 'major' };
+        if (pos.minor === chordSymbol) return { position: i, ring: 'minor' };
+        if (pos.diminished === chordSymbol) return { position: i, ring: 'diminished' };
+    }
+    return null;
+}
+
+export function getDiatonicHighlights(key: string): DiatonicHighlight[] {
+    const diatonicChords = getDiatonicChords(key);
+    const highlights: DiatonicHighlight[] = [];
+    
+    for (const chord of diatonicChords) {
+        let searchSymbol: string;
+        if (chord.quality === 'major') {
+            searchSymbol = chord.root;
+        } else if (chord.quality === 'minor') {
+            searchSymbol = chord.root + 'm';
+        } else if (chord.quality === 'diminished') {
+            searchSymbol = chord.root + '°';
+        } else {
+            continue;
+        }
+        
+        const location = findChordOnWheel(searchSymbol);
+        if (location) {
+            highlights.push({
+                wheelPosition: location.position,
+                ring: location.ring,
+                chordRoot: chord.root,
+                numeral: chord.numeral,
+            });
+        }
+    }
+    
+    return highlights;
+}
+
+export function isSegmentDiatonic(
+    wheelPosition: number, 
+    ring: 'major' | 'minor' | 'diminished', 
+    selectedKey: string
+): { isDiatonic: boolean; numeral?: string } {
+    const highlights = getDiatonicHighlights(selectedKey);
+    const match = highlights.find(h => h.wheelPosition === wheelPosition && h.ring === ring);
+    return {
+        isDiatonic: !!match,
+        numeral: match?.numeral
+    };
 }
 
 /**
  * Colors for each key position on the wheel.
  * Matches the physical Hal Leonard Chord Wheel color scheme.
- * Rainbow progression: Yellow → Green → Cyan → Blue → Purple → Magenta → Red → Orange
  */
 export function getWheelColors() {
     return {

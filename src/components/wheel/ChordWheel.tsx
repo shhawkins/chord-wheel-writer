@@ -1,11 +1,11 @@
 import React, { useMemo } from 'react';
 import { useSongStore } from '../../store/useSongStore';
 import { 
-    WHEEL_POSITIONS, 
+    MAJOR_POSITIONS,
     getWheelColors, 
     getChordNotes,
     getKeySignature,
-    isSegmentDiatonic,
+    CIRCLE_OF_FIFTHS,
     type Chord 
 } from '../../utils/musicTheory';
 import { WheelSegment } from './WheelSegment';
@@ -16,8 +16,6 @@ import { playChord } from '../../utils/audioEngine';
 export const ChordWheel: React.FC = () => {
     const {
         selectedKey,
-        wheelRotation,
-        rotateWheel,
         setKey,
         addChordToSlot,
         selectedSectionId,
@@ -29,19 +27,19 @@ export const ChordWheel: React.FC = () => {
 
     const colors = getWheelColors();
 
-    // Dimensions - CORRECT ORDER: Major (inner) -> Minor (middle) -> Diminished (outer)
+    // SVG dimensions
     const size = 600;
     const cx = size / 2;
     const cy = size / 2;
     
-    // Ring radii from inside to outside
-    const centerRadius = 70;
-    const majorInnerRadius = centerRadius + 10;    // Major ring (innermost)
-    const majorOuterRadius = 165;
-    const minorInnerRadius = majorOuterRadius;      // Minor ring (middle)
-    const minorOuterRadius = 230;
-    const dimInnerRadius = minorOuterRadius;        // Diminished ring (outer)
-    const dimOuterRadius = 270;
+    // Ring radii
+    const centerRadius = 60;
+    const majorInnerRadius = centerRadius + 8;
+    const majorOuterRadius = 145;
+    const minorInnerRadius = majorOuterRadius;
+    const minorOuterRadius = 210;
+    const dimInnerRadius = minorOuterRadius;
+    const dimOuterRadius = 250;
 
     // Key signature info
     const keySig = useMemo(() => getKeySignature(selectedKey), [selectedKey]);
@@ -51,20 +49,20 @@ export const ChordWheel: React.FC = () => {
         return '';
     }, [keySig]);
 
+    // Calculate wheel rotation based on selected key
+    // The wheel rotates so the selected key appears at the TOP (under position I)
+    const keyIndex = CIRCLE_OF_FIFTHS.indexOf(selectedKey);
+    const calculatedRotation = -keyIndex * 30; // Negative because we rotate the wheel to bring the key to top
+
     const handleChordClick = (chord: Chord) => {
-        // Play sound
         playChord(chord.notes);
-        
-        // Set selected chord for details panel
         setSelectedChord(chord);
 
-        // 1. If slot selected, add to it
         if (selectedSectionId && selectedSlotId) {
             addChordToSlot(chord, selectedSectionId, selectedSlotId);
             return;
         }
 
-        // 2. If section selected, find first empty slot in it
         if (selectedSectionId) {
             const section = currentSong.sections.find(s => s.id === selectedSectionId);
             if (section) {
@@ -79,7 +77,6 @@ export const ChordWheel: React.FC = () => {
             }
         }
 
-        // 3. Find first empty slot in song
         for (const section of currentSong.sections) {
             for (const measure of section.measures) {
                 for (const beat of measure.beats) {
@@ -93,54 +90,107 @@ export const ChordWheel: React.FC = () => {
     };
 
     const handleRotate = (direction: 'cw' | 'ccw') => {
-        const step = 30;
-        const newRotation = direction === 'cw' ? wheelRotation + step : wheelRotation - step;
-        rotateWheel(newRotation);
-
-        // Update key based on rotation - clockwise goes UP in fifths
-        const keys = ['C', 'G', 'D', 'A', 'E', 'B', 'F#', 'Db', 'Ab', 'Eb', 'Bb', 'F'];
-        const currentIndex = keys.indexOf(selectedKey);
+        // Change key - wheel will auto-rotate to position
+        const currentIndex = CIRCLE_OF_FIFTHS.indexOf(selectedKey);
         const newIndex = direction === 'cw'
             ? (currentIndex + 1) % 12
             : (currentIndex - 1 + 12) % 12;
 
-        setKey(keys[newIndex]);
+        setKey(CIRCLE_OF_FIFTHS[newIndex]);
     };
 
-    // Create the triangular overlay path that highlights diatonic chords
-    // The triangle spans from the IV position through I to V
+    // Create the FIXED triangular overlay - this shows the diatonic positions
+    // The triangle encompasses: IV, I, V (inner), ii, iii, vi (middle), vii° (outer)
     const createTriangleOverlay = () => {
-        // The triangle needs to highlight positions covering:
-        // - IV (1 position counter-clockwise from I)
-        // - I (at top, 12 o'clock)  
-        // - V (1 position clockwise from I)
-        // And the ii, iii, vi, vii° positions within that span
+        // The triangle spans from IV position (-30° from center) through I (center) to V (+30°)
+        // But it's shaped to encompass all 7 diatonic chord positions
         
-        // The span is roughly -60° to +30° from top (covering ~3 main segments)
-        // But we need to encompass the full diatonic area
+        // Angular positions (0° = top/12 o'clock):
+        // I = 0° (center top)
+        // V = 30° (clockwise, right side)
+        // IV = -30° (counter-clockwise, left side)
+        // iii = centered on I (0°)
+        // ii = between IV and I (around -15°)
+        // vi = between I and V (around 15°)
+        // vii° = above iii (0°)
         
-        const triangleStartAngle = -75;  // Start left of IV
-        const triangleEndAngle = 45;     // End right of V
+        const leftAngle = -52;   // Left edge (past IV)
+        const rightAngle = 52;   // Right edge (past V)
         
-        // Outer edge of diminished ring
-        const outerStart = polarToCartesian(cx, cy, dimOuterRadius + 5, triangleStartAngle);
-        const outerEnd = polarToCartesian(cx, cy, dimOuterRadius + 5, triangleEndAngle);
-        
-        // Inner edge near center
-        const innerStart = polarToCartesian(cx, cy, majorInnerRadius - 5, triangleStartAngle);
-        const innerEnd = polarToCartesian(cx, cy, majorInnerRadius - 5, triangleEndAngle);
+        const outerLeft = polarToCartesian(cx, cy, dimOuterRadius + 8, leftAngle);
+        const outerRight = polarToCartesian(cx, cy, dimOuterRadius + 8, rightAngle);
+        const innerLeft = polarToCartesian(cx, cy, majorInnerRadius - 5, leftAngle);
+        const innerRight = polarToCartesian(cx, cy, majorInnerRadius - 5, rightAngle);
         
         return `
-            M ${outerStart.x} ${outerStart.y}
-            A ${dimOuterRadius + 5} ${dimOuterRadius + 5} 0 0 1 ${outerEnd.x} ${outerEnd.y}
-            L ${innerEnd.x} ${innerEnd.y}
-            A ${majorInnerRadius - 5} ${majorInnerRadius - 5} 0 0 0 ${innerStart.x} ${innerStart.y}
+            M ${outerLeft.x} ${outerLeft.y}
+            A ${dimOuterRadius + 8} ${dimOuterRadius + 8} 0 0 1 ${outerRight.x} ${outerRight.y}
+            L ${innerRight.x} ${innerRight.y}
+            A ${majorInnerRadius - 5} ${majorInnerRadius - 5} 0 0 0 ${innerLeft.x} ${innerLeft.y}
             Z
         `;
     };
 
+    // Check if a position is within the highlighted triangle (diatonic)
+    // After rotation, the chord at position keyIndex is at the top (I position)
+    // We need to check the RELATIVE position after rotation
+    const getRelativePosition = (posIndex: number): number => {
+        // Returns 0 if this position is at I, 1 if at V, 11 if at IV, etc.
+        return (posIndex - keyIndex + 12) % 12;
+    };
+
+    const isPositionDiatonic = (posIndex: number, type: 'major' | 'ii' | 'iii' | 'dim'): boolean => {
+        const relPos = getRelativePosition(posIndex);
+        
+        if (type === 'major') {
+            // I (relPos 0), IV (relPos 11), V (relPos 1)
+            return relPos === 0 || relPos === 1 || relPos === 11;
+        }
+        if (type === 'ii') {
+            // ii is at I position (relPos 0), left slot
+            return relPos === 0;
+        }
+        if (type === 'iii') {
+            // iii is at I position (relPos 0), right slot
+            return relPos === 0;
+        }
+        if (type === 'dim') {
+            // vii° is at I position (relPos 0)
+            return relPos === 0;
+        }
+        return false;
+    };
+
+    // Also need to highlight vi - which is the ii (left slot) of the V position
+    const isViPosition = (posIndex: number): boolean => {
+        const relPos = getRelativePosition(posIndex);
+        return relPos === 1; // V position's left slot = vi
+    };
+
+    // Get roman numeral for a diatonic position
+    const getRomanNumeral = (posIndex: number, type: 'major' | 'ii' | 'iii' | 'dim'): string => {
+        const relPos = getRelativePosition(posIndex);
+        
+        if (type === 'major') {
+            if (relPos === 0) return 'I';
+            if (relPos === 1) return 'V';
+            if (relPos === 11) return 'IV';
+        }
+        if (type === 'ii') {
+            if (relPos === 0) return 'ii';
+            if (relPos === 1) return 'vi'; // ii of V = vi of I
+        }
+        if (type === 'iii') {
+            if (relPos === 0) return 'iii';
+        }
+        if (type === 'dim') {
+            if (relPos === 0) return 'vii°';
+        }
+        return '';
+    };
+
     return (
-        <div className="relative flex flex-col items-center justify-center w-full h-full max-w-[580px] max-h-[580px] aspect-square p-2">
+        <div className="relative flex flex-col items-center justify-center w-full h-full max-w-[540px] max-h-[540px] aspect-square p-2">
             <svg
                 width="100%"
                 height="100%"
@@ -152,123 +202,160 @@ export const ChordWheel: React.FC = () => {
                         <feGaussianBlur stdDeviation="3" result="blur" />
                         <feComposite in="SourceGraphic" in2="blur" operator="over" />
                     </filter>
-                    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-                        <feDropShadow dx="0" dy="2" stdDeviation="3" floodOpacity="0.3" />
-                    </filter>
                 </defs>
 
-                {/* Rotatable Wheel Group */}
+                {/* ROTATING WHEEL - rotates based on selected key */}
                 <g
                     style={{
-                        transform: `rotate(${wheelRotation}deg)`,
+                        transform: `rotate(${calculatedRotation}deg)`,
                         transformOrigin: `${cx}px ${cy}px`,
-                        transition: 'transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)'
+                        transition: 'transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)'
                     }}
                 >
-                    {WHEEL_POSITIONS.map((position, i) => {
-                        const angleSize = 30;
-                        const startAngle = i * angleSize - 90 - (angleSize / 2);
-                        const endAngle = startAngle + angleSize;
+                    {MAJOR_POSITIONS.map((position, i) => {
+                        const majorAngleSize = 30;
+                        const majorStartAngle = i * majorAngleSize - 90 - (majorAngleSize / 2);
+                        const majorEndAngle = majorStartAngle + majorAngleSize;
                         
                         const baseColor = colors[position.major as keyof typeof colors] || colors.C;
                         
-                        // Extract the root from minor chord symbol (e.g., "Am" -> "A")
-                        const minorRoot = position.minor.replace('m', '');
-                        // Extract the root from diminished chord symbol (e.g., "B°" -> "B")
+                        // Extract roots
+                        const iiRoot = position.ii.replace('m', '');
+                        const iiiRoot = position.iii.replace('m', '');
                         const dimRoot = position.diminished.replace('°', '');
 
-                        // Check if each segment is diatonic to the current key
-                        const majorDiatonic = isSegmentDiatonic(i, 'major', selectedKey);
-                        const minorDiatonic = isSegmentDiatonic(i, 'minor', selectedKey);
-                        const dimDiatonic = isSegmentDiatonic(i, 'diminished', selectedKey);
+                        // Check if this position is in the diatonic area
+                        const majorIsDiatonic = isPositionDiatonic(i, 'major');
+                        // ii slot: diatonic if at I position (as ii) OR at V position (as vi)
+                        const iiIsDiatonic = isPositionDiatonic(i, 'ii') || isViPosition(i);
+                        const iiiIsDiatonic = isPositionDiatonic(i, 'iii');
+                        const dimIsDiatonic = isPositionDiatonic(i, 'dim');
 
-                        // Create chord objects with proper notes
+                        // Create chord objects
                         const majorChord: Chord = {
                             root: position.major,
                             quality: 'major',
-                            numeral: majorDiatonic.numeral || '',
+                            numeral: getRomanNumeral(i, 'major'),
                             notes: getChordNotes(position.major, 'major'),
                             symbol: position.major
                         };
 
-                        const minorChord: Chord = {
-                            root: minorRoot,
+                        const iiChord: Chord = {
+                            root: iiRoot,
                             quality: 'minor',
-                            numeral: minorDiatonic.numeral || '',
-                            notes: getChordNotes(minorRoot, 'minor'),
-                            symbol: position.minor
+                            numeral: getRomanNumeral(i, 'ii'),
+                            notes: getChordNotes(iiRoot, 'minor'),
+                            symbol: position.ii
+                        };
+
+                        const iiiChord: Chord = {
+                            root: iiiRoot,
+                            quality: 'minor',
+                            numeral: getRomanNumeral(i, 'iii'),
+                            notes: getChordNotes(iiiRoot, 'minor'),
+                            symbol: position.iii
                         };
 
                         const dimChord: Chord = {
                             root: dimRoot,
                             quality: 'diminished',
-                            numeral: dimDiatonic.numeral || 'vii°',
+                            numeral: getRomanNumeral(i, 'dim'),
                             notes: getChordNotes(dimRoot, 'diminished'),
                             symbol: position.diminished
                         };
 
+                        // Minor ring: 24 segments (15° each)
+                        const minorAngleSize = 15;
+                        const iiStartAngle = majorStartAngle;
+                        const iiEndAngle = iiStartAngle + minorAngleSize;
+                        const iiiStartAngle = iiEndAngle;
+                        const iiiEndAngle = iiiStartAngle + minorAngleSize;
+
+                        // Diminished: narrow notch (15° width) centered on the position
+                        const dimAngleSize = 15;
+                        const dimStartAngle = majorStartAngle + (majorAngleSize - dimAngleSize) / 2;
+                        const dimEndAngle = dimStartAngle + dimAngleSize;
+
                         // Determine labels
-                        const majorLabel = showRomanNumerals && majorDiatonic.isDiatonic
-                            ? majorDiatonic.numeral!
+                        const majorLabel = showRomanNumerals && majorIsDiatonic 
+                            ? getRomanNumeral(i, 'major') 
                             : position.major;
-                        
-                        const minorLabel = showRomanNumerals && minorDiatonic.isDiatonic
-                            ? minorDiatonic.numeral!
-                            : position.minor;
-                        
-                        const dimLabel = showRomanNumerals && dimDiatonic.isDiatonic
-                            ? dimDiatonic.numeral!
+                        const iiLabel = showRomanNumerals && iiIsDiatonic 
+                            ? getRomanNumeral(i, 'ii') 
+                            : position.ii;
+                        const iiiLabel = showRomanNumerals && iiiIsDiatonic 
+                            ? getRomanNumeral(i, 'iii') 
+                            : position.iii;
+                        const dimLabel = showRomanNumerals && dimIsDiatonic 
+                            ? getRomanNumeral(i, 'dim') 
                             : position.diminished;
 
                         return (
                             <g key={position.major}>
-                                {/* INNER RING: Major chords (closest to center) */}
+                                {/* INNER RING: Major chords (12 segments, 30° each) */}
                                 <WheelSegment
                                     cx={cx}
                                     cy={cy}
                                     innerRadius={majorInnerRadius}
                                     outerRadius={majorOuterRadius}
-                                    startAngle={startAngle}
-                                    endAngle={endAngle}
+                                    startAngle={majorStartAngle}
+                                    endAngle={majorEndAngle}
                                     color={baseColor}
                                     label={majorLabel}
                                     chord={majorChord}
                                     isSelected={false}
-                                    isDiatonic={majorDiatonic.isDiatonic}
+                                    isDiatonic={majorIsDiatonic}
                                     onClick={handleChordClick}
                                     ringType="major"
                                 />
 
-                                {/* MIDDLE RING: Minor chords */}
+                                {/* MIDDLE RING: ii chord (left 15° slot) */}
                                 <WheelSegment
                                     cx={cx}
                                     cy={cy}
                                     innerRadius={minorInnerRadius}
                                     outerRadius={minorOuterRadius}
-                                    startAngle={startAngle}
-                                    endAngle={endAngle}
+                                    startAngle={iiStartAngle}
+                                    endAngle={iiEndAngle}
                                     color={baseColor}
-                                    label={minorLabel}
-                                    chord={minorChord}
+                                    label={iiLabel}
+                                    chord={iiChord}
                                     isSelected={false}
-                                    isDiatonic={minorDiatonic.isDiatonic}
+                                    isDiatonic={iiIsDiatonic}
                                     onClick={handleChordClick}
                                     ringType="minor"
                                 />
 
-                                {/* OUTER RING: Diminished chords (notches on outside) */}
+                                {/* MIDDLE RING: iii chord (right 15° slot) */}
+                                <WheelSegment
+                                    cx={cx}
+                                    cy={cy}
+                                    innerRadius={minorInnerRadius}
+                                    outerRadius={minorOuterRadius}
+                                    startAngle={iiiStartAngle}
+                                    endAngle={iiiEndAngle}
+                                    color={baseColor}
+                                    label={iiiLabel}
+                                    chord={iiiChord}
+                                    isSelected={false}
+                                    isDiatonic={iiiIsDiatonic}
+                                    onClick={handleChordClick}
+                                    ringType="minor"
+                                />
+
+                                {/* OUTER RING: Diminished chord (narrow 15° notch, centered) */}
                                 <WheelSegment
                                     cx={cx}
                                     cy={cy}
                                     innerRadius={dimInnerRadius}
                                     outerRadius={dimOuterRadius}
-                                    startAngle={startAngle}
-                                    endAngle={endAngle}
+                                    startAngle={dimStartAngle}
+                                    endAngle={dimEndAngle}
                                     color={baseColor}
                                     label={dimLabel}
                                     chord={dimChord}
                                     isSelected={false}
-                                    isDiatonic={dimDiatonic.isDiatonic}
+                                    isDiatonic={dimIsDiatonic}
                                     onClick={handleChordClick}
                                     ringType="diminished"
                                 />
@@ -277,155 +364,59 @@ export const ChordWheel: React.FC = () => {
                     })}
                 </g>
 
-                {/* Static Triangular Overlay - Shows diatonic area */}
+                {/* FIXED Triangular Overlay - always stays at top, shows diatonic area */}
                 <g pointerEvents="none">
                     <path
                         d={createTriangleOverlay()}
                         fill="none"
-                        stroke="rgba(255,255,255,0.85)"
+                        stroke="rgba(255,255,255,0.9)"
                         strokeWidth="2.5"
                         strokeLinejoin="round"
                         filter="url(#glow)"
                     />
                 </g>
 
-                {/* Ring Labels - Chord extension hints (like the physical wheel) */}
-                <g pointerEvents="none" opacity="0.6">
-                    {/* Inner ring label - Major extensions */}
-                    <text
-                        x={cx + 135}
-                        y={cy - 45}
-                        fill="#333"
-                        fontSize="7"
-                        fontWeight="500"
-                        transform={`rotate(15, ${cx + 135}, ${cy - 45})`}
-                    >
-                        maj7, maj9
-                    </text>
-                    
-                    {/* Middle ring label - Minor extensions */}
-                    <text
-                        x={cx + 185}
-                        y={cy - 65}
-                        fill="#333"
-                        fontSize="7"
-                        fontWeight="500"
-                        transform={`rotate(15, ${cx + 185}, ${cy - 65})`}
-                    >
-                        m7, m9, m11
-                    </text>
-                    
-                    {/* Outer ring label - Diminished */}
-                    <text
-                        x={cx + 235}
-                        y={cy - 85}
-                        fill="#555"
-                        fontSize="6"
-                        fontWeight="500"
-                        transform={`rotate(15, ${cx + 235}, ${cy - 85})`}
-                    >
-                        m7♭5
-                    </text>
-                </g>
-
-                {/* Center Circle with Key Info */}
-                <g filter="url(#shadow)">
-                    <circle 
-                        cx={cx} 
-                        cy={cy} 
-                        r={centerRadius} 
-                        fill="linear-gradient(180deg, #1e1e28 0%, #16161d 100%)"
-                        stroke="#3a3a4a" 
-                        strokeWidth="2" 
-                    />
-                    <circle 
-                        cx={cx} 
-                        cy={cy} 
-                        r={centerRadius} 
-                        fill="#1a1a24"
-                    />
-                </g>
+                {/* Center Circle */}
+                <circle cx={cx} cy={cy} r={centerRadius} fill="#1a1a24" stroke="#3a3a4a" strokeWidth="2" />
                 
                 {/* KEY Label */}
-                <text 
-                    x={cx} 
-                    y={cy - 28} 
-                    textAnchor="middle" 
-                    fill="#6366f1" 
-                    fontSize="10"
-                    fontWeight="bold"
-                    letterSpacing="2"
-                >
+                <text x={cx} y={cy - 22} textAnchor="middle" fill="#6366f1" fontSize="9" fontWeight="bold" letterSpacing="2">
                     KEY
                 </text>
                 
                 {/* Key Name */}
-                <text 
-                    x={cx} 
-                    y={cy + 5} 
-                    textAnchor="middle" 
-                    fill="white" 
-                    fontSize="32"
-                    fontWeight="bold"
-                    fontFamily="system-ui, -apple-system, sans-serif"
-                >
+                <text x={cx} y={cy + 6} textAnchor="middle" fill="white" fontSize="26" fontWeight="bold">
                     {selectedKey}
                 </text>
                 
                 {/* Key Signature */}
-                <text 
-                    x={cx} 
-                    y={cy + 28} 
-                    textAnchor="middle" 
-                    fill="#9898a6" 
-                    fontSize="14"
-                >
+                <text x={cx} y={cy + 24} textAnchor="middle" fill="#9898a6" fontSize="11">
                     {keySigDisplay || 'No ♯/♭'}
                 </text>
 
                 {/* Rotation Controls */}
                 <g 
-                    transform={`translate(${cx - 30}, ${cy + 48})`} 
+                    transform={`translate(${cx - 22}, ${cy + 38})`} 
                     onClick={() => handleRotate('ccw')} 
                     className="cursor-pointer"
                     style={{ pointerEvents: 'all' }}
                 >
-                    <circle r="12" fill="#282833" className="hover:fill-[#3a3a4a] transition-colors" />
-                    <g transform="translate(-6, -6)">
-                        <RotateCcw size={12} color="#9898a6" />
+                    <circle r="9" fill="#282833" className="hover:fill-[#3a3a4a] transition-colors" />
+                    <g transform="translate(-4.5, -4.5)">
+                        <RotateCcw size={9} color="#9898a6" />
                     </g>
                 </g>
                 <g 
-                    transform={`translate(${cx + 30}, ${cy + 48})`} 
+                    transform={`translate(${cx + 22}, ${cy + 38})`} 
                     onClick={() => handleRotate('cw')} 
                     className="cursor-pointer"
                     style={{ pointerEvents: 'all' }}
                 >
-                    <circle r="12" fill="#282833" className="hover:fill-[#3a3a4a] transition-colors" />
-                    <g transform="translate(-6, -6)">
-                        <RotateCw size={12} color="#9898a6" />
+                    <circle r="9" fill="#282833" className="hover:fill-[#3a3a4a] transition-colors" />
+                    <g transform="translate(-4.5, -4.5)">
+                        <RotateCw size={9} color="#9898a6" />
                     </g>
                 </g>
-
-                {/* Direction Indicators */}
-                <text 
-                    x={cx - 55} 
-                    y={cy + 52} 
-                    textAnchor="middle" 
-                    fill="#6b6b7b" 
-                    fontSize="8"
-                >
-                    IV
-                </text>
-                <text 
-                    x={cx + 55} 
-                    y={cy + 52} 
-                    textAnchor="middle" 
-                    fill="#6b6b7b" 
-                    fontSize="8"
-                >
-                    V
-                </text>
             </svg>
         </div>
     );
