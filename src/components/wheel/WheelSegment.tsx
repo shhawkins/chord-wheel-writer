@@ -19,8 +19,8 @@ interface WheelSegmentProps {
     onClick: (chord: Chord) => void;
     ringType?: 'major' | 'minor' | 'diminished';
     wheelRotation?: number;
-    romanNumeral?: string;  // Roman numeral to display for diatonic chords
-    voicingSuggestion?: string;  // Voicing suggestions like "maj7, maj9"
+    romanNumeral?: string;
+    voicingSuggestion?: string;
 }
 
 export const WheelSegment: React.FC<WheelSegmentProps> = ({
@@ -43,25 +43,38 @@ export const WheelSegment: React.FC<WheelSegmentProps> = ({
     voicingSuggestion
 }) => {
     const path = describeSector(cx, cy, innerRadius, outerRadius, startAngle, endAngle);
-
-    // Calculate center of the segment for text placement
     const midAngle = (startAngle + endAngle) / 2;
-    const textRadius = (innerRadius + outerRadius) / 2;
-    
-    const textPos = polarToCartesian(cx, cy, textRadius, midAngle);
-    const textX = textPos.x;
-    const textY = textPos.y;
 
-    // Calculate text rotation accounting for wheel rotation
-    const absoluteAngle = midAngle + wheelRotation;
-    const normalizedAbsoluteAngle = ((absoluteAngle % 360) + 360) % 360;
+    // Calculate final screen angle after wheel rotation
+    const screenAngle = midAngle + wheelRotation;
+    const normalizedScreenAngle = ((screenAngle % 360) + 360) % 360;
     
-    let textRotation = -wheelRotation;
-    if (normalizedAbsoluteAngle > 90 && normalizedAbsoluteAngle < 270) {
-        textRotation += 180;
-    }
+    // Determine if text should be flipped (when segment is in bottom half of screen)
+    const shouldFlip = normalizedScreenAngle > 90 && normalizedScreenAngle < 270;
+    
+    // Text rotation: counter-rotate by wheel rotation, then flip if needed
+    const baseTextRotation = -wheelRotation;
+    const textRotation = shouldFlip ? baseTextRotation + 180 : baseTextRotation;
 
-    // Adjust color based on ring type and diatonic/secondary status
+    // Calculate positions for different text elements
+    // Voicing: near outer edge (top of ring when right-side up, bottom when flipped)
+    // Chord name: center of ring
+    // Numeral: near inner edge (bottom of ring when right-side up, top when flipped)
+    
+    const ringHeight = outerRadius - innerRadius;
+    const voicingRadius = shouldFlip 
+        ? innerRadius + ringHeight * 0.15  // Near inner edge when flipped
+        : outerRadius - ringHeight * 0.15; // Near outer edge normally
+    const chordRadius = innerRadius + ringHeight * 0.5;  // Center
+    const numeralRadius = shouldFlip
+        ? outerRadius - ringHeight * 0.18  // Near outer edge when flipped  
+        : innerRadius + ringHeight * 0.18; // Near inner edge normally
+
+    const voicingPos = polarToCartesian(cx, cy, voicingRadius, midAngle);
+    const chordPos = polarToCartesian(cx, cy, chordRadius, midAngle);
+    const numeralPos = polarToCartesian(cx, cy, numeralRadius, midAngle);
+
+    // Adjust color based on ring type and diatonic status
     const getSegmentStyle = () => {
         let baseOpacity = 0.35;
         let baseSaturation = 0.5;
@@ -98,22 +111,16 @@ export const WheelSegment: React.FC<WheelSegmentProps> = ({
 
     const segmentStyle = getSegmentStyle();
     
-    // Font sizes based on ring type
-    const getMainFontSize = () => {
+    // Font sizes
+    const getChordFontSize = () => {
         if (ringType === 'diminished') return '11px';
-        if (ringType === 'minor') return '12px';
+        if (ringType === 'minor') return '11px';
         return '14px';
     };
 
     const isHighlighted = isDiatonic || isSecondary;
     const textColor = isHighlighted ? '#000000' : 'rgba(255,255,255,0.7)';
     const textWeight = isDiatonic ? 'bold' : (isSecondary ? '600' : 'normal');
-
-    // Position for numeral (below main label)
-    const numeralY = textY + (ringType === 'diminished' ? 10 : ringType === 'minor' ? 11 : 12);
-    
-    // Position for voicing suggestion (above main label, smaller)
-    const voicingY = textY - (ringType === 'diminished' ? 10 : ringType === 'minor' ? 11 : 14);
 
     return (
         <g
@@ -139,51 +146,83 @@ export const WheelSegment: React.FC<WheelSegmentProps> = ({
                 )}
             />
             
-            {/* Voicing suggestion (top, small) - only for diatonic chords */}
-            {isDiatonic && voicingSuggestion && ringType !== 'diminished' && (
+            {/* Voicing suggestion - at top/outer edge of ring */}
+            {isDiatonic && voicingSuggestion && ringType === 'major' && (
                 <text
-                    x={textX}
-                    y={voicingY}
+                    x={voicingPos.x}
+                    y={voicingPos.y}
                     textAnchor="middle"
                     dominantBaseline="middle"
-                    fill="rgba(0,0,0,0.5)"
-                    fontSize={ringType === 'minor' ? '6px' : '7px'}
+                    fill="rgba(0,0,0,0.55)"
+                    fontSize="6px"
                     className="pointer-events-none select-none"
-                    transform={`rotate(${textRotation}, ${textX}, ${voicingY})`}
+                    transform={`rotate(${textRotation}, ${voicingPos.x}, ${voicingPos.y})`}
                 >
                     {voicingSuggestion}
                 </text>
             )}
             
-            {/* Main chord label */}
+            {/* Minor voicing - smaller */}
+            {isDiatonic && voicingSuggestion && ringType === 'minor' && (
+                <text
+                    x={voicingPos.x}
+                    y={voicingPos.y}
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                    fill="rgba(0,0,0,0.5)"
+                    fontSize="5px"
+                    className="pointer-events-none select-none"
+                    transform={`rotate(${textRotation}, ${voicingPos.x}, ${voicingPos.y})`}
+                >
+                    {voicingSuggestion}
+                </text>
+            )}
+            
+            {/* Main chord label - center of ring */}
             <text
-                x={textX}
-                y={textY}
+                x={chordPos.x}
+                y={chordPos.y}
                 textAnchor="middle"
                 dominantBaseline="middle"
                 fill={textColor}
                 fontWeight={textWeight}
-                fontSize={getMainFontSize()}
+                fontSize={getChordFontSize()}
                 className="pointer-events-none select-none"
-                transform={`rotate(${textRotation}, ${textX}, ${textY})`}
+                transform={`rotate(${textRotation}, ${chordPos.x}, ${chordPos.y})`}
             >
                 {label}
             </text>
             
-            {/* Roman numeral (bottom, smaller) - only for diatonic chords */}
+            {/* Roman numeral - at bottom/inner edge of ring */}
             {isDiatonic && romanNumeral && (
                 <text
-                    x={textX}
-                    y={numeralY}
+                    x={numeralPos.x}
+                    y={numeralPos.y}
                     textAnchor="middle"
                     dominantBaseline="middle"
                     fill="rgba(0,0,0,0.6)"
-                    fontSize={ringType === 'diminished' ? '7px' : ringType === 'minor' ? '8px' : '9px'}
+                    fontSize={ringType === 'diminished' ? '7px' : ringType === 'minor' ? '7px' : '9px'}
                     fontStyle="italic"
                     className="pointer-events-none select-none"
-                    transform={`rotate(${textRotation}, ${textX}, ${numeralY})`}
+                    transform={`rotate(${textRotation}, ${numeralPos.x}, ${numeralPos.y})`}
                 >
                     {romanNumeral}
+                </text>
+            )}
+            
+            {/* Diminished voicing - special handling due to narrow segment */}
+            {isDiatonic && voicingSuggestion && ringType === 'diminished' && (
+                <text
+                    x={voicingPos.x}
+                    y={voicingPos.y}
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                    fill="rgba(0,0,0,0.5)"
+                    fontSize="5px"
+                    className="pointer-events-none select-none"
+                    transform={`rotate(${textRotation}, ${voicingPos.x}, ${voicingPos.y})`}
+                >
+                    {voicingSuggestion}
                 </text>
             )}
         </g>
