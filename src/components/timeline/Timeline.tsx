@@ -91,7 +91,7 @@ export const Timeline: React.FC = () => {
         <div className="w-full h-full flex flex-col">
             {/* Content area - no header, just the sections */}
             <div
-                className="flex-1 overflow-x-auto px-3 py-2"
+                className="flex-1 overflow-x-auto px-3 py-1.5 overflow-y-hidden"
                 ref={(el) => {
                     if (el) {
                         el.addEventListener('wheel', (e) => {
@@ -113,18 +113,18 @@ export const Timeline: React.FC = () => {
                         items={currentSong.sections.map(s => s.id)}
                         strategy={horizontalListSortingStrategy}
                     >
-                        <div className="flex gap-3 min-w-max pb-2">
+                        <div className="flex gap-3 min-w-max h-full items-stretch">
                             {currentSong.sections.map((section) => (
                                 <Section key={section.id} section={section} />
                             ))}
 
-                            {/* Add Section Placeholder/Button at end */}
+                            {/* Add Section Button - matches section height */}
                             <button
                                 onClick={() => addSection('chorus')}
-                                className="w-16 rounded-lg border-2 border-dashed border-border-medium hover:border-accent-primary hover:bg-bg-elevated transition-all flex flex-col items-center justify-center text-text-muted hover:text-accent-primary gap-1 min-h-[80px]"
+                                className="w-12 rounded-lg border-2 border-dashed border-border-medium hover:border-accent-primary hover:bg-bg-elevated transition-all flex flex-col items-center justify-center text-text-muted hover:text-accent-primary gap-1 self-stretch"
                             >
-                                <Plus size={16} />
-                                <span className="text-[8px] font-medium uppercase tracking-wider">Add</span>
+                                <Plus size={14} />
+                                <span className="text-[7px] font-medium uppercase tracking-wider">Add</span>
                             </button>
                         </div>
                     </SortableContext>

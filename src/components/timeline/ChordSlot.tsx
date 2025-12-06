@@ -67,14 +67,14 @@ export const ChordSlot: React.FC<ChordSlotProps> = ({ slot, sectionId }) => {
             ref={setDroppableRef}
             onClick={handleClick}
             className={clsx(
-                "w-14 h-14 rounded border-2 flex items-center justify-center transition-all relative",
+                "w-12 h-12 rounded border-2 flex items-center justify-center transition-all relative flex-shrink-0",
                 isOver ? "border-accent-primary bg-accent-glow scale-105" : "border-border-medium bg-bg-elevated",
                 isSelected ? "ring-2 ring-accent-primary ring-offset-1 ring-offset-bg-primary" : "",
                 !slot.chord && "hover:border-text-muted cursor-pointer"
             )}
         >
             {!slot.chord && (
-                <span className="text-text-muted text-lg font-light select-none">+</span>
+                <span className="text-text-muted text-base font-light select-none">+</span>
             )}
 
             {slot.chord && (
@@ -87,11 +87,11 @@ export const ChordSlot: React.FC<ChordSlotProps> = ({ slot, sectionId }) => {
                         backgroundColor: chordColor,
                     }}
                     className={clsx(
-                        "w-full h-full rounded flex items-center justify-center font-bold shadow cursor-grab active:cursor-grabbing select-none",
+                        "w-full h-full rounded flex items-center justify-center font-bold shadow cursor-grab active:cursor-grabbing select-none overflow-hidden",
                         isDragging ? "opacity-50" : "opacity-100"
                     )}
                 >
-                    <span className="text-sm text-black/80">{slot.chord.symbol}</span>
+                    <span className="text-[10px] text-black/80 truncate px-0.5">{slot.chord.symbol}</span>
                 </div>
             )}
         </div>

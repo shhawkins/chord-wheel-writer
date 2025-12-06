@@ -242,6 +242,23 @@ export const ChordWheel: React.FC = () => {
         return '';
     };
 
+    // Button zoom controls
+    const handleZoomIn = useCallback(() => {
+        setZoomScale(prev => {
+            const newScale = Math.min(2.5, prev + 0.3);
+            setZoomOriginY(newScale > 1.3 ? 38 : 50);
+            return newScale;
+        });
+    }, []);
+    
+    const handleZoomOut = useCallback(() => {
+        setZoomScale(prev => {
+            const newScale = Math.max(1, prev - 0.3);
+            setZoomOriginY(newScale > 1.3 ? 38 : 50);
+            return newScale;
+        });
+    }, []);
+
     return (
         <div 
             ref={containerRef}
@@ -251,12 +268,25 @@ export const ChordWheel: React.FC = () => {
             onTouchEnd={handleTouchEnd}
             onWheel={handleWheel}
         >
-            {/* Zoom hint - only show when not zoomed */}
-            {zoomScale === 1 && (
-                <div className="absolute top-0 right-0 z-10 px-2 py-1 bg-bg-elevated/60 backdrop-blur-sm rounded-bl-lg text-[8px] text-text-muted pointer-events-none">
-                    Pinch to zoom
-                </div>
-            )}
+            {/* Zoom controls - positioned outside the wheel area */}
+            <div className="absolute top-0 right-0 z-10 flex gap-0.5">
+                <button
+                    onClick={handleZoomOut}
+                    disabled={zoomScale <= 1}
+                    className="w-6 h-6 flex items-center justify-center bg-bg-elevated/70 hover:bg-bg-tertiary disabled:opacity-30 disabled:cursor-not-allowed rounded text-text-muted hover:text-text-primary text-sm font-medium transition-colors"
+                    title="Zoom out"
+                >
+                    −
+                </button>
+                <button
+                    onClick={handleZoomIn}
+                    disabled={zoomScale >= 2.5}
+                    className="w-6 h-6 flex items-center justify-center bg-bg-elevated/70 hover:bg-bg-tertiary disabled:opacity-30 disabled:cursor-not-allowed rounded text-text-muted hover:text-text-primary text-sm font-medium transition-colors"
+                    title="Zoom in"
+                >
+                    +
+                </button>
+            </div>
 
             <div 
                 className="w-full h-full transition-transform duration-150 ease-out overflow-hidden"
