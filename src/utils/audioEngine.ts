@@ -24,29 +24,60 @@ export const initAudio = async () => {
     console.log("Audio initialized");
 };
 
+// NOTES array for octave calculation
+const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+
+/**
+ * Play a chord with proper voicing
+ * Notes are spread across octaves to sound musical
+ */
 export const playChord = async (notes: string[], duration: string = "1n") => {
     if (Tone.context.state !== 'running') {
         await Tone.start();
-        console.log("Tone context started");
     }
 
     if (!sampler) {
-        console.log("Initializing sampler...");
         await initAudio();
     }
 
-    // Add octave to notes if missing (default to 4)
-    const fullNotes = notes.map(n => {
-        // If note has number, keep it. If not, add 4.
-        // But wait, our notes are just "C", "F#".
-        // We need to calculate octaves to make them sound good together.
-        // Simple heuristic: Root is 3 or 4.
-        // Let's just append '4' for now, handling the rollover (B3 -> C4) is tricky without index.
-        // Let's assume octave 4 for all for simplicity, or spread them.
-        return n.match(/\d/) ? n : `${n}4`;
+    if (!notes || notes.length === 0) return;
+
+    // Build voiced notes with proper octaves
+    // Root in octave 3, rest spread intelligently
+    const rootNote = notes[0];
+    const rootIndex = NOTES.indexOf(rootNote.replace(/\d/, ''));
+    
+    const voicedNotes = notes.map((note, i) => {
+        // If note already has octave, use it
+        if (note.match(/\d/)) return note;
+        
+        const noteName = note;
+        const noteIndex = NOTES.indexOf(noteName);
+        
+        if (i === 0) {
+            // Root note in octave 3
+            return `${noteName}3`;
+        }
+        
+        // Other notes: if they're "below" the root in the chromatic scale, put them an octave up
+        // This creates proper voice leading
+        let octave = 3;
+        if (noteIndex < rootIndex || (noteIndex - rootIndex > 6)) {
+            octave = 4;
+        }
+        
+        // For extended chords (9, 11, 13), put those even higher
+        if (i >= 4) {
+            octave = 4;
+        }
+        if (i >= 5) {
+            octave = 5;
+        }
+        
+        return `${noteName}${octave}`;
     });
 
-    sampler?.triggerAttackRelease(fullNotes, duration);
+    sampler?.triggerAttackRelease(voicedNotes, duration);
 };
 
 export const stopAudio = () => {

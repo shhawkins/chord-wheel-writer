@@ -93,23 +93,79 @@ export function normalizeNote(note: string): string {
 
 // Map short variation names to full quality names
 const QUALITY_ALIASES: Record<string, string> = {
+    // Dominant family
     '7': 'dominant7',
+    '9': 'dominant9',
+    '11': 'dominant11',
+    '13': 'dominant13',
+    
+    // Major family
     'maj7': 'major7',
-    'm7': 'minor7',
-    'dim': 'diminished',
-    'dim7': 'halfDiminished7',
-    'm7b5': 'halfDiminished7',
+    'maj9': 'major9',
+    'maj11': 'major11',
+    'maj13': 'major13',
+    '6': 'major6',
     'add9': 'add9',
-    '9': 'ninth',
-    '11': 'eleventh',
+    
+    // Minor family
+    'm7': 'minor7',
+    'm9': 'minor9',
+    'm11': 'minor11',
+    'm13': 'minor13',
+    'm6': 'minor6',
+    
+    // Diminished family
+    'dim': 'diminished',
+    'dim7': 'diminished7',
+    'm7b5': 'halfDiminished7',
+    'm7♭5': 'halfDiminished7',
+    'ø7': 'halfDiminished7',
+    
+    // Sus chords
+    'sus2': 'sus2',
+    'sus4': 'sus4',
+    '7sus4': 'dominant7sus4',
 };
 
-// Extended chord formulas including add9, 9, 11
+// All chord formulas (intervals from root in semitones)
 const EXTENDED_CHORD_FORMULAS: Record<string, number[]> = {
-    ...CHORD_FORMULAS,
-    add9: [0, 4, 7, 2],  // Root, 3rd, 5th, 9th (9th = 2 semitones, shown in higher octave)
-    ninth: [0, 4, 7, 10, 2],  // Dominant 9 = 7 + 9
-    eleventh: [0, 4, 7, 10, 2, 5],  // Dominant 11 = 7 + 9 + 11
+    // Basic triads
+    major: [0, 4, 7],
+    minor: [0, 3, 7],
+    diminished: [0, 3, 6],
+    augmented: [0, 4, 8],
+    
+    // Sus chords
+    sus2: [0, 2, 7],
+    sus4: [0, 5, 7],
+    
+    // 6th chords
+    major6: [0, 4, 7, 9],          // R 3 5 6
+    minor6: [0, 3, 7, 9],          // R b3 5 6
+    
+    // 7th chords
+    major7: [0, 4, 7, 11],         // R 3 5 7
+    minor7: [0, 3, 7, 10],         // R b3 5 b7
+    dominant7: [0, 4, 7, 10],      // R 3 5 b7
+    diminished7: [0, 3, 6, 9],     // R b3 b5 bb7
+    halfDiminished7: [0, 3, 6, 10],// R b3 b5 b7
+    dominant7sus4: [0, 5, 7, 10],  // R 4 5 b7
+    
+    // 9th chords
+    add9: [0, 4, 7, 14],           // R 3 5 9 (9 = 14 semitones above root)
+    major9: [0, 4, 7, 11, 14],     // R 3 5 7 9
+    minor9: [0, 3, 7, 10, 14],     // R b3 5 b7 9
+    dominant9: [0, 4, 7, 10, 14],  // R 3 5 b7 9
+    
+    // 11th chords
+    major11: [0, 4, 7, 11, 14, 17],    // R 3 5 7 9 11
+    minor11: [0, 3, 7, 10, 14, 17],    // R b3 5 b7 9 11
+    dominant11: [0, 4, 7, 10, 14, 17], // R 3 5 b7 9 11
+    
+    // 13th chords
+    major13: [0, 4, 7, 11, 14, 21],    // R 3 5 7 9 13
+    minor13: [0, 3, 7, 10, 14, 21],    // R b3 5 b7 9 13
+    dominant13: [0, 4, 7, 10, 14, 21], // R 3 5 b7 9 13
 };
 
 export function getChordNotes(root: string, quality: string): string[] {
@@ -119,9 +175,40 @@ export function getChordNotes(root: string, quality: string): string[] {
 
     // Resolve quality alias
     const resolvedQuality = QUALITY_ALIASES[quality] || quality;
-    const formula = EXTENDED_CHORD_FORMULAS[resolvedQuality] || CHORD_FORMULAS[resolvedQuality] || CHORD_FORMULAS.major;
+    const formula = EXTENDED_CHORD_FORMULAS[resolvedQuality];
+    
+    if (!formula) {
+        // Unknown quality - return empty or basic major
+        console.warn(`Unknown chord quality: ${quality} (resolved to ${resolvedQuality})`);
+        return NOTES.slice(rootIndex, rootIndex + 1).concat(
+            [NOTES[(rootIndex + 4) % 12], NOTES[(rootIndex + 7) % 12]]
+        );
+    }
     
     return formula.map(interval => NOTES[(rootIndex + interval) % 12]);
+}
+
+/**
+ * Get chord notes with octave numbers for audio playback
+ * Extended intervals (9, 11, 13) are placed in higher octaves
+ */
+export function getChordNotesWithOctaves(root: string, quality: string, baseOctave: number = 3): string[] {
+    const normalizedRoot = normalizeNote(root);
+    const rootIndex = NOTES.indexOf(normalizedRoot);
+    if (rootIndex === -1) return [];
+
+    const resolvedQuality = QUALITY_ALIASES[quality] || quality;
+    const formula = EXTENDED_CHORD_FORMULAS[resolvedQuality];
+    
+    if (!formula) {
+        return [`${normalizedRoot}${baseOctave}`, `${NOTES[(rootIndex + 4) % 12]}${baseOctave}`, `${NOTES[(rootIndex + 7) % 12]}${baseOctave}`];
+    }
+    
+    return formula.map(interval => {
+        const noteIndex = (rootIndex + interval) % 12;
+        const octaveOffset = Math.floor(interval / 12);
+        return `${NOTES[noteIndex]}${baseOctave + octaveOffset}`;
+    });
 }
 
 export function getMajorScale(root: string): string[] {

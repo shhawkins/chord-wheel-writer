@@ -9,6 +9,7 @@ export const ChordDetails: React.FC = () => {
     const { selectedChord, selectedKey, chordPanelVisible, toggleChordPanel } = useSongStore();
     const colors = getWheelColors();
     const [previewVariant, setPreviewVariant] = useState<string | null>(null);
+    const [previewNotes, setPreviewNotes] = useState<string[]>([]);
     const [panelWidth, setPanelWidth] = useState(280);
     const [isResizing, setIsResizing] = useState(false);
 
@@ -39,38 +40,89 @@ export const ChordDetails: React.FC = () => {
         };
     }, [isResizing]);
 
+    // Clear preview when selected chord changes
+    useEffect(() => {
+        setPreviewVariant(null);
+        setPreviewNotes([]);
+    }, [selectedChord?.root, selectedChord?.quality]);
+
     const chordColor = selectedChord 
         ? (colors[selectedChord.root as keyof typeof colors] || '#6366f1')
         : '#6366f1';
     
-    // Get notes for preview
-    const displayNotes = selectedChord 
-        ? (previewVariant ? getChordNotes(selectedChord.root, previewVariant) : selectedChord.notes)
-        : [];
+    // Notes to display: preview notes (if any) > selected chord notes
+    const displayNotes = previewNotes.length > 0 
+        ? previewNotes 
+        : (selectedChord?.notes || []);
 
-    // Play chord variation - keep notes visible for 2 seconds after click
+    // Play chord variation and show notes until another is clicked
     const handleVariationClick = (variant: string) => {
         if (!selectedChord) return;
+        
         const variantNotes = getChordNotes(selectedChord.root, variant);
+        console.log(`Playing ${selectedChord.root}${variant}:`, variantNotes);
+        
         playChord(variantNotes);
         setPreviewVariant(variant);
-        // Keep the variant notes visible for 2 seconds (matches chord sustain)
-        setTimeout(() => setPreviewVariant(null), 2000);
+        setPreviewNotes(variantNotes);
+        // Notes stay visible until another variation is clicked or chord changes
     };
     
-    // Notes to display - either preview variant or the selected chord's notes
-    // These stay visible until changed
+    // Clear preview (back to base chord)
+    const clearPreview = () => {
+        setPreviewVariant(null);
+        setPreviewNotes([]);
+    };
 
     // Get interval name based on chord quality and position
     const getIntervalName = (index: number, quality?: string): string => {
-        if (quality === 'diminished') {
-            const dimNames = ['R', '♭3', '♭5'];
-            return dimNames[index] || `${index + 1}`;
+        const variant = previewVariant || '';
+        
+        // Determine chord family
+        const isMinor = quality === 'minor' || variant.includes('m') && !variant.includes('maj');
+        const isDiminished = quality === 'diminished' || variant === 'dim' || variant.includes('dim7');
+        const isHalfDim = variant.includes('m7b5') || variant.includes('m7♭5') || variant.includes('ø');
+        const isSus2 = variant === 'sus2';
+        const isSus4 = variant === 'sus4' || variant === '7sus4';
+        const is6th = variant === '6' || variant === 'm6';
+        const isDom = variant === '7' || variant === '9' || variant === '11' || variant === '13';
+        const isMaj7 = variant.includes('maj');
+        
+        // Build interval names based on chord type
+        if (isDiminished) {
+            const names = ['R', '♭3', '♭5', '𝄫7'];
+            return names[index] || `${index + 1}`;
         }
-        if (quality === 'minor' || previewVariant?.includes('m')) {
-            const minorNames = ['R', '♭3', '5', '♭7', '9', '11', '13'];
-            return minorNames[index] || `${index + 1}`;
+        if (isHalfDim) {
+            const names = ['R', '♭3', '♭5', '♭7'];
+            return names[index] || `${index + 1}`;
         }
+        if (isSus2) {
+            const names = ['R', '2', '5'];
+            return names[index] || `${index + 1}`;
+        }
+        if (isSus4) {
+            const names = ['R', '4', '5', '♭7'];
+            return names[index] || `${index + 1}`;
+        }
+        if (is6th) {
+            const names = isMinor ? ['R', '♭3', '5', '6'] : ['R', '3', '5', '6'];
+            return names[index] || `${index + 1}`;
+        }
+        if (isMinor) {
+            const names = ['R', '♭3', '5', '♭7', '9', '11', '13'];
+            return names[index] || `${index + 1}`;
+        }
+        if (isDom) {
+            const names = ['R', '3', '5', '♭7', '9', '11', '13'];
+            return names[index] || `${index + 1}`;
+        }
+        if (isMaj7) {
+            const names = ['R', '3', '5', '7', '9', '11', '13'];
+            return names[index] || `${index + 1}`;
+        }
+        
+        // Default major
         const names = ['R', '3', '5', '7', '9', '11', '13'];
         return names[index] || `${index + 1}`;
     };
@@ -232,9 +284,19 @@ export const ChordDetails: React.FC = () => {
 
                         {/* Piano */}
                         <div className="p-3 border-b border-border-subtle">
-                            <h3 className="text-[9px] font-bold text-text-muted uppercase tracking-wider mb-2">
-                                Voicing {previewVariant && <span className="text-accent-primary">({previewVariant})</span>}
-                            </h3>
+                            <div className="flex items-center justify-between mb-2">
+                                <h3 className="text-[9px] font-bold text-text-muted uppercase tracking-wider">
+                                    Voicing {previewVariant && <span className="text-accent-primary">({previewVariant})</span>}
+                                </h3>
+                                {previewVariant && (
+                                    <button
+                                        onClick={clearPreview}
+                                        className="text-[8px] text-text-muted hover:text-text-primary transition-colors"
+                                    >
+                                        ← back to {selectedChord.symbol}
+                                    </button>
+                                )}
+                            </div>
                             <PianoKeyboard
                                 highlightedNotes={displayNotes}
                                 rootNote={selectedChord.root}
