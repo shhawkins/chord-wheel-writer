@@ -40,6 +40,7 @@ interface SongState {
     setIsPlaying: (isPlaying: boolean) => void;
 
     // Song Actions
+    setTitle: (title: string) => void;
     addSection: (type: Section['type']) => void;
     updateSection: (id: string, updates: Partial<Section>) => void;
     removeSection: (id: string) => void;
@@ -120,6 +121,10 @@ export const useSongStore = create<SongState>()(
             setVolume: (volume) => set({ volume }),
             setInstrument: (instrument) => set({ instrument }),
             setIsPlaying: (isPlaying) => set({ isPlaying }),
+
+            setTitle: (title) => set((state) => ({
+                currentSong: { ...state.currentSong, title }
+            })),
 
             addSection: (type) => set((state) => {
                 const newSection: Section = {

@@ -1,15 +1,15 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { ChordWheel } from './components/wheel/ChordWheel';
 import { Timeline } from './components/timeline/Timeline';
 import { ChordDetails } from './components/panel/ChordDetails';
 import { PlaybackControls } from './components/playback/PlaybackControls';
 import { useSongStore } from './store/useSongStore';
-import { Download, Save, Music, GripHorizontal, ChevronDown, ChevronUp, Plus, Minus } from 'lucide-react';
+import { Download, Save, Music, GripHorizontal, ChevronDown, ChevronUp, Plus, Minus, Clock } from 'lucide-react';
 import * as Tone from 'tone';
 import jsPDF from 'jspdf';
 
 function App() {
-  const { currentSong, selectedKey, timelineVisible, toggleTimeline } = useSongStore();
+  const { currentSong, selectedKey, timelineVisible, toggleTimeline, selectedSectionId, selectedSlotId, clearSlot, setTitle } = useSongStore();
   
   // Resizable panel state - timeline height in pixels
   const [timelineHeight, setTimelineHeight] = useState(180);
@@ -36,6 +36,29 @@ function App() {
     setWheelZoomOrigin(newScale > 1.3 ? 38 : 50);
   }, [wheelZoom]);
 
+  // State for editing title
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [titleInput, setTitleInput] = useState(currentSong.title);
+
+  // Calculate song duration (Task 33)
+  const songDuration = useMemo(() => {
+    const totalBeats = currentSong.sections.reduce((total, section) => {
+      const sectionBeats = section.measures.reduce((mTotal, measure) => {
+        return mTotal + measure.beats.reduce((bTotal, beat) => bTotal + beat.duration, 0);
+      }, 0);
+      return total + sectionBeats;
+    }, 0);
+    
+    // Convert beats to seconds using BPM
+    const beatsPerSecond = currentSong.tempo / 60;
+    const totalSeconds = totalBeats / beatsPerSecond;
+    
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = Math.floor(totalSeconds % 60);
+    
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  }, [currentSong.sections, currentSong.tempo]);
+
   useEffect(() => {
     const startAudio = async () => {
       await Tone.start();
@@ -44,6 +67,43 @@ function App() {
     document.addEventListener('click', startAudio, { once: true });
     return () => document.removeEventListener('click', startAudio);
   }, []);
+
+  // Keyboard shortcut for delete (Task 22)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedSectionId && selectedSlotId) {
+        // Don't delete if user is editing an input
+        if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') {
+          return;
+        }
+        e.preventDefault();
+        clearSlot(selectedSectionId, selectedSlotId);
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedSectionId, selectedSlotId, clearSlot]);
+
+  // Handle title edit (Task 23)
+  const handleTitleDoubleClick = () => {
+    setTitleInput(currentSong.title);
+    setIsEditingTitle(true);
+  };
+
+  const handleTitleSave = () => {
+    setTitle(titleInput.trim() || 'Untitled Song');
+    setIsEditingTitle(false);
+  };
+
+  const handleTitleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleTitleSave();
+    } else if (e.key === 'Escape') {
+      setTitleInput(currentSong.title);
+      setIsEditingTitle(false);
+    }
+  };
 
   // Handle resize drag
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -114,14 +174,48 @@ function App() {
     <div className="h-screen w-screen flex flex-col bg-bg-primary text-text-primary overflow-hidden">
       {/* Header */}
       <header className="h-12 border-b border-border-subtle flex items-center justify-between px-3 bg-bg-secondary shrink-0 z-10">
-        <div className="flex items-center gap-2 shrink-0">
-          <div className="w-6 h-6 rounded bg-gradient-to-br from-accent-primary to-purple-600 flex items-center justify-center shadow-lg">
-            <Music size={12} className="text-white" />
+        <div className="flex items-center gap-3 shrink-0">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded bg-gradient-to-br from-accent-primary to-purple-600 flex items-center justify-center shadow-lg">
+              <Music size={12} className="text-white" />
+            </div>
+            <span className="font-bold text-sm tracking-tight hidden sm:block text-text-muted">Songwriter's Wheel</span>
           </div>
-          <h1 className="font-bold text-sm tracking-tight hidden sm:block">Songwriter's Wheel</h1>
+          
+          {/* Editable Song Title (Task 23) */}
+          <div className="hidden md:block">
+            {isEditingTitle ? (
+              <input
+                type="text"
+                value={titleInput}
+                onChange={(e) => setTitleInput(e.target.value)}
+                onBlur={handleTitleSave}
+                onKeyDown={handleTitleKeyDown}
+                autoFocus
+                className="bg-bg-tertiary border border-border-medium rounded px-2 py-0.5 text-sm font-medium text-text-primary focus:outline-none focus:border-accent-primary w-48"
+                maxLength={50}
+              />
+            ) : (
+              <span 
+                onDoubleClick={handleTitleDoubleClick}
+                className="text-sm font-medium text-text-primary cursor-pointer hover:text-accent-primary transition-colors px-2 py-0.5"
+                title="Double-click to edit title"
+              >
+                {currentSong.title}
+              </span>
+            )}
+          </div>
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
+          {/* Song Duration (Task 33) */}
+          <div className="flex items-center gap-1 text-[10px] text-text-muted px-1.5">
+            <Clock size={10} />
+            <span>{songDuration}</span>
+          </div>
+
+          <div className="h-4 w-px bg-border-medium" />
+
           <div className="flex items-center gap-1.5 bg-bg-tertiary px-2 py-1 rounded-full border border-border-subtle">
             <span className="text-[9px] text-text-muted uppercase font-bold">Key</span>
             <span className="font-bold text-accent-primary text-sm">{selectedKey}</span>
