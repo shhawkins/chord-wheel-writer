@@ -9,7 +9,7 @@ import {
     type Chord
 } from '../../utils/musicTheory';
 import { WheelSegment } from './WheelSegment';
-import { RotateCw, RotateCcw, Compass } from 'lucide-react';
+import { RotateCw, RotateCcw, Lock, Unlock } from 'lucide-react';
 import { playChord } from '../../utils/audioEngine';
 
 interface ChordWheelProps {
@@ -17,12 +17,6 @@ interface ChordWheelProps {
     zoomOriginY: number;
     onZoomChange: (scale: number, originY: number) => void;
 }
-
-type WheelChord = Chord & {
-    segmentId: string;
-    ringType: 'major' | 'minor' | 'diminished';
-    positionIndex: number;
-};
 
 export const ChordWheel: React.FC<ChordWheelProps> = ({ zoomScale, zoomOriginY, onZoomChange }) => {
     const {
@@ -36,10 +30,7 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({ zoomScale, zoomOriginY, 
         selectedSectionId,
         selectedSlotId,
         currentSong,
-        setSelectedChord,
-        selectedChord,
-        selectNextSlotAfter,
-        setSelectedSlot
+        setSelectedChord
     } = useSongStore();
 
     // In fixed mode, wheel doesn't rotate - calculate highlight offset instead
@@ -47,13 +38,6 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({ zoomScale, zoomOriginY, 
     const keyIndex = CIRCLE_OF_FIFTHS.indexOf(selectedKey);
 
     const lastTouchDistance = useRef<number | null>(null);
-    const [selectedSegmentId, setSelectedSegmentId] = useState<string | null>(null);
-
-    // Keep wheel highlight in sync with store selection when it carries segment info
-    useEffect(() => {
-        const segId = (selectedChord as WheelChord | null)?.segmentId ?? null;
-        setSelectedSegmentId(segId);
-    }, [selectedChord]);
     const containerRef = useRef<HTMLDivElement>(null);
     const svgRef = useRef<SVGSVGElement>(null);
 
@@ -232,7 +216,6 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({ zoomScale, zoomOriginY, 
     const lastClickTime = useRef<number>(0);
 
     const handleChordClick = (chord: Chord) => {
-        const wheelChord = chord as WheelChord;
         const now = Date.now();
         if (now - lastClickTime.current < 300) {
             return;
@@ -240,58 +223,37 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({ zoomScale, zoomOriginY, 
         lastClickTime.current = now;
 
         playChord(chord.notes);
-        setSelectedSegmentId(wheelChord.segmentId ?? null);
         setSelectedChord(chord);
     };
 
     const handleChordDoubleClick = (chord: Chord) => {
-        const wheelChord = chord as WheelChord;
-        let targetSectionId: string | null = null;
-        let targetSlotId: string | null = null;
-
         if (selectedSectionId && selectedSlotId) {
-            targetSectionId = selectedSectionId;
-            targetSlotId = selectedSlotId;
-        } else if (selectedSectionId) {
-            const section = currentSong.sections.find((s) => s.id === selectedSectionId);
+            addChordToSlot(chord, selectedSectionId, selectedSlotId);
+            return;
+        }
+
+        if (selectedSectionId) {
+            const section = currentSong.sections.find(s => s.id === selectedSectionId);
             if (section) {
                 for (const measure of section.measures) {
                     for (const beat of measure.beats) {
                         if (!beat.chord) {
-                            targetSectionId = section.id;
-                            targetSlotId = beat.id;
-                            break;
+                            addChordToSlot(chord, section.id, beat.id);
+                            return;
                         }
                     }
-                    if (targetSlotId) break;
                 }
             }
         }
 
-        if (!targetSectionId || !targetSlotId) {
-            for (const section of currentSong.sections) {
-                for (const measure of section.measures) {
-                    for (const beat of measure.beats) {
-                        if (!beat.chord) {
-                            targetSectionId = section.id;
-                            targetSlotId = beat.id;
-                            break;
-                        }
+        for (const section of currentSong.sections) {
+            for (const measure of section.measures) {
+                for (const beat of measure.beats) {
+                    if (!beat.chord) {
+                        addChordToSlot(chord, section.id, beat.id);
+                        return;
                     }
-                    if (targetSlotId) break;
                 }
-                if (targetSlotId) break;
-            }
-        }
-
-        if (targetSectionId && targetSlotId) {
-                    addChordToSlot(chord, targetSectionId, targetSlotId);
-            const advanced = selectNextSlotAfter(targetSectionId, targetSlotId);
-
-            if (!advanced) {
-                setSelectedSlot(targetSectionId, targetSlotId);
-                        setSelectedSegmentId(wheelChord.segmentId ?? null);
-                        setSelectedChord(chord);
             }
         }
     };
@@ -393,21 +355,10 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({ zoomScale, zoomOriginY, 
 
     // Zoom controls are handled via touch/scroll events
 
-    const isChordSelected = (ch: WheelChord) => {
-        if (selectedSegmentId) {
-            return selectedSegmentId === ch.segmentId;
-        }
-        const storeSegmentId = (selectedChord as WheelChord | undefined)?.segmentId;
-        if (storeSegmentId) {
-            return storeSegmentId === ch.segmentId;
-        }
-        return false;
-    };
-
     return (
         <div
             ref={containerRef}
-            className="relative flex flex-col items-center justify-center w-[600px] h-[600px] aspect-square p-2 touch-none"
+            className="relative flex flex-col items-center justify-center w-full h-full max-w-[540px] max-h-[540px] aspect-square p-2 touch-none"
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
@@ -433,9 +384,6 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({ zoomScale, zoomOriginY, 
                         <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
                             <feGaussianBlur stdDeviation="3" result="blur" />
                             <feComposite in="SourceGraphic" in2="blur" operator="over" />
-                        </filter>
-                        <filter id="segment-glow" x="-50%" y="-50%" width="200%" height="200%">
-                            <feDropShadow dx="0" dy="0" stdDeviation="4" floodColor="#ffffff" floodOpacity="0.9" />
                         </filter>
                     </defs>
 
@@ -470,48 +418,36 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({ zoomScale, zoomOriginY, 
                             const dimIsDiatonic = isPositionDiatonic(i, 'dim');
 
                             // Create chord objects
-                            const majorChord: WheelChord = {
+                            const majorChord: Chord = {
                                 root: position.major,
                                 quality: 'major',
                                 numeral: getRomanNumeral(i, 'major'),
                                 notes: getChordNotes(position.major, 'major'),
-                                symbol: position.major,
-                                segmentId: `major-${i}`,
-                                ringType: 'major',
-                                positionIndex: i
+                                symbol: position.major
                             };
 
-                            const iiChord: WheelChord = {
+                            const iiChord: Chord = {
                                 root: iiRoot,
                                 quality: 'minor',
                                 numeral: getRomanNumeral(i, 'ii'),
                                 notes: getChordNotes(iiRoot, 'minor'),
-                                symbol: position.ii,
-                                segmentId: `ii-${i}`,
-                                ringType: 'minor',
-                                positionIndex: i
+                                symbol: position.ii
                             };
 
-                            const iiiChord: WheelChord = {
+                            const iiiChord: Chord = {
                                 root: iiiRoot,
                                 quality: 'minor',
                                 numeral: getRomanNumeral(i, 'iii'),
                                 notes: getChordNotes(iiiRoot, 'minor'),
-                                symbol: position.iii,
-                                segmentId: `iii-${i}`,
-                                ringType: 'minor',
-                                positionIndex: i
+                                symbol: position.iii
                             };
 
-                            const dimChord: WheelChord = {
+                            const dimChord: Chord = {
                                 root: dimRoot,
                                 quality: 'diminished',
                                 numeral: getRomanNumeral(i, 'dim'),
                                 notes: getChordNotes(dimRoot, 'diminished'),
-                                symbol: position.diminished,
-                                segmentId: `dim-${i}`,
-                                ringType: 'diminished',
-                                positionIndex: i
+                                symbol: position.diminished
                             };
 
                             // Minor ring: 24 segments (15° each)
@@ -547,7 +483,7 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({ zoomScale, zoomOriginY, 
                                         color={baseColor}
                                         label={majorLabel}
                                         chord={majorChord}
-                                        isSelected={isChordSelected(majorChord)}
+                                        isSelected={false}
                                         isDiatonic={majorIsDiatonic}
                                         isSecondary={majorIsSecondary}
                                         onClick={handleChordClick}
@@ -570,7 +506,7 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({ zoomScale, zoomOriginY, 
                                         color={baseColor}
                                         label={iiLabel}
                                         chord={iiChord}
-                                        isSelected={isChordSelected(iiChord)}
+                                        isSelected={false}
                                         isDiatonic={iiIsDiatonic}
                                         onClick={handleChordClick}
                                         onDoubleClick={handleChordDoubleClick}
@@ -592,7 +528,7 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({ zoomScale, zoomOriginY, 
                                         color={baseColor}
                                         label={iiiLabel}
                                         chord={iiiChord}
-                                        isSelected={isChordSelected(iiiChord)}
+                                        isSelected={false}
                                         isDiatonic={iiiIsDiatonic}
                                         onClick={handleChordClick}
                                         onDoubleClick={handleChordDoubleClick}
@@ -614,7 +550,7 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({ zoomScale, zoomOriginY, 
                                         color={baseColor}
                                         label={dimLabel}
                                         chord={dimChord}
-                                        isSelected={isChordSelected(dimChord)}
+                                        isSelected={false}
                                         isDiatonic={dimIsDiatonic}
                                         onClick={handleChordClick}
                                         onDoubleClick={handleChordDoubleClick}
@@ -679,15 +615,13 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({ zoomScale, zoomOriginY, 
                         style={{ pointerEvents: 'all' }}
                     >
                         <rect x="-18" y="-6" width="36" height="12" rx="6" fill={wheelMode === 'fixed' ? '#6366f1' : '#282833'} className="hover:brightness-110 transition-all" />
-                        {wheelMode === 'fixed' ? (
-                            <g transform="translate(-4, -4)">
-                                <Compass size={8} color="white" />
-                            </g>
-                        ) : (
-                            <g transform="translate(-4, -4) rotate(-35 4 4)">
-                                <Compass size={8} color="#ef4444" />
-                            </g>
-                        )}
+                        <g transform="translate(-4, -4)">
+                            {wheelMode === 'fixed' ? (
+                                <Lock size={8} color="white" />
+                            ) : (
+                                <Unlock size={8} color="#9898a6" />
+                            )}
+                        </g>
                     </g>
                 </svg>
             </div>

@@ -520,9 +520,9 @@ function App() {
                       <span className="uppercase font-bold tracking-wider text-[9px]">Scale</span>
                       <input
                         type="range"
-                      min={0.01}
+                        min={0.1}
                         max={1.6}
-                      step={0.01}
+                        step={0.05}
                         value={timelineScale}
                         onChange={(e) => setTimelineScale(parseFloat(e.target.value))}
                         className="w-32"
