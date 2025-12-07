@@ -214,13 +214,20 @@ const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
  * Notes are spread across octaves to sound musical
  */
 export const playChord = async (notes: string[], duration: string = "1n") => {
+    console.log('playChord called with notes:', notes);
+    
     if (Tone.context.state !== 'running') {
+        console.log('Starting Tone context...');
         await Tone.start();
     }
 
     await initAudio();
+    console.log('Audio initialized, current instrument:', currentInstrument);
 
-    if (!notes || notes.length === 0) return;
+    if (!notes || notes.length === 0) {
+        console.log('No notes to play');
+        return;
+    }
 
     // Build voiced notes with proper octaves
     // Root in octave 3, rest spread intelligently
@@ -258,14 +265,21 @@ export const playChord = async (notes: string[], duration: string = "1n") => {
     });
 
     let inst = instruments[currentInstrument];
+    console.log(`Trying to play with instrument: ${currentInstrument}, available:`, inst !== null);
+    
     if (!inst) {
         console.warn(`Instrument "${currentInstrument}" not ready, falling back to piano`);
         inst = instruments.piano;
     }
-    if (!inst) return;
+    if (!inst) {
+        console.error('No instrument available to play!');
+        return;
+    }
 
     try {
+        console.log('Playing voiced notes:', voicedNotes);
         inst.triggerAttackRelease(voicedNotes, duration);
+        console.log('Chord played successfully');
     } catch (err) {
         console.error(`Failed to play on "${currentInstrument}"`, err);
     }

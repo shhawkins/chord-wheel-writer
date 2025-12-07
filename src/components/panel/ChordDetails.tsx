@@ -1,10 +1,9 @@
-import React from 'react';
 import { useSongStore } from '../../store/useSongStore';
 import { PianoKeyboard } from './PianoKeyboard';
 import { getWheelColors, getChordNotes, getIntervalFromKey } from '../../utils/musicTheory';
-import { PanelRightClose, PanelRight, GripVertical, HelpCircle } from 'lucide-react';
+import { PanelRightClose, PanelRight, GripVertical, HelpCircle, ChevronUp, ChevronDown } from 'lucide-react';
 import { playChord } from '../../utils/audioEngine';
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { HelpModal } from '../HelpModal';
 
 interface ChordDetailsProps {
@@ -12,16 +11,40 @@ interface ChordDetailsProps {
 }
 
 export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' }) => {
-    const { selectedChord, selectedKey, chordPanelVisible, toggleChordPanel, selectedSectionId, selectedSlotId, addChordToSlot, setSelectedChord } = useSongStore();
-    const isDrawer = variant === 'drawer';
+    const {
+        selectedChord,
+        selectedKey,
+        chordPanelVisible,
+        toggleChordPanel,
+        selectedSectionId,
+        selectedSlotId,
+        addChordToSlot,
+        setSelectedChord,
+        selectNextSlotAfter,
+        setSelectedSlot
+    } = useSongStore();
     const colors = getWheelColors();
     const [previewVariant, setPreviewVariant] = useState<string | null>(null);
     const [previewNotes, setPreviewNotes] = useState<string[]>([]);
     const [panelWidth, setPanelWidth] = useState(280);
     const [isResizing, setIsResizing] = useState(false);
     const [showHelp, setShowHelp] = useState(false);
+    const lastVariationClickTime = useRef<number>(0);
+    const isDrawer = variant === 'drawer';
     const [persistedChord, setPersistedChord] = useState(selectedChord);
     const chord = selectedChord ?? persistedChord;
+    const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+    
+    // Collapsible sections state (for mobile) - most collapsed by default to save space
+    const [showVariations, setShowVariations] = useState(false); // Collapsed by default
+    const [showSuggested, setShowSuggested] = useState(false); // Also collapsed by default
+    const [showTheory, setShowTheory] = useState(false); // Collapsed by default
+
+    useEffect(() => {
+        const updateMobile = () => setIsMobile(window.innerWidth < 768);
+        window.addEventListener('resize', updateMobile);
+        return () => window.removeEventListener('resize', updateMobile);
+    }, []);
     const voicingTooltips: Record<string, string> = {
         'maj': 'Bright, stable major triad — home base sound.',
         '7': 'Dominant 7: bluesy tension that wants to resolve.',
@@ -62,50 +85,6 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
         '9',
         '11',
     ];
-
-    // Handle resize drag
-    const handleMouseDown = useCallback((e: React.MouseEvent) => {
-        if (isDrawer) return;
-        e.preventDefault();
-        setIsResizing(true);
-    }, [isDrawer]);
-
-    useEffect(() => {
-        if (!isResizing) return;
-
-        const handleMouseMove = (e: MouseEvent) => {
-            const newWidth = window.innerWidth - e.clientX;
-            setPanelWidth(Math.max(200, Math.min(400, newWidth)));
-        };
-
-        const handleMouseUp = () => {
-            setIsResizing(false);
-        };
-
-        document.addEventListener('mousemove', handleMouseMove);
-        document.addEventListener('mouseup', handleMouseUp);
-
-        return () => {
-            document.removeEventListener('mousemove', handleMouseMove);
-            document.removeEventListener('mouseup', handleMouseUp);
-        };
-    }, [isResizing]);
-
-    useEffect(() => {
-        if (selectedChord) {
-            setPersistedChord(selectedChord);
-        }
-    }, [selectedChord]);
-
-    // Clear preview when chord changes
-    useEffect(() => {
-        setPreviewVariant(null);
-        setPreviewNotes([]);
-    }, [chord?.root, chord?.quality]);
-
-    const chordColor = chord
-        ? (colors[chord.root as keyof typeof colors] || '#6366f1')
-        : '#6366f1';
 
     const getAbsoluteDegree = (note: string): string => {
         if (!chord?.root) return '-';
@@ -158,6 +137,50 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
         return degreeMap[interval] ?? '-';
     };
 
+    // Handle resize drag (sidebar only)
+    const handleMouseDown = useCallback((e: React.MouseEvent) => {
+        if (isDrawer) return;
+        e.preventDefault();
+        setIsResizing(true);
+    }, [isDrawer]);
+
+    useEffect(() => {
+        if (!isResizing || isDrawer) return;
+
+        const handleMouseMove = (e: MouseEvent) => {
+            const newWidth = window.innerWidth - e.clientX;
+            setPanelWidth(Math.max(200, Math.min(400, newWidth)));
+        };
+
+        const handleMouseUp = () => {
+            setIsResizing(false);
+        };
+
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+
+        return () => {
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+        };
+    }, [isResizing, isDrawer]);
+
+    useEffect(() => {
+        if (selectedChord) {
+            setPersistedChord(selectedChord);
+        }
+    }, [selectedChord]);
+
+    // Clear preview when chord changes
+    useEffect(() => {
+        setPreviewVariant(null);
+        setPreviewNotes([]);
+    }, [chord?.root, chord?.quality]);
+
+    const chordColor = chord
+        ? (colors[chord.root as keyof typeof colors] || '#6366f1')
+        : '#6366f1';
+
     // Notes to display: preview notes (if any) > selected chord notes
     const displayNotes = previewNotes.length > 0
         ? previewNotes
@@ -165,6 +188,13 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
 
     // Play chord variation and show notes until another is clicked
     const handleVariationClick = (variant: string) => {
+        const now = Date.now();
+        if (now - lastVariationClickTime.current < 300) {
+            // Ignore second click of a rapid double-click to prevent double playback
+            return;
+        }
+        lastVariationClickTime.current = now;
+
         if (!chord) return;
 
         const variantNotes = getChordNotes(chord.root, variant);
@@ -174,31 +204,28 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
         setPreviewVariant(variant);
         setPreviewNotes(variantNotes);
 
-        // If a timeline slot is selected, update the chord in that slot
-        if (selectedSectionId && selectedSlotId) {
-            // Construct the new chord object
-            // We need to map quality back to the internal quality type if possible, or just pass it as is 
-            // since getChordNotes handles the mapping. 
-            // Ideally we should use a proper type for quality.
-            // For now, we rely on the fact that our Chord type has 'quality' as a union, 
-            // but we might need to be careful with 'variant' being just a string. 
-            // Let's assume 'variant' maps to one of the extended qualities in most cases.
+        // Single click: preview only (no timeline add)
+    };
 
-            // We'll update the selected chord in the store to reflect the change immediately
-            const newChord = {
-                ...chord,
-                quality: variant as any, // Cast to any because our variant string might be 'sus2' etc which are valid qualities
-                symbol: `${chord.root}${variant === 'major' ? '' : variant}`, // basic symbol construction
-                notes: variantNotes
-            };
+    const handleVariationDoubleClick = (variant: string) => {
+        // Reset the single-click timer so the next interaction isn't blocked
+        lastVariationClickTime.current = 0;
 
-            // Fix symbol if it looks weird (like Cmajor) - actually variant usually comes from the button text like 'maj7'
-            // We can improve symbol generation logic or import CHORD_SYMBOLS reversed or similar.
-            // For 'maj7', symbol is Root + 'maj7'. For '7', Root + '7'.
-            // The button labels match common symbol suffixes.
-            newChord.symbol = `${chord.root}${variant}`;
+        if (!chord || !selectedSectionId || !selectedSlotId) return;
 
-            addChordToSlot(newChord, selectedSectionId, selectedSlotId);
+        const variantNotes = getChordNotes(chord.root, variant);
+        const newChord = {
+            ...chord,
+            quality: variant as any,
+            symbol: `${chord.root}${variant}`,
+            notes: variantNotes
+        };
+
+        addChordToSlot(newChord, selectedSectionId, selectedSlotId);
+        const advanced = selectNextSlotAfter(selectedSectionId, selectedSlotId);
+
+        if (!advanced) {
+            setSelectedSlot(selectedSectionId, selectedSlotId);
             setSelectedChord(newChord);
         }
     };
@@ -283,11 +310,27 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
             },
         };
 
-        return suggestions[numeral || ''] || { extensions: [], description: 'Try different extensions to find your sound' };
+        return suggestions[numeral || ''] || {
+            extensions: [],
+            description: `This chord doesn't fit in the key of ${selectedKey}, but it may add color and interest to your progression.`
+        };
     };
 
-    // Collapsed state - just show a button
+    // Collapsed state - show appropriate reopen control
     if (!chordPanelVisible) {
+        if (isDrawer) {
+            return (
+                <button
+                    onClick={toggleChordPanel}
+                    className={`w-full ${isMobile ? 'h-16 min-h-[64px]' : 'h-11'} flex items-center justify-center gap-2 bg-bg-secondary border-2 border-border-subtle rounded-2xl ${isMobile ? 'text-base' : 'text-[11px]'} font-bold text-text-primary shadow-lg hover:border-accent-primary transition-all touch-feedback active:scale-[0.97]`}
+                    title="Show chord details"
+                >
+                    <ChevronUp size={isMobile ? 20 : 14} />
+                    <span>Open Chord Details</span>
+                </button>
+            );
+        }
+
         return (
             <button
                 onClick={toggleChordPanel}
@@ -301,64 +344,83 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
 
     return (
         <div
-            className="h-full flex bg-bg-secondary border-l border-border-subtle shrink-0"
-            style={{ width: panelWidth, minWidth: panelWidth }}
+            className={isDrawer
+                ? `${isMobile ? 'relative w-full' : 'fixed inset-x-3 bottom-[88px]'} ${isMobile ? 'max-h-[60vh]' : 'max-h-[70vh]'} bg-bg-secondary border-2 border-border-subtle ${isMobile ? 'rounded-2xl' : 'rounded-2xl'} shadow-2xl overflow-hidden ${isMobile ? '' : 'z-40'} flex`
+                : "h-full flex bg-bg-secondary border-l border-border-subtle shrink-0"
+            }
+            style={!isDrawer ? { width: panelWidth, minWidth: panelWidth } : undefined}
         >
-            {/* Resize handle */}
-            <div
-                className={`w-2 flex items-center justify-center cursor-ew-resize hover:bg-bg-tertiary transition-colors ${isResizing ? 'bg-accent-primary/20' : ''}`}
-                onMouseDown={handleMouseDown}
-            >
-                <GripVertical size={12} className="text-text-muted" />
-            </div>
+            {/* Resize handle (sidebar only) */}
+            {!isDrawer && (
+                <div
+                    className={`w-2 flex items-center justify-center cursor-ew-resize hover:bg-bg-tertiary transition-colors ${isResizing ? 'bg-accent-primary/20' : ''} relative z-[60]`}
+                    onMouseDown={handleMouseDown}
+                >
+                    <GripVertical size={12} className="text-text-muted" />
+                </div>
+            )}
 
             {/* Panel content */}
             <div className="flex-1 flex flex-col overflow-hidden min-w-0 relative">
-                {/* Header with single hide button */}
-                <div className="p-3 border-b border-border-subtle flex justify-between items-center shrink-0">
-                    <span className="text-[10px] text-text-muted uppercase tracking-wider font-bold">
-                        {chord ? chord.symbol : 'Chord Details'}
-                        {chord?.numeral && (
-                            <span className="ml-2 font-serif italic text-text-secondary">{chord.numeral}</span>
+                {/* Consolidated Header - chord name, key, help, and hide button all in one row */}
+                <div className={`${isMobile && isDrawer ? 'px-4 py-2' : 'px-3 py-2'} border-b border-border-subtle flex justify-between items-center gap-3 shrink-0 ${isDrawer ? 'bg-bg-secondary/80 backdrop-blur-md' : ''}`}>
+                    <div className="flex items-center gap-2 overflow-hidden flex-1 min-w-0">
+                        <span className="flex items-center gap-2 shrink-0">
+                            <span className={`${isMobile ? 'text-lg' : 'text-base sm:text-lg'} font-bold text-text-primary leading-none`}>
+                                {chord ? chord.symbol : 'Chord Details'}
+                            </span>
+                            {chord?.numeral && (
+                                <span className={`${isMobile ? 'text-xs' : 'text-[11px]'} font-serif italic text-text-secondary shrink-0`}>{chord.numeral}</span>
+                            )}
+                        </span>
+                        {chord && (
+                            <span className={`${isMobile ? 'text-xs' : 'text-[10px]'} text-text-muted whitespace-nowrap`}>
+                                Key: <span className="font-semibold text-text-primary">{selectedKey}</span>
+                            </span>
                         )}
-                    </span>
-                    <button
-                        onClick={toggleChordPanel}
-                        className="p-1 hover:bg-bg-tertiary rounded transition-colors"
-                        title="Hide panel"
-                    >
-                        <PanelRightClose size={16} className="text-text-muted" />
-                    </button>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                        {/* Help button moved to header */}
+                        {chord && (
+                            <button
+                                onClick={() => setShowHelp(true)}
+                                className={`${isMobile ? 'w-10 h-10 min-w-[40px] min-h-[40px]' : 'w-8 h-8'} flex items-center justify-center bg-bg-tertiary/60 hover:bg-accent-primary/20 border border-border-subtle rounded-full text-text-muted hover:text-accent-primary transition-colors shadow-sm touch-feedback`}
+                                title="Chord Wheel Guide"
+                            >
+                                <HelpCircle size={isMobile ? 16 : 14} />
+                            </button>
+                        )}
+                        <button
+                            onClick={toggleChordPanel}
+                            className={`${isMobile ? 'p-2 min-w-[40px] min-h-[40px]' : 'p-1'} hover:bg-bg-tertiary rounded transition-colors touch-feedback flex items-center justify-center`}
+                            title="Hide panel"
+                        >
+                            <PanelRightClose size={isMobile ? 18 : 16} className="text-text-muted" />
+                        </button>
+                    </div>
                 </div>
 
                 {/* Content */}
                 {!chord ? (
                     <div className="flex-1 flex items-center justify-center p-6">
-                        <p className="text-sm text-text-muted text-center">
+                        <p className={`${isMobile ? 'text-base' : 'text-sm'} text-text-muted text-center`}>
                             Select a chord from the wheel or timeline
                         </p>
                     </div>
                 ) : (
-                    <div className="flex-1 overflow-y-auto min-h-0">
-                        {/* Key indicator */}
-                        <div className="px-4 py-3 border-b border-border-subtle bg-bg-elevated/30">
-                            <p className="text-xs text-text-muted">
-                                Key of <span className="font-bold text-text-primary text-sm">{selectedKey}</span>
-                            </p>
-                        </div>
-
-                        {/* Piano & Voicing Section */}
-                        <div className="px-4 py-4 border-b border-border-subtle">
-                            <div className="flex items-center justify-between mb-3">
-                                <h3 className="text-[10px] font-bold text-text-muted uppercase tracking-wider">
+                    <div className="flex-1 overflow-y-auto min-h-0 overscroll-contain">
+                        {/* Piano & Voicing Section - Key indicator removed, now in header */}
+                        <div className={`${isMobile ? 'px-4 py-1.5' : 'px-4 py-3'} border-b border-border-subtle`}>
+                            <div className="flex items-center justify-between mb-2">
+                                <h3 className={`${isMobile ? 'text-[11px]' : 'text-[10px]'} font-semibold text-text-muted uppercase tracking-wide`}>
                                     Voicing {previewVariant && <span className="text-accent-primary ml-1">({previewVariant})</span>}
                                 </h3>
                                 {previewVariant && (
                                     <button
                                         onClick={clearPreview}
-                                        className="text-[9px] text-accent-primary hover:text-accent-secondary transition-colors"
+                                        className={`${isMobile ? 'text-[10px] px-2 py-1' : 'text-[9px]'} text-accent-primary hover:text-accent-secondary transition-colors touch-feedback`}
                                     >
-                                        ← back to {chord.symbol}
+                                        ← {chord.symbol}
                                     </button>
                                 )}
                             </div>
@@ -367,8 +429,8 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
                                 rootNote={chord.root}
                                 color={chordColor}
                             />
-                            {/* Notes display with absolute and relative lines */}
-                            <div className="mt-4 w-full">
+                            {/* Notes display with single labels and compact rows */}
+                            <div className={`${isMobile ? 'mt-2' : 'mt-4'} w-full`}>
                                 <div
                                     className="grid w-full items-center gap-y-1"
                                     style={{
@@ -414,70 +476,95 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
                         </div>
 
                         {/* Variations */}
-                        <div className="px-4 py-4 border-b border-border-subtle">
-                            <h3 className="text-[10px] font-bold text-text-muted uppercase tracking-wider mb-3">
-                                Variations
-                            </h3>
-                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                        <div className={`${isMobile ? 'px-4 py-1' : 'px-4 py-2'} border-b border-border-subtle`}>
+                            <button
+                                onClick={() => isMobile && setShowVariations(!showVariations)}
+                                className={`w-full flex items-center justify-between ${showVariations && isMobile ? 'mb-2' : 'mb-0'} ${isMobile ? 'cursor-pointer py-0.5' : ''}`}
+                            >
+                                <h3 className={`${isMobile ? 'text-[11px]' : 'text-[10px]'} font-semibold text-text-muted uppercase tracking-wide`}>
+                                    Variations
+                                </h3>
+                                {isMobile && (
+                                    <ChevronDown 
+                                        size={14} 
+                                        className={`text-text-muted transition-transform ${showVariations ? 'rotate-180' : ''}`} 
+                                    />
+                                )}
+                            </button>
+                            {(!isMobile || showVariations) && (
+                            <div className={`grid ${isMobile ? 'grid-cols-3' : 'grid-cols-2 sm:grid-cols-3'} ${isMobile ? 'gap-2' : 'gap-1.5'}`}>
                                 {voicingOptions.map((ext, idx) => {
-                                    const colIndex = idx % 3;
-                                    const isLeftCol = colIndex === 0;
+                                    const isLeftCol = idx % 2 === 0;
                                     const tooltipPositionStyle = isLeftCol
-                                        ? { left: 'calc(100% + 10px)', top: '50%', transform: 'translateY(-50%)' }
-                                        : { right: 'calc(100% + 10px)', top: '50%', transform: 'translateY(-50%)' };
+                                        ? { left: 'calc(100% + 10px)' }
+                                        : { right: 'calc(100% + 10px)' };
 
                                     return (
-                                        <button
-                                            key={ext}
-                                            className={`relative group px-2 py-1.5 rounded text-[10px] font-medium transition-colors border ${previewVariant === ext
-                                                ? 'bg-accent-primary text-white border-accent-primary'
-                                                : 'bg-bg-elevated hover:bg-bg-tertiary text-text-secondary hover:text-text-primary border-border-subtle'
-                                                }`}
-                                            onClick={() => handleVariationClick(ext)}
-                                            onDoubleClick={() => handleVariationClick(ext)}
-                                        >
-                                            {ext}
-                                            {voicingTooltips[ext] && (
-                                                <span
-                                                    className="pointer-events-none absolute whitespace-normal text-[10px] leading-tight bg-black text-white px-3 py-2 rounded border border-white/10 shadow-xl opacity-0 group-hover:opacity-100 group-active:opacity-0 group-active:delay-1000 group-focus:opacity-0 transition-opacity duration-150 group-hover:delay-150 z-50 w-44 text-left"
-                                                    style={{
-                                                        ...tooltipPositionStyle,
-                                                        backgroundColor: '#000',
-                                                        color: '#fff',
-                                                        padding: '8px 10px'
-                                                    }}
-                                                >
-                                                    {voicingTooltips[ext]}
-                                                </span>
-                                            )}
-                                        </button>
+                                    <button
+                                        key={ext}
+                                        className={`relative group ${isMobile ? 'px-3 py-3 min-h-[48px] text-xs' : 'px-2 py-1.5 text-[10px]'} rounded font-medium transition-colors border touch-feedback ${previewVariant === ext
+                                            ? 'bg-accent-primary text-white border-accent-primary'
+                                            : 'bg-bg-elevated hover:bg-bg-tertiary text-text-secondary hover:text-text-primary border-border-subtle'
+                                            }`}
+                                        onClick={() => handleVariationClick(ext)}
+                                        onDoubleClick={() => handleVariationDoubleClick(ext)}
+                                    >
+                                        {ext}
+                                        {!isMobile && voicingTooltips[ext] && (
+                                            <span
+                                                className="pointer-events-none absolute top-1/2 -translate-y-1/2 whitespace-normal text-[10px] leading-tight bg-black text-white px-3 py-2 rounded border border-white/10 shadow-xl opacity-0 group-hover:opacity-100 group-active:opacity-0 group-focus:opacity-0 transition-opacity duration-150 group-hover:delay-150 z-50 w-44 text-left"
+                                                style={{
+                                                    ...tooltipPositionStyle,
+                                                    backgroundColor: '#000',
+                                                    color: '#fff',
+                                                    padding: '8px 10px'
+                                                }}
+                                            >
+                                                {voicingTooltips[ext]}
+                                            </span>
+                                        )}
+                                    </button>
                                     );
                                 })}
                             </div>
+                            )}
                         </div>
 
                         {/* Suggested Voicings - now after variations */}
                         {chord?.numeral && getSuggestedVoicings().extensions.length > 0 && (
-                            <div className="px-4 py-4 border-b border-border-subtle bg-accent-primary/5">
-                                <h3 className="text-[10px] font-bold text-accent-primary uppercase tracking-wider mb-3">
-                                    Suggested for {chord.numeral}
-                                </h3>
-                                <div className="flex flex-wrap gap-2 mb-3">
+                            <div className={`${isMobile ? 'px-4 py-1' : 'px-4 py-2'} border-b border-border-subtle bg-accent-primary/5`}>
+                                <button
+                                    onClick={() => isMobile && setShowSuggested(!showSuggested)}
+                                    className={`w-full flex items-center justify-between ${showSuggested && isMobile ? 'mb-2' : 'mb-0'} ${isMobile ? 'cursor-pointer py-0.5' : ''}`}
+                                >
+                                    <h3 className={`${isMobile ? 'text-[11px]' : 'text-[10px]'} font-semibold text-accent-primary uppercase tracking-wide`}>
+                                        Suggested for {chord.numeral}
+                                    </h3>
+                                    {isMobile && (
+                                        <ChevronDown 
+                                            size={14} 
+                                            className={`text-accent-primary transition-transform ${showSuggested ? 'rotate-180' : ''}`} 
+                                        />
+                                    )}
+                                </button>
+                                {(!isMobile || showSuggested) && (
+                                <>
+                                <div className={`flex flex-wrap ${isMobile ? 'gap-2.5' : 'gap-2'} mb-2`}>
                                     {getSuggestedVoicings().extensions.map((ext) => (
                                         <button
                                             key={ext}
-                                            className={`relative group px-3 py-1.5 rounded text-xs font-semibold transition-colors ${previewVariant === ext
+                                            className={`relative group ${isMobile ? 'px-4 py-2.5 text-sm min-h-[44px]' : 'px-3 py-1.5 text-xs'} rounded font-semibold transition-colors touch-feedback ${previewVariant === ext
                                                 ? 'bg-accent-primary text-white'
                                                 : 'bg-bg-elevated hover:bg-accent-primary/20 text-text-primary border border-border-subtle'
                                                 }`}
                                             onClick={() => handleVariationClick(ext)}
+                                            onDoubleClick={() => handleVariationDoubleClick(ext)}
                                         >
                                             {chord.root}{ext}
-                                            {voicingTooltips[ext] && (
+                                            {!isMobile && voicingTooltips[ext] && (
                                                 <span
-                                                    className="pointer-events-none absolute left-1/2 -translate-x-1/2 whitespace-normal text-[10px] leading-tight bg-black text-white px-3 py-2 rounded border border-white/10 shadow-xl opacity-0 group-hover:opacity-100 group-active:opacity-0 group-active:delay-1000 group-focus:opacity-0 transition-opacity duration-150 group-hover:delay-150 z-50 w-44 text-left"
+                                                    className="pointer-events-none absolute -top-6 -translate-y-full left-1/2 -translate-x-1/2 whitespace-normal text-[10px] leading-tight bg-black text-white px-3 py-2 rounded border border-white/10 shadow-xl opacity-0 group-hover:opacity-100 group-active:opacity-0 group-focus:opacity-0 transition-opacity duration-150 group-hover:delay-150 z-50 w-44 text-left"
                                                     style={{
-                                                        top: 'calc(100% + 10px)',
                                                         backgroundColor: '#000',
                                                         color: '#fff',
                                                         padding: '8px 10px'
@@ -489,34 +576,40 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
                                         </button>
                                     ))}
                                 </div>
-                                <p className="text-[10px] text-text-muted leading-relaxed">
+                                <p className={`${isMobile ? 'text-xs' : 'text-[10px]'} text-text-muted leading-relaxed`}>
                                     {getSuggestedVoicings().description}
                                 </p>
+                                </>
+                                )}
                             </div>
                         )}
 
                         {/* Theory Note - with proper text wrapping */}
-                        <div className="px-4 py-4">
-                            <div className="p-4 bg-bg-elevated rounded-lg border border-border-subtle">
-                                <h3 className="text-[10px] font-bold text-accent-primary uppercase tracking-wider mb-2">
+                        <div className={`${isMobile ? 'px-4 py-1' : 'px-4 py-2'} ${isMobile ? 'pb-1' : ''}`}>
+                            <button
+                                onClick={() => isMobile && setShowTheory(!showTheory)}
+                                className={`w-full flex items-center justify-between ${isMobile ? 'cursor-pointer py-0.5' : 'mb-0'} ${showTheory && isMobile ? 'mb-2' : 'mb-0'}`}
+                            >
+                                <h3 className={`${isMobile ? 'text-[11px]' : 'text-[10px]'} font-semibold text-accent-primary uppercase tracking-wide ${!isMobile ? 'mb-2' : ''}`}>
                                     Theory
                                 </h3>
-                                <p className="text-xs text-text-secondary leading-relaxed">
-                                    {getTheoryNote()}
-                                </p>
-                            </div>
+                                {isMobile && (
+                                    <ChevronDown 
+                                        size={14} 
+                                        className={`text-accent-primary transition-transform ${showTheory ? 'rotate-180' : ''}`} 
+                                    />
+                                )}
+                            </button>
+                            {(!isMobile || showTheory) && (
+                                <div className={`${isMobile ? 'p-3' : 'p-4'} bg-bg-elevated rounded-lg border border-border-subtle`}>
+                                    <p className={`${isMobile ? 'text-sm' : 'text-xs'} text-text-secondary leading-relaxed`}>
+                                        {getTheoryNote()}
+                                    </p>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
-
-                {/* Help button at bottom left */}
-                <button
-                    onClick={() => setShowHelp(true)}
-                    className="absolute bottom-3 left-3 w-7 h-7 flex items-center justify-center bg-bg-tertiary hover:bg-accent-primary/20 border border-border-subtle rounded-full text-text-muted hover:text-accent-primary transition-colors"
-                    title="Chord Wheel Guide"
-                >
-                    <HelpCircle size={14} />
-                </button>
             </div>
 
             {/* Help Modal */}

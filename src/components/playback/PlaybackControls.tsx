@@ -2,6 +2,7 @@ import { useSongStore } from '../../store/useSongStore';
 import { Play, Pause, SkipBack, SkipForward, Repeat, Volume2, VolumeX, ChevronLeft, ChevronRight } from 'lucide-react';
 import { initAudio } from '../../utils/audioEngine';
 import type { InstrumentType } from '../../types';
+import { useState, useEffect } from 'react';
 
 export const PlaybackControls: React.FC = () => {
     const {
@@ -16,6 +17,14 @@ export const PlaybackControls: React.FC = () => {
         isMuted,
         toggleMute
     } = useSongStore();
+
+    const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+
+    useEffect(() => {
+        const updateMobile = () => setIsMobile(window.innerWidth < 768);
+        window.addEventListener('resize', updateMobile);
+        return () => window.removeEventListener('resize', updateMobile);
+    }, []);
 
     const handlePlayPause = async () => {
         if (!isPlaying) {
@@ -52,66 +61,72 @@ export const PlaybackControls: React.FC = () => {
     };
 
     return (
-        <div className="h-14 bg-bg-elevated border-t border-border-subtle flex items-center justify-between px-6">
+        <div className={`${isMobile ? 'h-16' : 'h-14'} bg-bg-elevated border-t border-border-subtle flex items-center ${isMobile ? 'justify-around px-2' : 'justify-between px-6'}`}>
             {/* Transport */}
-            <div className="flex items-center gap-2">
-                <button className="p-1.5 text-text-secondary hover:text-text-primary transition-colors">
-                    <SkipBack size={16} />
+            <div className={`flex items-center ${isMobile ? 'gap-1' : 'gap-2'}`}>
+                <button className={`${isMobile ? 'p-2 min-w-[44px] min-h-[44px]' : 'p-1.5'} text-text-secondary hover:text-text-primary transition-colors touch-feedback flex items-center justify-center`}>
+                    <SkipBack size={isMobile ? 18 : 16} />
                 </button>
                 <button
                     onClick={handlePlayPause}
-                    className="w-9 h-9 rounded-full bg-accent-primary hover:bg-indigo-500 flex items-center justify-center text-white shadow-lg transition-all hover:scale-105 active:scale-95"
+                    className={`${isMobile ? 'w-12 h-12' : 'w-9 h-9'} rounded-full bg-accent-primary hover:bg-indigo-500 flex items-center justify-center text-white shadow-lg transition-all hover:scale-105 active:scale-95 touch-feedback`}
                 >
-                    {isPlaying ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" className="ml-0.5" />}
+                    {isPlaying ? <Pause size={isMobile ? 22 : 18} fill="currentColor" /> : <Play size={isMobile ? 22 : 18} fill="currentColor" className="ml-0.5" />}
                 </button>
-                <button className="p-1.5 text-text-secondary hover:text-text-primary transition-colors">
-                    <SkipForward size={16} />
+                <button className={`${isMobile ? 'p-2 min-w-[44px] min-h-[44px]' : 'p-1.5'} text-text-secondary hover:text-text-primary transition-colors touch-feedback flex items-center justify-center`}>
+                    <SkipForward size={isMobile ? 18 : 16} />
                 </button>
-                <button className="p-1.5 text-text-secondary hover:text-text-primary transition-colors ml-1">
-                    <Repeat size={14} />
-                </button>
+                {!isMobile && (
+                    <button className="p-1.5 text-text-secondary hover:text-text-primary transition-colors ml-1">
+                        <Repeat size={14} />
+                    </button>
+                )}
             </div>
 
             {/* Tempo & Info */}
-            <div className="flex items-center gap-3 text-[10px] text-text-muted">
-                <div className="flex items-center gap-1.5">
-                    <span>Tempo</span>
-                    <input
-                        type="number"
-                        value={tempo}
-                        onChange={(e) => setTempo(Number(e.target.value))}
-                        className="w-10 bg-bg-tertiary border border-border-subtle rounded px-1 py-0.5 text-center text-text-primary text-[10px]"
-                    />
-                    <span>BPM</span>
+            {!isMobile && (
+                <div className="flex items-center gap-3 text-[10px] text-text-muted">
+                    <div className="flex items-center gap-1.5">
+                        <span>Tempo</span>
+                        <input
+                            type="number"
+                            value={tempo}
+                            onChange={(e) => setTempo(Number(e.target.value))}
+                            className="w-10 bg-bg-tertiary border border-border-subtle rounded px-1 py-0.5 text-center text-text-primary text-[10px]"
+                        />
+                        <span>BPM</span>
+                    </div>
+                    <span className="text-text-muted">•</span>
+                    <span>4/4</span>
                 </div>
-                <span className="text-text-muted">•</span>
-                <span>4/4</span>
-            </div>
+            )}
 
             {/* Volume & Instrument */}
-            <div className="flex items-center gap-4">
+            <div className={`flex items-center ${isMobile ? 'gap-2' : 'gap-4'}`}>
                 {/* Instrument Selector with quick cycle buttons */}
-                <div className="flex items-center gap-2">
-                    <div className="flex items-center rounded bg-bg-tertiary/60 border border-border-subtle/70 h-8">
-                        <button
-                            onClick={() => cycleInstrument('prev')}
-                            className="px-1.5 h-full text-text-secondary hover:text-text-primary hover:bg-bg-tertiary rounded-l transition-colors flex items-center"
-                            title="Previous instrument"
-                        >
-                            <ChevronLeft size={12} />
-                        </button>
-                        <button
-                            onClick={() => cycleInstrument('next')}
-                            className="px-1.5 h-full text-text-secondary hover:text-text-primary hover:bg-bg-tertiary rounded-r transition-colors flex items-center"
-                            title="Next instrument"
-                        >
-                            <ChevronRight size={12} />
-                        </button>
-                    </div>
+                <div className={`flex items-center ${isMobile ? 'gap-1' : 'gap-2'}`}>
+                    {!isMobile && (
+                        <div className="flex items-center rounded bg-bg-tertiary/60 border border-border-subtle/70 h-8">
+                            <button
+                                onClick={() => cycleInstrument('prev')}
+                                className="px-1.5 h-full text-text-secondary hover:text-text-primary hover:bg-bg-tertiary rounded-l transition-colors flex items-center"
+                                title="Previous instrument"
+                            >
+                                <ChevronLeft size={12} />
+                            </button>
+                            <button
+                                onClick={() => cycleInstrument('next')}
+                                className="px-1.5 h-full text-text-secondary hover:text-text-primary hover:bg-bg-tertiary rounded-r transition-colors flex items-center"
+                                title="Next instrument"
+                            >
+                                <ChevronRight size={12} />
+                            </button>
+                        </div>
+                    )}
                     <select
                         value={instrument}
                         onChange={(e) => setInstrument(e.target.value as InstrumentType)}
-                        className="bg-bg-tertiary border border-border-subtle rounded px-2 h-8 text-[10px] text-text-secondary focus:outline-none focus:border-accent-primary cursor-pointer min-w-[140px]"
+                        className={`bg-bg-tertiary border border-border-subtle rounded ${isMobile ? 'px-2 h-11 text-xs min-w-[90px]' : 'px-2 h-8 text-[10px] min-w-[140px]'} text-text-secondary focus:outline-none focus:border-accent-primary cursor-pointer`}
                     >
                         {instrumentOptions.map((opt) => (
                             <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -120,26 +135,28 @@ export const PlaybackControls: React.FC = () => {
                 </div>
 
                 {/* Volume Control */}
-                <div className="flex items-center gap-2 w-32">
+                <div className={`flex items-center gap-2 ${isMobile ? 'w-20' : 'w-32'}`}>
                     <button
                         onClick={toggleMute}
-                        className="text-text-secondary hover:text-text-primary transition-colors"
+                        className={`${isMobile ? 'min-w-[44px] min-h-[44px] p-2' : ''} text-text-secondary hover:text-text-primary transition-colors touch-feedback flex items-center justify-center`}
                         title={isMuted ? "Unmute" : "Mute"}
                     >
-                        {isMuted || volume === 0 ? <VolumeX size={14} /> : <Volume2 size={14} />}
+                        {isMuted || volume === 0 ? <VolumeX size={isMobile ? 18 : 14} /> : <Volume2 size={isMobile ? 18 : 14} />}
                     </button>
-                    <input
-                        type="range"
-                        min="0"
-                        max="1"
-                        step="0.01"
-                        value={isMuted ? 0 : volume}
-                        onChange={(e) => {
-                            if (isMuted) toggleMute();
-                            setVolume(Number(e.target.value));
-                        }}
-                        className={`w-full h-1 bg-bg-tertiary rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2.5 [&::-webkit-slider-thumb]:h-2.5 [&::-webkit-slider-thumb]:bg-accent-primary [&::-webkit-slider-thumb]:rounded-full ${isMuted ? 'opacity-50' : ''}`}
-                    />
+                    {!isMobile && (
+                        <input
+                            type="range"
+                            min="0"
+                            max="1"
+                            step="0.01"
+                            value={isMuted ? 0 : volume}
+                            onChange={(e) => {
+                                if (isMuted) toggleMute();
+                                setVolume(Number(e.target.value));
+                            }}
+                            className={`w-full h-1 bg-bg-tertiary rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2.5 [&::-webkit-slider-thumb]:h-2.5 [&::-webkit-slider-thumb]:bg-accent-primary [&::-webkit-slider-thumb]:rounded-full ${isMuted ? 'opacity-50' : ''}`}
+                        />
+                    )}
                 </div>
             </div>
         </div>

@@ -42,33 +42,86 @@ function App() {
 
   // Responsive state
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+  const [isLandscape, setIsLandscape] = useState(() => typeof window !== 'undefined' ? window.innerHeight < window.innerWidth && window.innerWidth < 1024 : false);
   const autoCollapsedPanelRef = useRef(false);
+  const hasInitializedMobile = useRef(false);
+  const hasAppliedMobileBoost = useRef(false);
 
   useEffect(() => {
     const updateLayout = () => {
       const width = window.innerWidth;
       const height = window.innerHeight;
       const mobile = width < 768;
+      const landscape = height < width && width < 1024 && mobile;
+      
       setIsMobile(mobile);
+      setIsLandscape(landscape);
 
-      const padding = mobile ? 24 : 120; // leave room for padding/margins
-      const headerHeight = 48; // h-12
-      const footerHeight = 56; // h-14
-      const timelineReserve = 140; // keep room for timeline
-      const availableHeight = Math.max(360, height - headerHeight - footerHeight - timelineReserve);
+      // On mobile, calculate wheel size differently based on orientation
+      if (mobile) {
+        const boost = 1.2; // Default mobile boost; user can raise if desired
+        if (landscape) {
+          // Landscape: wheel on left side
+          const availableWidth = width * 0.5; // Half screen width
+          const padding = 16;
+          const rawSize = Math.min(560, Math.max(280, availableWidth - padding, height - 120));
+          const boosted = Math.min(rawSize * boost, availableWidth - padding + 12, height - 120 + 12, 560);
+          setWheelBaseSize(boosted);
+        } else {
+          // Portrait: wheel in upper portion
+          const padding = 12; // Keep margin but allow more usable width
+          const headerHeight = 56;
+          const footerHeight = 64;
+          const chordDetailsReserve = 80; // Space for collapsed chord details button
+          const availableHeight = height - headerHeight - footerHeight - chordDetailsReserve;
+          const maxWheelHeight = availableHeight * 0.8; // Give more height budget for larger wheel
+          
+          const rawSize = Math.min(
+            Math.min(width - padding, maxWheelHeight),
+            560 // Allow a bit more headroom for boosted size
+          );
+          const boosted = Math.min(rawSize * boost, width - padding + 12, maxWheelHeight + 24, 560);
+          setWheelBaseSize(Math.max(260, boosted));
+        }
 
-      const computedSize = Math.min(
-        720,
-        Math.max(320, Math.min(width - padding, availableHeight))
-      );
-      setWheelBaseSize(computedSize);
+        // Apply an initial zoom bump so boost is visible (without overriding user changes later)
+        if (!hasAppliedMobileBoost.current && wheelZoom === 1) {
+          const zoomBoost = Math.min(boost, 2.5);
+          setWheelZoom(zoomBoost);
+          setWheelZoomOrigin(zoomBoost > 1.3 ? 45 : 50);
+          hasAppliedMobileBoost.current = true;
+        }
+      } else {
+        // Desktop sizing
+        const padding = 120;
+        const headerHeight = 48;
+        const footerHeight = 56;
+        const timelineReserve = 140;
+        const availableHeight = Math.max(360, height - headerHeight - footerHeight - timelineReserve);
 
-      // Auto-collapse the side panel when entering mobile to save space
+        const computedSize = Math.min(
+          720,
+          Math.max(320, Math.min(width - padding, availableHeight))
+        );
+        setWheelBaseSize(computedSize);
+      }
+
+      // Initialize mobile settings on first load
       const store = useSongStore.getState();
-      if (mobile && store.chordPanelVisible) {
-        store.toggleChordPanel();
-        autoCollapsedPanelRef.current = true;
-      } else if (!mobile && autoCollapsedPanelRef.current && !store.chordPanelVisible) {
+      if (mobile && !hasInitializedMobile.current) {
+        // Hide timeline by default on mobile
+        if (store.timelineVisible) {
+          store.toggleTimeline();
+        }
+        // Close chord panel on mobile (we'll use drawer mode)
+        if (store.chordPanelVisible) {
+          store.toggleChordPanel();
+        }
+        hasInitializedMobile.current = true;
+      }
+
+      // Handle switching between mobile and desktop
+      if (!mobile && autoCollapsedPanelRef.current && !store.chordPanelVisible) {
         store.toggleChordPanel();
         autoCollapsedPanelRef.current = false;
       }
@@ -76,7 +129,11 @@ function App() {
 
     updateLayout();
     window.addEventListener('resize', updateLayout);
-    return () => window.removeEventListener('resize', updateLayout);
+    window.addEventListener('orientationchange', updateLayout);
+    return () => {
+      window.removeEventListener('resize', updateLayout);
+      window.removeEventListener('orientationchange', updateLayout);
+    };
   }, []);
 
   const handleZoomChange = useCallback((scale: number, originY: number) => {
@@ -119,18 +176,36 @@ function App() {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   }, [currentSong.sections, currentSong.tempo]);
 
+  // Audio initialization state
+  const [audioReady, setAudioReady] = useState(false);
+
   useEffect(() => {
     const startAudio = async () => {
-      await Tone.start();
-      console.log('Audio Context Started');
+      try {
+        await Tone.start();
+        await initAudio();
+        setAudioReady(true);
+        console.log('Audio Context Started and Ready');
+      } catch (error) {
+        console.error('Audio initialization failed:', error);
+      }
     };
-    document.addEventListener('click', startAudio, { once: true });
+    
+    // Start on any user interaction
+    const handleInteraction = () => {
+      if (!audioReady) {
+        startAudio();
+      }
+    };
 
-    // Preload audio samples immediately
-    initAudio().catch(console.error);
+    document.addEventListener('touchstart', handleInteraction, { once: true });
+    document.addEventListener('click', handleInteraction, { once: true });
 
-    return () => document.removeEventListener('click', startAudio);
-  }, []);
+    return () => {
+      document.removeEventListener('touchstart', handleInteraction);
+      document.removeEventListener('click', handleInteraction);
+    };
+  }, [audioReady]);
 
   // Keyboard shortcut for delete (Task 22)
   useEffect(() => {
@@ -322,20 +397,23 @@ function App() {
   const timelineContentHeight = Math.max(80, timelineHeight - 42);
 
   return (
-    <div className={`${isMobile ? 'min-h-screen' : 'h-screen'} w-screen flex flex-col bg-bg-primary text-text-primary overflow-x-hidden`}>
+    <div className="h-full w-full flex flex-col bg-bg-primary text-text-primary overflow-hidden">
       {/* Header */}
-      <header className="h-12 border-b border-border-subtle grid grid-cols-[1fr_auto_1fr] items-center px-3 bg-bg-secondary shrink-0 z-20 sticky top-0">
-        <div className="flex items-center gap-3 shrink-0">
+      <header className={`${isMobile ? 'h-14' : 'h-12'} border-b border-border-subtle grid grid-cols-[1fr_auto_1fr] items-center ${isMobile ? 'px-4' : 'px-3'} bg-bg-secondary shrink-0 z-20 sticky top-0`}>
+        <div className="flex items-center gap-2 shrink-0">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded bg-gradient-to-br from-accent-primary to-purple-600 flex items-center justify-center shadow-lg">
-              <Music size={12} className="text-white" />
+            <div className={`${isMobile ? 'w-8 h-8' : 'w-6 h-6'} rounded bg-gradient-to-br from-accent-primary to-purple-600 flex items-center justify-center shadow-lg relative`}>
+              <Music size={isMobile ? 16 : 12} className="text-white" />
+              {audioReady && (
+                <div className="absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full" title="Audio Ready" />
+              )}
             </div>
-            <span className="font-bold text-sm tracking-tight hidden sm:block text-text-muted">Songwriter's Wheel</span>
+            <span className={`font-bold ${isMobile ? 'text-xs' : 'text-sm'} tracking-tight hidden sm:block text-text-muted`}>Songwriter's Wheel</span>
           </div>
         </div>
 
         {/* Editable Song Title (Task 23) */}
-        <div className="flex items-center justify-center">
+        <div className="flex items-center justify-center overflow-hidden">
           {isEditingTitle ? (
             <input
               type="text"
@@ -344,13 +422,13 @@ function App() {
               onBlur={handleTitleSave}
               onKeyDown={handleTitleKeyDown}
               autoFocus
-              className="bg-bg-tertiary border border-border-medium rounded px-3 py-1 text-sm font-medium text-text-primary focus:outline-none focus:border-accent-primary text-center w-56 max-w-[70vw]"
+              className={`bg-bg-tertiary border border-border-medium rounded px-3 py-1 ${isMobile ? 'text-xs' : 'text-sm'} font-medium text-text-primary focus:outline-none focus:border-accent-primary text-center ${isMobile ? 'w-40' : 'w-56'} max-w-[70vw]`}
               maxLength={50}
             />
           ) : (
             <span
               onDoubleClick={handleTitleDoubleClick}
-              className="text-sm font-medium text-text-primary cursor-pointer hover:text-accent-primary transition-colors px-3 py-1 rounded text-center"
+              className={`${isMobile ? 'text-xs' : 'text-sm'} font-medium text-text-primary cursor-pointer hover:text-accent-primary transition-colors px-2 py-1 rounded text-center truncate max-w-[70vw]`}
               title="Double-click to edit title"
             >
               {currentSong.title}
@@ -358,27 +436,41 @@ function App() {
           )}
         </div>
 
-        <div className="flex items-center gap-[20px] shrink-0 justify-self-end mr-2">
-          {/* Song Duration (Task 33) */}
-          <div className="flex items-center gap-[6px] text-[10px] text-text-muted">
-            <Clock size={11} className="shrink-0" />
-            <span className="leading-none">{songDuration}</span>
-          </div>
+        <div className={`flex items-center ${isMobile ? 'gap-2' : 'gap-[20px]'} shrink-0 justify-self-end ${isMobile ? 'mr-0' : 'mr-2'}`}>
+          {/* Timeline Toggle for Mobile - make it prominent */}
+          {isMobile && !isLandscape && (
+            <button
+              onClick={toggleTimeline}
+              className={`flex items-center gap-1 px-3 py-2 min-h-[48px] rounded-lg ${timelineVisible ? 'bg-accent-primary text-white' : 'bg-bg-tertiary text-text-muted'} hover:bg-accent-primary/80 hover:text-white transition-all border border-border-subtle shadow-md active:scale-95`}
+              title={timelineVisible ? "Hide Timeline" : "Show Timeline"}
+            >
+              <GripHorizontal size={16} className="shrink-0" />
+              <span className="text-xs font-semibold uppercase tracking-wider">{timelineVisible ? 'Hide' : 'Show'}</span>
+            </button>
+          )}
 
-          <div className="flex items-center gap-[6px] text-[10px] text-text-muted">
+          {/* Song Duration (Task 33) - Hide on very small screens */}
+          {!isMobile && (
+            <div className="flex items-center gap-[6px] text-[10px] text-text-muted">
+              <Clock size={11} className="shrink-0" />
+              <span className="leading-none">{songDuration}</span>
+            </div>
+          )}
+
+          <div className={`flex items-center gap-[6px] ${isMobile ? 'text-xs' : 'text-[10px]'} text-text-muted`}>
             <span className="uppercase font-bold">Key</span>
-            <span className="font-bold text-accent-primary text-sm">{selectedKey}</span>
+            <span className={`font-bold text-accent-primary ${isMobile ? 'text-base' : 'text-sm'}`}>{selectedKey}</span>
           </div>
 
           {/* Save/Load Menu (Task 30) - fixed styling */}
           <div className="relative" ref={saveMenuRef}>
             <button
               onClick={() => setShowSaveMenu(!showSaveMenu)}
-              className="flex items-center gap-[20px] text-[11px] text-text-secondary hover:text-text-primary transition-colors px-2 py-1"
+              className={`flex items-center ${isMobile ? 'gap-1' : 'gap-[20px]'} ${isMobile ? 'text-xs' : 'text-[11px]'} text-text-secondary hover:text-text-primary transition-colors ${isMobile ? 'px-1 py-1.5 min-w-[44px]' : 'px-2 py-1'} touch-feedback`}
             >
-              <Save size={12} />
+              <Save size={isMobile ? 16 : 12} />
               <span className="hidden sm:inline">Save</span>
-              <ChevronDown size={10} className={`transition-transform ${showSaveMenu ? 'rotate-180' : ''}`} />
+              <ChevronDown size={isMobile ? 12 : 10} className={`transition-transform ${showSaveMenu ? 'rotate-180' : ''}`} />
             </button>
 
             {showSaveMenu && (
@@ -438,51 +530,53 @@ function App() {
 
           <button
             onClick={handleExport}
-            className="flex items-center gap-[20px] text-[11px] bg-text-primary text-bg-primary px-2 py-1 rounded font-medium hover:bg-white transition-colors"
+            className={`flex items-center ${isMobile ? 'gap-1' : 'gap-[20px]'} ${isMobile ? 'text-xs' : 'text-[11px]'} bg-text-primary text-bg-primary ${isMobile ? 'px-2 py-1.5 min-w-[44px]' : 'px-2 py-1'} rounded font-medium hover:bg-white transition-colors touch-feedback`}
           >
-            <Download size={12} />
+            <Download size={isMobile ? 16 : 12} />
             <span className="hidden sm:inline">Export</span>
           </button>
         </div>
       </header>
 
       {/* Main Content Area */}
-      <div className={`flex-1 flex ${isMobile ? 'flex-col' : 'flex-row'} overflow-x-hidden ${isMobile ? '' : 'overflow-hidden'} min-h-0`}>
-        {/* Left: Wheel + Timeline */}
-        <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden bg-gradient-to-b from-bg-primary to-bg-secondary/30">
-          {/* Wheel Area - takes remaining space */}
-          <div className="flex-1 flex flex-col min-h-[320px] md:min-h-0 overflow-auto">
-            {/* Zoom toolbar - fixed at top of wheel area */}
-            <div className="flex justify-end px-3 py-2 md:py-1.5 shrink-0">
-              <div className="flex items-center gap-1 bg-bg-secondary/80 backdrop-blur-sm rounded-full px-2 py-1 border border-border-subtle shadow-lg">
-                <button
-                  onClick={handleZoomOut}
-                  disabled={wheelZoom <= 1}
-                  className="w-6 h-6 flex items-center justify-center hover:bg-bg-tertiary disabled:opacity-30 disabled:cursor-not-allowed rounded-full text-text-muted hover:text-text-primary transition-colors"
-                  title="Zoom out"
-                >
-                  <Minus size={12} />
-                </button>
-                <span className="text-[9px] text-text-muted w-8 text-center">{Math.round(wheelZoom * 100)}%</span>
-                <button
-                  onClick={handleZoomIn}
-                  disabled={wheelZoom >= 2.5}
-                  className="w-6 h-6 flex items-center justify-center hover:bg-bg-tertiary disabled:opacity-30 disabled:cursor-not-allowed rounded-full text-text-muted hover:text-text-primary transition-colors"
-                  title="Zoom in"
-                >
-                  <Plus size={12} />
-                </button>
+      <div className={`flex-1 flex ${isMobile ? (isLandscape ? 'flex-row' : 'flex-col') : 'flex-row'} overflow-hidden min-h-0`}>
+        {/* Left/Top: Wheel + Timeline */}
+        <div className={`flex flex-col min-w-0 min-h-0 ${isMobile ? (isLandscape ? 'w-1/2' : 'flex-1') : 'flex-1'} ${isMobile && !isLandscape ? 'overflow-hidden' : 'overflow-hidden'} bg-gradient-to-b from-bg-primary to-bg-secondary/30`}>
+          {/* Wheel Area */}
+          <div className={`${isMobile && !isLandscape ? 'flex-1' : 'flex-1'} flex flex-col ${isMobile && !isLandscape ? 'justify-center' : ''} overflow-hidden`}>
+            {/* Zoom toolbar - always show on desktop, hide on mobile portrait to save space */}
+            {!isMobile || isLandscape ? (
+              <div className={`flex justify-end ${isMobile ? 'px-4 py-2' : 'px-3 py-2 md:py-1.5'} shrink-0 w-full`}>
+                <div className={`flex items-center ${isMobile ? 'gap-2' : 'gap-1'} bg-bg-secondary/80 backdrop-blur-sm rounded-full ${isMobile ? 'px-3 py-2' : 'px-2 py-1'} border border-border-subtle shadow-lg`}>
+                  <button
+                    onClick={handleZoomOut}
+                    disabled={wheelZoom <= 1}
+                    className={`${isMobile ? 'w-11 h-11' : 'w-6 h-6'} flex items-center justify-center hover:bg-bg-tertiary disabled:opacity-30 disabled:cursor-not-allowed rounded-full text-text-muted hover:text-text-primary transition-colors touch-feedback active:scale-95`}
+                    title="Zoom out"
+                  >
+                    <Minus size={isMobile ? 18 : 12} />
+                  </button>
+                  <span className={`${isMobile ? 'text-xs w-12' : 'text-[9px] w-8'} text-text-muted text-center font-medium`}>{Math.round(wheelZoom * 100)}%</span>
+                  <button
+                    onClick={handleZoomIn}
+                    disabled={wheelZoom >= 2.5}
+                    className={`${isMobile ? 'w-11 h-11' : 'w-6 h-6'} flex items-center justify-center hover:bg-bg-tertiary disabled:opacity-30 disabled:cursor-not-allowed rounded-full text-text-muted hover:text-text-primary transition-colors touch-feedback active:scale-95`}
+                    title="Zoom in"
+                  >
+                    <Plus size={isMobile ? 18 : 12} />
+                  </button>
+                </div>
               </div>
-            </div>
+            ) : null}
             {/* Wheel container */}
-            <div className="flex-1 overflow-auto px-3 pb-3 md:px-0 md:pb-0">
+            <div className={`flex-1 flex items-center justify-center ${isMobile && !isLandscape ? 'overflow-hidden' : 'overflow-auto'} ${isMobile && !isLandscape ? 'px-2 py-0' : 'px-3 pb-3'}`}>
               <div
-                className="relative flex items-center justify-center mx-auto"
+                className="relative flex items-center justify-center"
                 style={{
                   width: `${wheelBaseSize}px`,
                   height: `${wheelBaseSize}px`,
-                  minWidth: '100%',
-                  minHeight: '100%'
+                  maxWidth: '100%',
+                  maxHeight: isMobile && !isLandscape ? '100%' : undefined
                 }}
               >
                 <ChordWheel
@@ -494,8 +588,9 @@ function App() {
             </div>
           </div>
 
-          {/* Timeline section with toggle */}
-          {timelineVisible ? (
+          {/* Desktop & Mobile Landscape: Timeline section */}
+          {(!isMobile || isLandscape) ? (
+            timelineVisible ? (
             <>
               {/* Resize Handle with hide button */}
               <div
@@ -520,9 +615,9 @@ function App() {
                       <span className="uppercase font-bold tracking-wider text-[9px]">Scale</span>
                       <input
                         type="range"
-                        min={0.1}
+                      min={0.01}
                         max={1.6}
-                        step={0.05}
+                      step={0.01}
                         value={timelineScale}
                         onChange={(e) => setTimelineScale(parseFloat(e.target.value))}
                         className="w-32"
@@ -536,29 +631,29 @@ function App() {
                       <button
                         onClick={undo}
                         disabled={!canUndo}
-                        className="flex items-center gap-1 text-[10px] px-2 py-1 rounded bg-bg-tertiary/60 hover:bg-bg-tertiary text-text-muted hover:text-text-primary disabled:opacity-40 disabled:cursor-not-allowed border border-border-subtle"
+                        className={`flex items-center gap-1 ${isMobile ? 'text-xs px-3 py-2 min-h-[44px]' : 'text-[10px] px-2 py-1'} rounded bg-bg-tertiary/60 hover:bg-bg-tertiary text-text-muted hover:text-text-primary disabled:opacity-40 disabled:cursor-not-allowed border border-border-subtle touch-feedback`}
                         title="Undo (⌘Z)"
                       >
-                        <RotateCcw size={12} />
-                        <span className="uppercase font-bold tracking-wider">Undo</span>
+                        <RotateCcw size={isMobile ? 14 : 12} />
+                        <span className="uppercase font-bold tracking-wider">{isMobile ? '' : 'Undo'}</span>
                       </button>
                       <button
                         onClick={redo}
                         disabled={!canRedo}
-                        className="flex items-center gap-1 text-[10px] px-2 py-1 rounded bg-bg-tertiary/60 hover:bg-bg-tertiary text-text-muted hover:text-text-primary disabled:opacity-40 disabled:cursor-not-allowed border border-border-subtle"
+                        className={`flex items-center gap-1 ${isMobile ? 'text-xs px-3 py-2 min-h-[44px]' : 'text-[10px] px-2 py-1'} rounded bg-bg-tertiary/60 hover:bg-bg-tertiary text-text-muted hover:text-text-primary disabled:opacity-40 disabled:cursor-not-allowed border border-border-subtle touch-feedback`}
                         title="Redo (⇧⌘Z)"
                       >
-                        <RotateCw size={12} />
-                        <span className="uppercase font-bold tracking-wider">Redo</span>
+                        <RotateCw size={isMobile ? 14 : 12} />
+                        <span className="uppercase font-bold tracking-wider">{isMobile ? '' : 'Redo'}</span>
                       </button>
                     </div>
                   </div>
                   <button
                     onClick={toggleTimeline}
-                    className="text-[10px] text-text-muted hover:text-text-primary px-2 py-1 rounded hover:bg-bg-tertiary transition-colors flex items-center gap-1"
+                    className={`${isMobile ? 'text-xs min-h-[44px] px-3' : 'text-[10px] px-2 py-1'} text-text-muted hover:text-text-primary rounded hover:bg-bg-tertiary transition-colors flex items-center gap-1 touch-feedback`}
                     title="Hide timeline"
                   >
-                    <ChevronDown size={12} />
+                    <ChevronDown size={isMobile ? 14 : 12} />
                     <span className="uppercase tracking-wider font-bold">Hide</span>
                   </button>
                 </div>
@@ -567,34 +662,85 @@ function App() {
             </>
           ) : (
             /* Collapsed timeline - just a thin bar with show button */
-            <div className="h-7 bg-bg-secondary border-t border-border-subtle flex items-center justify-center shrink-0">
+            <div className={`${isMobile ? 'h-12' : 'h-7'} bg-bg-secondary border-t border-border-subtle flex items-center justify-center shrink-0`}>
               <button
                 onClick={toggleTimeline}
-                className="px-3 h-full flex items-center gap-1 text-[9px] text-text-muted hover:text-text-primary hover:bg-bg-tertiary transition-colors"
+                className={`${isMobile ? 'px-4 min-h-[48px]' : 'px-3 h-full'} flex items-center gap-1 ${isMobile ? 'text-xs' : 'text-[9px]'} text-text-muted hover:text-text-primary hover:bg-bg-tertiary transition-colors touch-feedback`}
                 title="Show timeline"
               >
-                <ChevronUp size={12} />
+                <ChevronUp size={isMobile ? 14 : 12} />
                 <span className="uppercase tracking-wider font-bold">Timeline</span>
               </button>
             </div>
-          )}
+            )
+          ) : null}
         </div>
 
-        {/* Right: Details Panel */}
-        {!isMobile && <ChordDetails variant="sidebar" />}
+        {/* Right Side: Chord Details Panel (Desktop) or Timeline+Details (Mobile Landscape) */}
+        {isMobile && isLandscape ? (
+          /* Mobile Landscape: Right side with timeline and chord details */
+          <div className="w-1/2 flex flex-col overflow-hidden border-l border-border-subtle">
+            {timelineVisible && (
+              <div className="flex-1 overflow-hidden bg-bg-secondary border-b border-border-subtle">
+                <div className="flex items-center justify-between px-3 py-2 border-b border-border-subtle bg-bg-secondary/90">
+                  <span className="text-xs font-bold text-text-primary uppercase tracking-wider">Timeline</span>
+                  <button
+                    onClick={toggleTimeline}
+                    className="text-xs px-2 py-1 text-text-muted hover:text-text-primary rounded hover:bg-bg-tertiary transition-colors"
+                  >
+                    Hide
+                  </button>
+                </div>
+                <Timeline height={150} scale={0.8} />
+              </div>
+            )}
+            <div className="flex-1 overflow-auto">
+              <ChordDetails variant="drawer" />
+            </div>
+          </div>
+        ) : !isMobile ? (
+          /* Desktop: Sidebar */
+          <ChordDetails variant="sidebar" />
+        ) : null}
       </div>
 
-      {/* Mobile drawer for chord details */}
-      {isMobile && (
-        <div className="px-3 pb-3 md:hidden">
+      {/* Mobile Portrait: Bottom area for chord details (only when timeline is not visible) */}
+      {isMobile && !isLandscape && !timelineVisible && (
+        <div className="shrink-0 px-4 pb-3 bg-bg-primary border-t border-border-subtle">
           <ChordDetails variant="drawer" />
         </div>
       )}
+      
+      {/* Mobile Portrait: Timeline overlay when visible */}
+      {isMobile && !isLandscape && timelineVisible && (
+        <div className="absolute inset-x-0 bottom-0 bg-bg-secondary border-t-2 border-accent-primary shadow-2xl" 
+          style={{ 
+            height: '45vh',
+            maxHeight: '350px',
+            zIndex: 50,
+            paddingBottom: 'env(safe-area-inset-bottom)'
+          }}>
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border-subtle bg-bg-secondary/95 backdrop-blur-sm">
+            <span className="text-sm font-bold text-text-primary uppercase tracking-wider">Timeline</span>
+            <button
+              onClick={toggleTimeline}
+              className="text-sm px-4 py-2 min-h-[44px] bg-bg-tertiary hover:bg-bg-elevated text-text-primary rounded-lg transition-colors font-semibold"
+            >
+              Hide
+            </button>
+          </div>
+          <Timeline height={200} scale={0.8} />
+        </div>
+      )}
 
-      {/* Footer: Playback */}
-      <div className="shrink-0 z-30 relative">
-        <PlaybackControls />
-      </div>
+      {/* Footer: Playback - with safe area padding for iOS - hidden on mobile unless timeline is visible */}
+      {(!isMobile || timelineVisible) && (
+        <div className="shrink-0 z-30 relative" style={{
+          paddingBottom: isMobile ? 'env(safe-area-inset-bottom)' : undefined
+        }}>
+          <PlaybackControls />
+        </div>
+      )}
     </div>
   );
 }
