@@ -84,7 +84,7 @@ export const initAudio = async () => {
             envelope: { attack: 0.002, decay: 0.25, sustain: 0.3, release: 1.2 },
             filter: { type: "lowpass", frequency: 2400, rolloff: -12, Q: 1.2 },
             filterEnvelope: { attack: 0.002, decay: 0.25, sustain: 0.2, release: 0.8, baseFrequency: 800, octaves: 2.5 }
-        }).toDestination());
+        } as any).toDestination());
 
         safeCreate('organ', () => new Tone.PolySynth(Tone.AMSynth, {
             harmonicity: 3,

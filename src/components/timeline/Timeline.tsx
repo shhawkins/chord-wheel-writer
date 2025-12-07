@@ -26,7 +26,9 @@ import type { Chord } from '../../utils/musicTheory';
 const CopyMonitor: React.FC<{ onAltChange: (isAlt: boolean) => void }> = ({ onAltChange }) => {
     useDndMonitor({
         onDragMove: (event: DragMoveEvent) => {
-            onAltChange(Boolean(event.modifiers?.altKey));
+            const altKey =
+                (event as unknown as { modifiers?: { altKey?: boolean } }).modifiers?.altKey ?? false;
+            onAltChange(Boolean(altKey));
         },
         onDragEnd: () => onAltChange(false),
         onDragCancel: () => onAltChange(false),
