@@ -18,6 +18,12 @@ interface ChordWheelProps {
     onZoomChange: (scale: number, originY: number) => void;
 }
 
+type WheelChord = Chord & {
+    segmentId: string;
+    ringType: 'major' | 'minor' | 'diminished';
+    positionIndex: number;
+};
+
 export const ChordWheel: React.FC<ChordWheelProps> = ({ zoomScale, zoomOriginY, onZoomChange }) => {
     const {
         selectedKey,
@@ -41,6 +47,13 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({ zoomScale, zoomOriginY, 
     const keyIndex = CIRCLE_OF_FIFTHS.indexOf(selectedKey);
 
     const lastTouchDistance = useRef<number | null>(null);
+    const [selectedSegmentId, setSelectedSegmentId] = useState<string | null>(null);
+
+    // Keep wheel highlight in sync with store selection when it carries segment info
+    useEffect(() => {
+        const segId = (selectedChord as WheelChord | null)?.segmentId ?? null;
+        setSelectedSegmentId(segId);
+    }, [selectedChord]);
     const containerRef = useRef<HTMLDivElement>(null);
     const svgRef = useRef<SVGSVGElement>(null);
 
@@ -219,6 +232,7 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({ zoomScale, zoomOriginY, 
     const lastClickTime = useRef<number>(0);
 
     const handleChordClick = (chord: Chord) => {
+        const wheelChord = chord as WheelChord;
         const now = Date.now();
         if (now - lastClickTime.current < 300) {
             return;
@@ -226,10 +240,12 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({ zoomScale, zoomOriginY, 
         lastClickTime.current = now;
 
         playChord(chord.notes);
+        setSelectedSegmentId(wheelChord.segmentId ?? null);
         setSelectedChord(chord);
     };
 
     const handleChordDoubleClick = (chord: Chord) => {
+        const wheelChord = chord as WheelChord;
         let targetSectionId: string | null = null;
         let targetSlotId: string | null = null;
 
@@ -269,12 +285,13 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({ zoomScale, zoomOriginY, 
         }
 
         if (targetSectionId && targetSlotId) {
-            addChordToSlot(chord, targetSectionId, targetSlotId);
+                    addChordToSlot(chord, targetSectionId, targetSlotId);
             const advanced = selectNextSlotAfter(targetSectionId, targetSlotId);
 
             if (!advanced) {
                 setSelectedSlot(targetSectionId, targetSlotId);
-                setSelectedChord(chord);
+                        setSelectedSegmentId(wheelChord.segmentId ?? null);
+                        setSelectedChord(chord);
             }
         }
     };
@@ -376,8 +393,16 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({ zoomScale, zoomOriginY, 
 
     // Zoom controls are handled via touch/scroll events
 
-    const isChordSelected = (ch: Chord) =>
-        selectedChord?.symbol === ch.symbol && selectedChord?.root === ch.root;
+    const isChordSelected = (ch: WheelChord) => {
+        if (selectedSegmentId) {
+            return selectedSegmentId === ch.segmentId;
+        }
+        const storeSegmentId = (selectedChord as WheelChord | undefined)?.segmentId;
+        if (storeSegmentId) {
+            return storeSegmentId === ch.segmentId;
+        }
+        return false;
+    };
 
     return (
         <div
@@ -408,6 +433,9 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({ zoomScale, zoomOriginY, 
                         <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
                             <feGaussianBlur stdDeviation="3" result="blur" />
                             <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                        </filter>
+                        <filter id="segment-glow" x="-50%" y="-50%" width="200%" height="200%">
+                            <feDropShadow dx="0" dy="0" stdDeviation="4" floodColor="#ffffff" floodOpacity="0.9" />
                         </filter>
                     </defs>
 
@@ -442,36 +470,48 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({ zoomScale, zoomOriginY, 
                             const dimIsDiatonic = isPositionDiatonic(i, 'dim');
 
                             // Create chord objects
-                            const majorChord: Chord = {
+                            const majorChord: WheelChord = {
                                 root: position.major,
                                 quality: 'major',
                                 numeral: getRomanNumeral(i, 'major'),
                                 notes: getChordNotes(position.major, 'major'),
-                                symbol: position.major
+                                symbol: position.major,
+                                segmentId: `major-${i}`,
+                                ringType: 'major',
+                                positionIndex: i
                             };
 
-                            const iiChord: Chord = {
+                            const iiChord: WheelChord = {
                                 root: iiRoot,
                                 quality: 'minor',
                                 numeral: getRomanNumeral(i, 'ii'),
                                 notes: getChordNotes(iiRoot, 'minor'),
-                                symbol: position.ii
+                                symbol: position.ii,
+                                segmentId: `ii-${i}`,
+                                ringType: 'minor',
+                                positionIndex: i
                             };
 
-                            const iiiChord: Chord = {
+                            const iiiChord: WheelChord = {
                                 root: iiiRoot,
                                 quality: 'minor',
                                 numeral: getRomanNumeral(i, 'iii'),
                                 notes: getChordNotes(iiiRoot, 'minor'),
-                                symbol: position.iii
+                                symbol: position.iii,
+                                segmentId: `iii-${i}`,
+                                ringType: 'minor',
+                                positionIndex: i
                             };
 
-                            const dimChord: Chord = {
+                            const dimChord: WheelChord = {
                                 root: dimRoot,
                                 quality: 'diminished',
                                 numeral: getRomanNumeral(i, 'dim'),
                                 notes: getChordNotes(dimRoot, 'diminished'),
-                                symbol: position.diminished
+                                symbol: position.diminished,
+                                segmentId: `dim-${i}`,
+                                ringType: 'diminished',
+                                positionIndex: i
                             };
 
                             // Minor ring: 24 segments (15° each)

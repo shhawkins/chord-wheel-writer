@@ -13,7 +13,13 @@ interface ChordSlotProps {
 }
 
 export const ChordSlot: React.FC<ChordSlotProps> = ({ slot, sectionId, size = 48, width }) => {
-    const { selectedSlotId, setSelectedSlot, selectedSectionId, setSelectedChord } = useSongStore();
+    const {
+        selectedSlots,
+        setSelectedSlot,
+        toggleSlotSelection,
+        selectRangeTo,
+        setSelectedSlots
+    } = useSongStore();
     const colors = getWheelColors();
     const resolvedWidth = width ?? size;
 
@@ -28,18 +34,33 @@ export const ChordSlot: React.FC<ChordSlotProps> = ({ slot, sectionId, size = 48
         disabled: !slot.chord
     });
 
-    const isSelected = selectedSlotId === slot.id && selectedSectionId === sectionId;
+    const isSelected = selectedSlots.some(
+        (selected) => selected.slotId === slot.id && selected.sectionId === sectionId
+    );
 
     const style = transform ? {
         transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
         zIndex: 999
     } : undefined;
 
-    const handleClick = (e: React.MouseEvent) => {
+    const handleMouseDown = (e: React.MouseEvent) => {
+        if (e.button !== 0) return;
         e.stopPropagation();
-        setSelectedSlot(sectionId, slot.id);
-        if (slot.chord) {
-            setSelectedChord(slot.chord);
+
+        if (e.shiftKey) {
+            selectRangeTo(sectionId, slot.id);
+        } else if (e.metaKey || e.ctrlKey) {
+            toggleSlotSelection(sectionId, slot.id);
+        } else {
+            if (isSelected && selectedSlots.length > 0) {
+                const reordered = [
+                    ...selectedSlots.filter((s) => !(s.sectionId === sectionId && s.slotId === slot.id)),
+                    { sectionId, slotId: slot.id }
+                ];
+                setSelectedSlots(reordered);
+            } else {
+                setSelectedSlot(sectionId, slot.id);
+            }
         }
     };
 
@@ -71,7 +92,9 @@ export const ChordSlot: React.FC<ChordSlotProps> = ({ slot, sectionId, size = 48
     return (
         <div
             ref={setDroppableRef}
-            onClick={handleClick}
+            onMouseDown={handleMouseDown}
+            onClick={(e) => e.stopPropagation()}
+            onDoubleClick={(e) => e.stopPropagation()}
             style={{ width: resolvedWidth, height: size }}
             className={clsx(
                 "rounded border-2 flex items-center justify-center transition-all relative flex-shrink-0",

@@ -66,6 +66,8 @@ export const WheelSegment: React.FC<WheelSegmentProps> = ({
     const arcPath = describeArcReversed(cx, cy, voicingArcRadius, startAngle + 1, endAngle - 1);
     const arcPathId = `voicing-arc-${segmentId}`;
 
+    const clipPathId = `clip-${segmentId}`;
+
     const getSegmentStyle = () => {
         let baseOpacity = 0.35;
         let baseSaturation = 0.5;
@@ -114,6 +116,15 @@ export const WheelSegment: React.FC<WheelSegmentProps> = ({
     
     const numeralFontSize = ringType === 'diminished' ? '6px' : ringType === 'minor' ? '6px' : '8px';
 
+    const glowStrokeWidth =
+        ringType === 'major'
+            ? (isHighlighted ? 6 : 5)
+            : ringType === 'minor'
+                ? (isHighlighted ? 4 : 3.25)
+                : (isHighlighted ? 3.5 : 3);
+
+    const glowOpacity = isHighlighted ? 1 : 0.95;
+
     return (
         <g
             className={clsx(
@@ -136,6 +147,13 @@ export const WheelSegment: React.FC<WheelSegmentProps> = ({
                 </defs>
             )}
 
+            {/* Clip path to keep glow inside the segment wedge */}
+            <defs>
+                <clipPath id={clipPathId}>
+                    <path d={path} />
+                </clipPath>
+            </defs>
+
             <path
                 d={path}
                 fill={segmentStyle.fill}
@@ -148,6 +166,21 @@ export const WheelSegment: React.FC<WheelSegmentProps> = ({
                     isHighlighted && "hover:brightness-105"
                 )}
             />
+
+            {isSelected && (
+                <path
+                    d={path}
+                    fill="none"
+                    stroke="white"
+                    strokeWidth={glowStrokeWidth}
+                    opacity={glowOpacity}
+                    filter="url(#segment-glow)"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    pointerEvents="none"
+                    clipPath={`url(#${clipPathId})`}
+                />
+            )}
 
             {/* Curved voicing at TOP of cell (outer edge) - major ring */}
             {(isDiatonic || isSecondary) && voicingSuggestion && ringType === 'major' && (

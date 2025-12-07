@@ -7,8 +7,10 @@ import {
     PointerSensor,
     useSensor,
     useSensors,
+    useDndMonitor,
     type DragStartEvent,
     type DragEndEvent,
+    type DragMoveEvent,
 } from '@dnd-kit/core';
 import {
     arrayMove,
@@ -21,6 +23,17 @@ import { Section } from './Section';
 import { Plus } from 'lucide-react';
 import type { Chord } from '../../utils/musicTheory';
 
+const CopyMonitor: React.FC<{ onAltChange: (isAlt: boolean) => void }> = ({ onAltChange }) => {
+    useDndMonitor({
+        onDragMove: (event: DragMoveEvent) => {
+            onAltChange(Boolean(event.modifiers?.altKey));
+        },
+        onDragEnd: () => onAltChange(false),
+        onDragCancel: () => onAltChange(false),
+    });
+    return null;
+};
+
 interface TimelineProps {
     height?: number;
     scale?: number;
@@ -32,7 +45,8 @@ export const Timeline: React.FC<TimelineProps> = ({ height = 180, scale = 1 }) =
         addSection,
         reorderSections,
         addChordToSlot,
-        moveChord
+        moveChord,
+        moveSelection
     } = useSongStore();
 
     const horizontalScale = Math.max(0.1, Math.min(1.6, scale));
@@ -44,6 +58,7 @@ export const Timeline: React.FC<TimelineProps> = ({ height = 180, scale = 1 }) =
 
     const [activeId, setActiveId] = React.useState<string | null>(null);
     const [activeDragData, setActiveDragData] = React.useState<any>(null);
+    const [copyModifier, setCopyModifier] = React.useState(false);
 
     const sensors = useSensors(
         useSensor(PointerSensor, {
@@ -57,8 +72,15 @@ export const Timeline: React.FC<TimelineProps> = ({ height = 180, scale = 1 }) =
     );
 
     const handleDragStart = (event: DragStartEvent) => {
+        const activator = event.activatorEvent as PointerEvent | KeyboardEvent | undefined;
+        const copyMode = !!(activator && 'altKey' in activator ? activator.altKey : false);
+
         setActiveId(event.active.id as string);
-        setActiveDragData(event.active.data.current);
+        setActiveDragData({
+            ...event.active.data.current,
+            copyMode,
+        });
+        setCopyModifier(copyMode);
     };
 
     const handleDragEnd = (event: DragEndEvent) => {
@@ -66,6 +88,7 @@ export const Timeline: React.FC<TimelineProps> = ({ height = 180, scale = 1 }) =
 
         setActiveId(null);
         setActiveDragData(null);
+        setCopyModifier(false);
 
         if (!over) return;
 
@@ -88,7 +111,17 @@ export const Timeline: React.FC<TimelineProps> = ({ height = 180, scale = 1 }) =
             const chord = active.data.current.chord as Chord;
 
             if (sourceSlotId && sourceSectionId) {
-                if (sourceSlotId === targetSlotId) return;
+                if (sourceSlotId === targetSlotId && sourceSectionId === targetSectionId) return;
+
+                const moved = moveSelection(
+                    { sectionId: sourceSectionId, slotId: sourceSlotId },
+                    { sectionId: targetSectionId, slotId: targetSlotId },
+                    activeDragData?.copyMode || copyModifier ? 'copy' : 'move'
+                );
+
+                if (moved) {
+                    return;
+                }
 
                 // Check if there is a chord in the target slot (Swap Scenario)
                 const state = useSongStore.getState();
@@ -128,6 +161,22 @@ export const Timeline: React.FC<TimelineProps> = ({ height = 180, scale = 1 }) =
         }
     };
 
+    React.useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.altKey) setCopyModifier(true);
+        };
+        const handleKeyUp = (e: KeyboardEvent) => {
+            if (!e.altKey) setCopyModifier(false);
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        window.addEventListener('keyup', handleKeyUp);
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+            window.removeEventListener('keyup', handleKeyUp);
+        };
+    }, []);
+
     return (
         <div className="w-full h-full flex flex-col">
             {/* Content area - no header, just the sections */}
@@ -150,6 +199,7 @@ export const Timeline: React.FC<TimelineProps> = ({ height = 180, scale = 1 }) =
                     onDragStart={handleDragStart}
                     onDragEnd={handleDragEnd}
                 >
+                    <CopyMonitor onAltChange={setCopyModifier} />
                     <SortableContext
                         items={currentSong.sections.map(s => s.id)}
                         strategy={horizontalListSortingStrategy}
@@ -184,8 +234,15 @@ export const Timeline: React.FC<TimelineProps> = ({ height = 180, scale = 1 }) =
                         ) : null}
 
                         {activeId && activeDragData?.type === 'chord' ? (
-                            <div className="w-24 h-24 rounded-lg bg-accent-primary text-white flex items-center justify-center font-bold text-xl shadow-2xl rotate-6 scale-110 cursor-grabbing">
-                                {activeDragData.chord.symbol}
+                            <div className="relative">
+                                <div className="w-24 h-24 rounded-lg bg-accent-primary text-white flex items-center justify-center font-bold text-xl shadow-2xl rotate-6 scale-110 cursor-grabbing">
+                                    {activeDragData.chord.symbol}
+                                </div>
+                                {(activeDragData?.copyMode || copyModifier) && (
+                                    <div className="absolute -top-3 -right-3 bg-green-500 text-white text-[11px] font-bold px-2 py-0.5 rounded-full shadow-md border border-white">
+                                        +
+                                    </div>
+                                )}
                             </div>
                         ) : null}
                     </DragOverlay>

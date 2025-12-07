@@ -34,7 +34,7 @@ export const Measure: React.FC<MeasureProps> = ({ measure, sectionId, index, cho
 
     return (
         <div
-            className="flex flex-col border-r border-border-subtle last:border-r-0 px-1 min-w-[64px]"
+            className="flex flex-col border-r-2 border-border-medium last:border-r-0 px-1 min-w-[64px]"
             style={{ minWidth: beatUnitWidth * Math.max(1, totalBeats) + 8 }}
         >
             <div className="text-[8px] text-text-muted mb-0.5 font-mono uppercase tracking-wider text-center">

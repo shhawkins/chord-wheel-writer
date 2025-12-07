@@ -4,7 +4,7 @@ import { Timeline } from './components/timeline/Timeline';
 import { ChordDetails } from './components/panel/ChordDetails';
 import { PlaybackControls } from './components/playback/PlaybackControls';
 import { useSongStore } from './store/useSongStore';
-import { Download, Save, Music, GripHorizontal, ChevronDown, ChevronUp, Plus, Minus, Clock, FolderOpen, FilePlus, Trash2 } from 'lucide-react';
+import { Download, Save, Music, GripHorizontal, ChevronDown, ChevronUp, Plus, Minus, Clock, FolderOpen, FilePlus, Trash2, RotateCcw, RotateCw } from 'lucide-react';
 import * as Tone from 'tone';
 import jsPDF from 'jspdf';
 import { saveSong, getSavedSongs, deleteSong } from './utils/storage';
@@ -12,7 +12,7 @@ import type { Song } from './types';
 import { setInstrument, setVolume, setMute, initAudio } from './utils/audioEngine';
 
 function App() {
-  const { currentSong, selectedKey, timelineVisible, toggleTimeline, selectedSectionId, selectedSlotId, clearSlot, setTitle, loadSong: loadSongToStore, newSong, instrument, volume, isMuted } = useSongStore();
+  const { currentSong, selectedKey, timelineVisible, toggleTimeline, selectedSectionId, selectedSlotId, clearSlot, setTitle, loadSong: loadSongToStore, newSong, instrument, volume, isMuted, undo, redo, canUndo, canRedo } = useSongStore();
 
   // Audio Sync Logic
   useEffect(() => {
@@ -148,6 +148,27 @@ function App() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedSectionId, selectedSlotId, clearSlot]);
+
+  // Undo/redo keyboard shortcuts
+  useEffect(() => {
+    const handleUndoRedo = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const isFormElement = target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA' || target?.isContentEditable;
+      if (isFormElement) return;
+
+      if (e.metaKey && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        if (e.shiftKey) {
+          if (canRedo) redo();
+        } else {
+          if (canUndo) undo();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleUndoRedo);
+    return () => window.removeEventListener('keydown', handleUndoRedo);
+  }, [undo, redo, canUndo, canRedo]);
 
   // Handle title edit (Task 23)
   const handleTitleDoubleClick = () => {
@@ -494,20 +515,43 @@ function App() {
                 style={{ height: timelineHeight }}
               >
                 <div className="flex items-center justify-between px-3 py-2 border-b border-border-subtle bg-bg-secondary/90 backdrop-blur-sm">
-                  <div className="flex items-center gap-2 text-[10px] text-text-muted">
-                    <span className="uppercase font-bold tracking-wider text-[9px]">Scale</span>
-                    <input
-                      type="range"
-                      min={0.1}
-                      max={1.6}
-                      step={0.05}
-                      value={timelineScale}
-                      onChange={(e) => setTimelineScale(parseFloat(e.target.value))}
-                      className="w-32"
-                      style={{ accentColor: '#8b5cf6' }}
-                      aria-label="Timeline scale"
-                    />
-                    <span className="text-[10px] text-text-secondary w-12 text-right">{Math.round(timelineScale * 100)}%</span>
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2 text-[10px] text-text-muted">
+                      <span className="uppercase font-bold tracking-wider text-[9px]">Scale</span>
+                      <input
+                        type="range"
+                      min={0.01}
+                        max={1.6}
+                      step={0.01}
+                        value={timelineScale}
+                        onChange={(e) => setTimelineScale(parseFloat(e.target.value))}
+                        className="w-32"
+                        style={{ accentColor: '#8b5cf6' }}
+                        aria-label="Timeline scale"
+                      />
+                      <span className="text-[10px] text-text-secondary w-12 text-right">{Math.round(timelineScale * 100)}%</span>
+                    </div>
+
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={undo}
+                        disabled={!canUndo}
+                        className="flex items-center gap-1 text-[10px] px-2 py-1 rounded bg-bg-tertiary/60 hover:bg-bg-tertiary text-text-muted hover:text-text-primary disabled:opacity-40 disabled:cursor-not-allowed border border-border-subtle"
+                        title="Undo (⌘Z)"
+                      >
+                        <RotateCcw size={12} />
+                        <span className="uppercase font-bold tracking-wider">Undo</span>
+                      </button>
+                      <button
+                        onClick={redo}
+                        disabled={!canRedo}
+                        className="flex items-center gap-1 text-[10px] px-2 py-1 rounded bg-bg-tertiary/60 hover:bg-bg-tertiary text-text-muted hover:text-text-primary disabled:opacity-40 disabled:cursor-not-allowed border border-border-subtle"
+                        title="Redo (⇧⌘Z)"
+                      >
+                        <RotateCw size={12} />
+                        <span className="uppercase font-bold tracking-wider">Redo</span>
+                      </button>
+                    </div>
                   </div>
                   <button
                     onClick={toggleTimeline}

@@ -505,7 +505,7 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
                                     {getSuggestedVoicings().extensions.map((ext) => (
                                         <button
                                             key={ext}
-                                            className={`px-3 py-1.5 rounded text-xs font-semibold transition-colors ${previewVariant === ext
+                                            className={`relative group px-3 py-1.5 rounded text-xs font-semibold transition-colors ${previewVariant === ext
                                                 ? 'bg-accent-primary text-white'
                                                 : 'bg-bg-elevated hover:bg-accent-primary/20 text-text-primary border border-border-subtle'
                                                 }`}
@@ -513,6 +513,18 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
                                             onDoubleClick={() => handleVariationDoubleClick(ext)}
                                         >
                                             {chord.root}{ext}
+                                            {voicingTooltips[ext] && (
+                                                <span
+                                                    className="pointer-events-none absolute -top-6 -translate-y-full left-1/2 -translate-x-1/2 whitespace-normal text-[10px] leading-tight bg-black text-white px-3 py-2 rounded border border-white/10 shadow-xl opacity-0 group-hover:opacity-100 group-active:opacity-0 group-focus:opacity-0 transition-opacity duration-150 group-hover:delay-150 z-50 w-44 text-left"
+                                                    style={{
+                                                        backgroundColor: '#000',
+                                                        color: '#fff',
+                                                        padding: '8px 10px'
+                                                    }}
+                                                >
+                                                    {voicingTooltips[ext]}
+                                                </span>
+                                            )}
                                         </button>
                                     ))}
                                 </div>
