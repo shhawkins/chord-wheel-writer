@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Song, Section, InstrumentType } from '../types';
-import type { Chord } from '../utils/musicTheory';
+import { CIRCLE_OF_FIFTHS, type Chord } from '../utils/musicTheory';
 import { v4 as uuidv4 } from 'uuid';
 
 interface SongState {
@@ -25,6 +25,7 @@ interface SongState {
     tempo: number;
     volume: number;
     instrument: InstrumentType;
+    isMuted: boolean;
 
     // Actions
     setKey: (key: string) => void;
@@ -40,6 +41,7 @@ interface SongState {
     setVolume: (volume: number) => void;
     setInstrument: (instrument: InstrumentType) => void;
     setIsPlaying: (isPlaying: boolean) => void;
+    toggleMute: () => void;
 
     // Song Actions
     setTitle: (title: string) => void;
@@ -98,7 +100,7 @@ export const useSongStore = create<SongState>()(
             currentSong: DEFAULT_SONG,
             selectedKey: 'C',
             wheelRotation: 0,
-            wheelMode: 'rotating' as const,
+            wheelMode: 'fixed' as const,
             chordPanelVisible: true,
             timelineVisible: true,
             selectedChord: null,
@@ -108,21 +110,37 @@ export const useSongStore = create<SongState>()(
             tempo: 120,
             volume: 0.8,
             instrument: 'piano',
+            isMuted: false,
 
             setKey: (key) => set({ selectedKey: key }),
-            
+
             // Cumulative rotation to avoid wrap-around animation issues
             rotateWheel: (direction) => set((state) => ({
-                wheelRotation: state.wheelMode === 'rotating' 
+                wheelRotation: state.wheelMode === 'rotating'
                     ? state.wheelRotation + (direction === 'cw' ? -30 : 30)
                     : 0  // In fixed mode, wheel doesn't rotate
             })),
-            
-            toggleWheelMode: () => set((state) => ({ 
-                wheelMode: state.wheelMode === 'rotating' ? 'fixed' : 'rotating',
-                wheelRotation: 0  // Reset rotation when switching modes
-            })),
-            
+
+            toggleWheelMode: () => set((state) => {
+                const newMode = state.wheelMode === 'rotating' ? 'fixed' : 'rotating';
+
+                // When unlocking (switching to rotating), snap the selected key to the top
+                // When locking (switching to fixed), snap the wheel to 0 (C at top)
+                let newRotation = 0;
+
+                if (newMode === 'rotating') {
+                    const keyIndex = CIRCLE_OF_FIFTHS.indexOf(state.selectedKey);
+                    if (keyIndex !== -1) {
+                        newRotation = -(keyIndex * 30);
+                    }
+                }
+
+                return {
+                    wheelMode: newMode,
+                    wheelRotation: newRotation
+                };
+            }),
+
             toggleChordPanel: () => set((state) => ({ chordPanelVisible: !state.chordPanelVisible })),
             toggleTimeline: () => set((state) => ({ timelineVisible: !state.timelineVisible })),
 
@@ -133,18 +151,31 @@ export const useSongStore = create<SongState>()(
             setVolume: (volume) => set({ volume }),
             setInstrument: (instrument) => set({ instrument }),
             setIsPlaying: (isPlaying) => set({ isPlaying }),
+            toggleMute: () => set((state) => ({ isMuted: !state.isMuted })),
 
             setTitle: (title) => set((state) => ({
                 currentSong: { ...state.currentSong, title }
             })),
 
-            loadSong: (song) => set({
-                currentSong: song,
-                selectedKey: song.key || 'C',
-                wheelRotation: 0,
-                selectedChord: null,
-                selectedSectionId: null,
-                selectedSlotId: null,
+            loadSong: (song) => set((state) => {
+                const key = song.key || 'C';
+                let rotation = 0;
+
+                if (state.wheelMode === 'rotating') {
+                    const keyIndex = CIRCLE_OF_FIFTHS.indexOf(key);
+                    if (keyIndex !== -1) {
+                        rotation = -(keyIndex * 30);
+                    }
+                }
+
+                return {
+                    currentSong: song,
+                    selectedKey: key,
+                    wheelRotation: rotation,
+                    selectedChord: null,
+                    selectedSectionId: null,
+                    selectedSlotId: null,
+                };
             }),
 
             newSong: () => set({
@@ -283,26 +314,32 @@ export const useSongStore = create<SongState>()(
                 return { currentSong: { ...state.currentSong, sections: newSections } };
             }),
 
-            moveChord: (fromSectionId, fromSlotId, _toSectionId, toSlotId) => set((state) => {
-                // Find the chord to move
-                let chordToMove: Chord | null = null;
+            moveChord: (_fromSectionId, fromSlotId, _toSectionId, toSlotId) => set((state) => {
+                // Find both chords
+                let sourceChord: Chord | null = null;
+                let targetChord: Chord | null = null;
 
-                // First pass: find chord
+                // First pass: find both chords
                 state.currentSong.sections.forEach(s => {
-                    if (s.id === fromSectionId) {
-                        s.measures.forEach(m => {
-                            m.beats.forEach(b => {
-                                if (b.id === fromSlotId) {
-                                    chordToMove = b.chord;
-                                }
-                            });
+                    s.measures.forEach(m => {
+                        m.beats.forEach(b => {
+                            if (b.id === fromSlotId) {
+                                sourceChord = b.chord;
+                            }
+                            if (b.id === toSlotId) {
+                                targetChord = b.chord; // This might be null, which is fine
+                            }
                         });
-                    }
+                    });
                 });
 
-                if (!chordToMove) return {};
+                if (!sourceChord && !targetChord) return {};
+                // Note: sourceChord might be null if we allow dragging empty slots, 
+                // but usually the UI prevents dragging empty slots. 
+                // If source is null, we are just "swapping" null into the target, clearing it,
+                // and moving the target back to source.
 
-                // Second pass: update both slots
+                // Second pass: swap
                 const newSections = state.currentSong.sections.map(section => {
                     return {
                         ...section,
@@ -310,10 +347,10 @@ export const useSongStore = create<SongState>()(
                             ...measure,
                             beats: measure.beats.map(beat => {
                                 if (beat.id === fromSlotId) {
-                                    return { ...beat, chord: null };
+                                    return { ...beat, chord: targetChord };
                                 }
                                 if (beat.id === toSlotId) {
-                                    return { ...beat, chord: chordToMove };
+                                    return { ...beat, chord: sourceChord };
                                 }
                                 return beat;
                             })
@@ -330,7 +367,8 @@ export const useSongStore = create<SongState>()(
                 currentSong: state.currentSong,
                 tempo: state.tempo,
                 volume: state.volume,
-                instrument: state.instrument
+                instrument: state.instrument,
+                isMuted: state.isMuted
             }),
         }
     )

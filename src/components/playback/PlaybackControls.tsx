@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { useSongStore } from '../../store/useSongStore';
-import { Play, Pause, SkipBack, SkipForward, Repeat, Volume2 } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, Repeat, Volume2, VolumeX } from 'lucide-react';
 import { initAudio } from '../../utils/audioEngine';
 
 export const PlaybackControls: React.FC = () => {
@@ -10,8 +11,35 @@ export const PlaybackControls: React.FC = () => {
         setIsPlaying,
         setTempo,
         setVolume,
-        currentSong
+        currentSong,
+        instrument,
+        setInstrument,
+        isMuted,
+        toggleMute,
+        setTitle
     } = useSongStore();
+
+    const [isEditing, setIsEditing] = useState(false);
+    const [tempTitle, setTempTitle] = useState("");
+
+    const handleDoubleClick = () => {
+        setTempTitle(currentSong.title);
+        setIsEditing(true);
+    };
+
+    const handleSave = () => {
+        const finalTitle = tempTitle.trim() || "Untitled Song";
+        setTitle(finalTitle);
+        setIsEditing(false);
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            handleSave();
+        } else if (e.key === 'Escape') {
+            setIsEditing(false);
+        }
+    };
 
     const handlePlayPause = async () => {
         if (!isPlaying) {
@@ -45,8 +73,26 @@ export const PlaybackControls: React.FC = () => {
 
             {/* Tempo & Info */}
             <div className="flex flex-col items-center">
-                <div className="text-xs font-medium text-text-primary">
-                    {currentSong.title}
+                <div className="text-xs font-medium text-text-primary h-5 flex items-center justify-center min-w-[120px]">
+                    {isEditing ? (
+                        <input
+                            type="text"
+                            value={tempTitle}
+                            onChange={(e) => setTempTitle(e.target.value)}
+                            onBlur={handleSave}
+                            onKeyDown={handleKeyDown}
+                            autoFocus
+                            className="bg-bg-tertiary border border-border-subtle rounded px-1.5 py-0.5 text-center text-xs text-text-primary focus:outline-none focus:border-accent-primary w-full"
+                        />
+                    ) : (
+                        <span
+                            onDoubleClick={handleDoubleClick}
+                            className="cursor-pointer hover:text-accent-primary transition-colors px-2 py-0.5 rounded hover:bg-bg-tertiary"
+                            title="Double-click to edit"
+                        >
+                            {currentSong.title}
+                        </span>
+                    )}
                 </div>
                 <div className="flex items-center gap-3 text-[10px] text-text-muted">
                     <div className="flex items-center gap-1.5">
@@ -64,18 +110,42 @@ export const PlaybackControls: React.FC = () => {
                 </div>
             </div>
 
-            {/* Volume */}
-            <div className="flex items-center gap-2 w-32">
-                <Volume2 size={14} className="text-text-secondary" />
-                <input
-                    type="range"
-                    min="0"
-                    max="1"
-                    step="0.01"
-                    value={volume}
-                    onChange={(e) => setVolume(Number(e.target.value))}
-                    className="w-full h-1 bg-bg-tertiary rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2.5 [&::-webkit-slider-thumb]:h-2.5 [&::-webkit-slider-thumb]:bg-accent-primary [&::-webkit-slider-thumb]:rounded-full"
-                />
+            {/* Volume & Instrument */}
+            <div className="flex items-center gap-4">
+                {/* Instrument Selector */}
+                <select
+                    value={instrument}
+                    onChange={(e) => setInstrument(e.target.value as any)}
+                    className="bg-bg-tertiary border border-border-subtle rounded px-2 py-1 text-[10px] text-text-secondary focus:outline-none focus:border-accent-primary cursor-pointer"
+                >
+                    <option value="piano">Piano</option>
+                    <option value="guitar">Guitar</option>
+                    <option value="organ">Organ</option>
+                    <option value="synth">Synth</option>
+                </select>
+
+                {/* Volume Control */}
+                <div className="flex items-center gap-2 w-32">
+                    <button
+                        onClick={toggleMute}
+                        className="text-text-secondary hover:text-text-primary transition-colors"
+                        title={isMuted ? "Unmute" : "Mute"}
+                    >
+                        {isMuted || volume === 0 ? <VolumeX size={14} /> : <Volume2 size={14} />}
+                    </button>
+                    <input
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.01"
+                        value={isMuted ? 0 : volume}
+                        onChange={(e) => {
+                            if (isMuted) toggleMute();
+                            setVolume(Number(e.target.value));
+                        }}
+                        className={`w-full h-1 bg-bg-tertiary rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2.5 [&::-webkit-slider-thumb]:h-2.5 [&::-webkit-slider-thumb]:bg-accent-primary [&::-webkit-slider-thumb]:rounded-full ${isMuted ? 'opacity-50' : ''}`}
+                    />
+                </div>
             </div>
         </div>
     );

@@ -1,13 +1,13 @@
 import { useSongStore } from '../../store/useSongStore';
 import { PianoKeyboard } from './PianoKeyboard';
-import { getWheelColors, getChordNotes } from '../../utils/musicTheory';
+import { getWheelColors, getChordNotes, getIntervalFromKey } from '../../utils/musicTheory';
 import { PanelRightClose, PanelRight, GripVertical, HelpCircle } from 'lucide-react';
 import { playChord } from '../../utils/audioEngine';
 import { useState, useCallback, useEffect } from 'react';
 import { HelpModal } from '../HelpModal';
 
 export const ChordDetails: React.FC = () => {
-    const { selectedChord, selectedKey, chordPanelVisible, toggleChordPanel } = useSongStore();
+    const { selectedChord, selectedKey, chordPanelVisible, toggleChordPanel, selectedSectionId, selectedSlotId, addChordToSlot, setSelectedChord } = useSongStore();
     const colors = getWheelColors();
     const [previewVariant, setPreviewVariant] = useState<string | null>(null);
     const [previewNotes, setPreviewNotes] = useState<string[]>([]);
@@ -48,130 +48,68 @@ export const ChordDetails: React.FC = () => {
         setPreviewNotes([]);
     }, [selectedChord?.root, selectedChord?.quality]);
 
-    const chordColor = selectedChord 
+    const chordColor = selectedChord
         ? (colors[selectedChord.root as keyof typeof colors] || '#6366f1')
         : '#6366f1';
-    
+
     // Notes to display: preview notes (if any) > selected chord notes
-    const displayNotes = previewNotes.length > 0 
-        ? previewNotes 
+    const displayNotes = previewNotes.length > 0
+        ? previewNotes
         : (selectedChord?.notes || []);
 
     // Play chord variation and show notes until another is clicked
     const handleVariationClick = (variant: string) => {
         if (!selectedChord) return;
-        
+
         const variantNotes = getChordNotes(selectedChord.root, variant);
         console.log(`Playing ${selectedChord.root}${variant}:`, variantNotes);
-        
+
         playChord(variantNotes);
         setPreviewVariant(variant);
         setPreviewNotes(variantNotes);
-        // Notes stay visible until another variation is clicked or chord changes
+
+        // If a timeline slot is selected, update the chord in that slot
+        if (selectedSectionId && selectedSlotId) {
+            // Construct the new chord object
+            // We need to map quality back to the internal quality type if possible, or just pass it as is 
+            // since getChordNotes handles the mapping. 
+            // Ideally we should use a proper type for quality.
+            // For now, we rely on the fact that our Chord type has 'quality' as a union, 
+            // but we might need to be careful with 'variant' being just a string. 
+            // Let's assume 'variant' maps to one of the extended qualities in most cases.
+
+            // We'll update the selected chord in the store to reflect the change immediately
+            const newChord = {
+                ...selectedChord,
+                quality: variant as any, // Cast to any because our variant string might be 'sus2' etc which are valid qualities
+                symbol: `${selectedChord.root}${variant === 'major' ? '' : variant}`, // basic symbol construction
+                notes: variantNotes
+            };
+
+            // Fix symbol if it looks weird (like Cmajor) - actually variant usually comes from the button text like 'maj7'
+            // We can improve symbol generation logic or import CHORD_SYMBOLS reversed or similar.
+            // For 'maj7', symbol is Root + 'maj7'. For '7', Root + '7'.
+            // The button labels match common symbol suffixes.
+            newChord.symbol = `${selectedChord.root}${variant}`;
+
+            addChordToSlot(newChord, selectedSectionId, selectedSlotId);
+            setSelectedChord(newChord);
+        }
     };
-    
+
     // Clear preview (back to base chord)
     const clearPreview = () => {
         setPreviewVariant(null);
         setPreviewNotes([]);
     };
 
-    // Get interval name based on chord quality and position
-    // When previewing a variant, use the variant's intervals, not the base chord
-    const getIntervalName = (index: number, quality?: string): string => {
-        const variant = previewVariant || '';
-        
-        // If there's a preview variant, prioritize variant-specific interval names
-        if (variant) {
-            // Suspended chords
-            if (variant === 'sus2') {
-                return ['R', '2', '5'][index] || `${index + 1}`;
-            }
-            if (variant === 'sus4') {
-                return ['R', '4', '5'][index] || `${index + 1}`;
-            }
-            if (variant === '7sus4') {
-                return ['R', '4', '5', '♭7'][index] || `${index + 1}`;
-            }
-            
-            // Diminished variants
-            if (variant === 'dim' || variant === 'dim7') {
-                return ['R', '♭3', '♭5', '𝄫7'][index] || `${index + 1}`;
-            }
-            if (variant === 'm7b5' || variant === 'm7♭5' || variant === 'ø7') {
-                return ['R', '♭3', '♭5', '♭7'][index] || `${index + 1}`;
-            }
-            
-            // 6th chords
-            if (variant === '6') {
-                return ['R', '3', '5', '6'][index] || `${index + 1}`;
-            }
-            if (variant === 'm6') {
-                return ['R', '♭3', '5', '6'][index] || `${index + 1}`;
-            }
-            
-            // Major 7th family
-            if (variant === 'maj7') {
-                return ['R', '3', '5', '7'][index] || `${index + 1}`;
-            }
-            if (variant === 'maj9') {
-                return ['R', '3', '5', '7', '9'][index] || `${index + 1}`;
-            }
-            if (variant === 'maj11') {
-                return ['R', '3', '5', '7', '9', '11'][index] || `${index + 1}`;
-            }
-            if (variant === 'maj13') {
-                return ['R', '3', '5', '7', '9', '11', '13'][index] || `${index + 1}`;
-            }
-            
-            // Minor 7th family  
-            if (variant === 'm7') {
-                return ['R', '♭3', '5', '♭7'][index] || `${index + 1}`;
-            }
-            if (variant === 'm9') {
-                return ['R', '♭3', '5', '♭7', '9'][index] || `${index + 1}`;
-            }
-            if (variant === 'm11') {
-                return ['R', '♭3', '5', '♭7', '9', '11'][index] || `${index + 1}`;
-            }
-            
-            // Dominant 7th family
-            if (variant === '7') {
-                return ['R', '3', '5', '♭7'][index] || `${index + 1}`;
-            }
-            if (variant === '9') {
-                return ['R', '3', '5', '♭7', '9'][index] || `${index + 1}`;
-            }
-            if (variant === '11') {
-                return ['R', '3', '5', '♭7', '9', '11'][index] || `${index + 1}`;
-            }
-            if (variant === '13') {
-                return ['R', '3', '5', '♭7', '9', '11', '13'][index] || `${index + 1}`;
-            }
-            
-            // Add9 (no 7th)
-            if (variant === 'add9') {
-                return ['R', '3', '5', '9'][index] || `${index + 1}`;
-            }
-        }
-        
-        // No variant - use base chord quality
-        if (quality === 'diminished') {
-            return ['R', '♭3', '♭5'][index] || `${index + 1}`;
-        }
-        if (quality === 'minor') {
-            return ['R', '♭3', '5'][index] || `${index + 1}`;
-        }
-        
-        // Default: major triad
-        return ['R', '3', '5'][index] || `${index + 1}`;
-    };
+
 
     // Get theory note
     const getTheoryNote = () => {
         if (!selectedChord) return '';
         const numeral = selectedChord.numeral;
-        
+
         const theoryNotes: Record<string, string> = {
             'I': 'The tonic chord — your home base. Most songs begin and end here. Try adding maj7 or 6 for a jazzier sound.',
             'ii': 'The supertonic — a pre-dominant chord that naturally leads to V. The ii-V-I progression is fundamental in jazz and pop.',
@@ -190,44 +128,52 @@ export const ChordDetails: React.FC = () => {
     // Get suggested voicings based on chord function
     const getSuggestedVoicings = (): { extensions: string[], description: string } => {
         if (!selectedChord) return { extensions: [], description: '' };
-        const numeral = selectedChord.numeral;
+        let numeral = selectedChord.numeral;
         
+        // Extract base numeral if it contains parentheses (e.g., "II (V of V)" -> "II")
+        if (numeral && numeral.includes('(')) {
+            const match = numeral.match(/^(.+?)\s*\(/);
+            if (match) {
+                numeral = match[1].trim();
+            }
+        }
+
         const suggestions: Record<string, { extensions: string[], description: string }> = {
-            'I': { 
-                extensions: ['maj7', 'maj9', 'maj13', '6'], 
+            'I': {
+                extensions: ['maj7', 'maj9', 'maj13', '6'],
                 description: 'Major 7th or 6th voicings sound rich and resolved'
             },
-            'IV': { 
-                extensions: ['maj7', 'maj9', 'maj13', '6'], 
+            'IV': {
+                extensions: ['maj7', 'maj9', 'maj13', '6'],
                 description: 'Same as I — warm major extensions work beautifully'
             },
-            'V': { 
-                extensions: ['7', '9', '11', 'sus4', '13'], 
+            'V': {
+                extensions: ['7', '9', '11', 'sus4', '13'],
                 description: 'Dominant 7th adds tension that pulls to I'
             },
-            'ii': { 
-                extensions: ['m7', 'm9', 'm11', 'm6'], 
+            'ii': {
+                extensions: ['m7', 'm9', 'm11', 'm6'],
                 description: 'Minor 7th extensions for a smooth jazz sound'
             },
-            'iii': { 
-                extensions: ['m7'], 
+            'iii': {
+                extensions: ['m7'],
                 description: 'Keep it simple — m7 is most common for iii'
             },
-            'vi': { 
-                extensions: ['m7', 'm9', 'm11'], 
+            'vi': {
+                extensions: ['m7', 'm9', 'm11'],
                 description: 'Minor extensions add depth and emotion'
             },
-            'vii°': { 
-                extensions: ['m7♭5'], 
+            'vii°': {
+                extensions: ['m7♭5'],
                 description: 'Half-diminished (ø7) is the standard voicing'
             },
-            'II': { 
-                extensions: ['7', '9'], 
-                description: 'Dominant voicing as V/V'
+            'II': {
+                extensions: ['7', 'sus4'],
+                description: 'Dominant voicing as V/V — leads strongly to V'
             },
-            'III': { 
-                extensions: ['7', '9'], 
-                description: 'Dominant voicing as V/vi'
+            'III': {
+                extensions: ['7', 'sus4'],
+                description: 'Dominant voicing as V/vi — leads strongly to vi'
             },
         };
 
@@ -239,7 +185,7 @@ export const ChordDetails: React.FC = () => {
         return (
             <button
                 onClick={toggleChordPanel}
-                className="h-full px-2 flex items-center justify-center bg-bg-secondary border-l border-border-subtle hover:bg-bg-tertiary transition-colors"
+                className="h-full px-2 flex items-center justify-center bg-bg-secondary border-l border-border-subtle hover:bg-bg-tertiary transition-colors shrink-0"
                 title="Show chord details"
             >
                 <PanelRight size={18} className="text-text-muted" />
@@ -248,12 +194,12 @@ export const ChordDetails: React.FC = () => {
     }
 
     return (
-        <div 
-            className="h-full flex bg-bg-secondary border-l border-border-subtle"
-            style={{ width: panelWidth }}
+        <div
+            className="h-full flex bg-bg-secondary border-l border-border-subtle shrink-0"
+            style={{ width: panelWidth, minWidth: panelWidth }}
         >
             {/* Resize handle */}
-            <div 
+            <div
                 className={`w-2 flex items-center justify-center cursor-ew-resize hover:bg-bg-tertiary transition-colors ${isResizing ? 'bg-accent-primary/20' : ''}`}
                 onMouseDown={handleMouseDown}
             >
@@ -318,13 +264,13 @@ export const ChordDetails: React.FC = () => {
                             {/* Notes display - improved spacing */}
                             <div className="mt-4 flex flex-wrap gap-2 justify-center">
                                 {displayNotes.map((note, i) => (
-                                    <div 
-                                        key={i} 
+                                    <div
+                                        key={i}
                                         className="flex flex-col items-center px-3 py-2 bg-bg-elevated rounded-lg min-w-[44px]"
                                     >
                                         <span className="font-bold text-text-primary text-sm">{note}</span>
                                         <span className="text-[9px] text-text-muted mt-0.5">
-                                            {getIntervalName(i, selectedChord.quality)}
+                                            {getIntervalFromKey(selectedKey, note)}
                                         </span>
                                     </div>
                                 ))}
@@ -340,11 +286,10 @@ export const ChordDetails: React.FC = () => {
                                 {['7', 'maj7', 'm7', 'sus2', 'sus4', 'dim', 'add9', '9', '11'].map((ext) => (
                                     <button
                                         key={ext}
-                                        className={`px-2 py-1.5 rounded text-[10px] font-medium transition-colors border ${
-                                            previewVariant === ext 
-                                                ? 'bg-accent-primary text-white border-accent-primary' 
-                                                : 'bg-bg-elevated hover:bg-bg-tertiary text-text-secondary hover:text-text-primary border-border-subtle'
-                                        }`}
+                                        className={`px-2 py-1.5 rounded text-[10px] font-medium transition-colors border ${previewVariant === ext
+                                            ? 'bg-accent-primary text-white border-accent-primary'
+                                            : 'bg-bg-elevated hover:bg-bg-tertiary text-text-secondary hover:text-text-primary border-border-subtle'
+                                            }`}
                                         onClick={() => handleVariationClick(ext)}
                                     >
                                         {ext}
@@ -363,11 +308,10 @@ export const ChordDetails: React.FC = () => {
                                     {getSuggestedVoicings().extensions.map((ext) => (
                                         <button
                                             key={ext}
-                                            className={`px-3 py-1.5 rounded text-xs font-semibold transition-colors ${
-                                                previewVariant === ext 
-                                                    ? 'bg-accent-primary text-white' 
-                                                    : 'bg-bg-elevated hover:bg-accent-primary/20 text-text-primary border border-border-subtle'
-                                            }`}
+                                            className={`px-3 py-1.5 rounded text-xs font-semibold transition-colors ${previewVariant === ext
+                                                ? 'bg-accent-primary text-white'
+                                                : 'bg-bg-elevated hover:bg-accent-primary/20 text-text-primary border border-border-subtle'
+                                                }`}
                                             onClick={() => handleVariationClick(ext)}
                                         >
                                             {selectedChord.root}{ext}
@@ -393,7 +337,7 @@ export const ChordDetails: React.FC = () => {
                         </div>
                     </div>
                 )}
-                
+
                 {/* Help button at bottom left */}
                 <button
                     onClick={() => setShowHelp(true)}
@@ -403,7 +347,7 @@ export const ChordDetails: React.FC = () => {
                     <HelpCircle size={14} />
                 </button>
             </div>
-            
+
             {/* Help Modal */}
             <HelpModal isOpen={showHelp} onClose={() => setShowHelp(false)} />
         </div>

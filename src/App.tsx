@@ -9,29 +9,46 @@ import * as Tone from 'tone';
 import jsPDF from 'jspdf';
 import { saveSong, getSavedSongs, deleteSong } from './utils/storage';
 import type { Song } from './types';
+import { setInstrument, setVolume, setMute, initAudio } from './utils/audioEngine';
 
 function App() {
-  const { currentSong, selectedKey, timelineVisible, toggleTimeline, selectedSectionId, selectedSlotId, clearSlot, setTitle, loadSong: loadSongToStore, newSong } = useSongStore();
-  
+  const { currentSong, selectedKey, timelineVisible, toggleTimeline, selectedSectionId, selectedSlotId, clearSlot, setTitle, loadSong: loadSongToStore, newSong, instrument, volume, isMuted } = useSongStore();
+
+  // Audio Sync Logic
+  useEffect(() => {
+    console.log("App Audio Sync: Instrument", instrument);
+    setInstrument(instrument);
+  }, [instrument]);
+
+  useEffect(() => {
+    console.log("App Audio Sync: Volume", volume);
+    setVolume(volume);
+  }, [volume]);
+
+  useEffect(() => {
+    console.log("App Audio Sync: Mute", isMuted);
+    setMute(isMuted);
+  }, [isMuted]);
+
   // Resizable panel state - timeline height in pixels
   const [timelineHeight, setTimelineHeight] = useState(180);
   const [isResizing, setIsResizing] = useState(false);
-  
+
   // Wheel zoom state
   const [wheelZoom, setWheelZoom] = useState(1);
   const [wheelZoomOrigin, setWheelZoomOrigin] = useState(50);
-  
+
   const handleZoomChange = useCallback((scale: number, originY: number) => {
     setWheelZoom(scale);
     setWheelZoomOrigin(originY);
   }, []);
-  
+
   const handleZoomIn = useCallback(() => {
     const newScale = Math.min(2.5, wheelZoom + 0.3);
     setWheelZoom(newScale);
     setWheelZoomOrigin(newScale > 1.3 ? 38 : 50);
   }, [wheelZoom]);
-  
+
   const handleZoomOut = useCallback(() => {
     const newScale = Math.max(1, wheelZoom - 0.3);
     setWheelZoom(newScale);
@@ -50,14 +67,14 @@ function App() {
       }, 0);
       return total + sectionBeats;
     }, 0);
-    
+
     // Convert beats to seconds using BPM
     const beatsPerSecond = currentSong.tempo / 60;
     const totalSeconds = totalBeats / beatsPerSecond;
-    
+
     const minutes = Math.floor(totalSeconds / 60);
     const seconds = Math.floor(totalSeconds % 60);
-    
+
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   }, [currentSong.sections, currentSong.tempo]);
 
@@ -67,6 +84,10 @@ function App() {
       console.log('Audio Context Started');
     };
     document.addEventListener('click', startAudio, { once: true });
+
+    // Preload audio samples immediately
+    initAudio().catch(console.error);
+
     return () => document.removeEventListener('click', startAudio);
   }, []);
 
@@ -82,7 +103,7 @@ function App() {
         clearSlot(selectedSectionId, selectedSlotId);
       }
     };
-    
+
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedSectionId, selectedSlotId, clearSlot]);
@@ -120,7 +141,21 @@ function App() {
   }, []);
 
   const handleSave = () => {
-    saveSong(currentSong);
+    if (currentSong.title === 'Untitled Song' || !currentSong.title.trim()) {
+      // If title is default or empty, prompt for a new one
+      const newTitle = prompt('Please name your song:', currentSong.title);
+      if (newTitle === null) return; // Cancelled
+
+      const finalTitle = newTitle.trim() || 'Untitled Song';
+      setTitle(finalTitle);
+      // We need to wait for the state to update, but setSongTitle is synchronous in Zustand usually, 
+      // but strictly speaking we are using currentSong from closure. 
+      // Actually, let's just save with the new title directly to avoid race conditions with state update
+      const songToSave = { ...currentSong, title: finalTitle };
+      saveSong(songToSave);
+    } else {
+      saveSong(currentSong);
+    }
     setSavedSongs(getSavedSongs());
     setShowSaveMenu(false);
   };
@@ -188,8 +223,11 @@ function App() {
     const doc = new jsPDF();
 
     doc.setFontSize(24);
+    doc.setFont("helvetica", "bold");
     doc.text(currentSong.title, 20, 20);
+
     doc.setFontSize(12);
+    doc.setFont("helvetica", "normal");
     doc.text(`Key: ${selectedKey} | Tempo: ${currentSong.tempo} BPM`, 20, 30);
 
     let y = 50;
@@ -230,7 +268,7 @@ function App() {
             </div>
             <span className="font-bold text-sm tracking-tight hidden sm:block text-text-muted">Songwriter's Wheel</span>
           </div>
-          
+
           {/* Editable Song Title (Task 23) */}
           <div className="hidden md:block">
             {isEditingTitle ? (
@@ -245,7 +283,7 @@ function App() {
                 maxLength={50}
               />
             ) : (
-              <span 
+              <span
                 onDoubleClick={handleTitleDoubleClick}
                 className="text-sm font-medium text-text-primary cursor-pointer hover:text-accent-primary transition-colors px-2 py-0.5"
                 title="Double-click to edit title"
@@ -274,7 +312,7 @@ function App() {
 
           {/* Save/Load Menu (Task 30) - fixed styling */}
           <div className="relative" ref={saveMenuRef}>
-            <button 
+            <button
               onClick={() => setShowSaveMenu(!showSaveMenu)}
               className="flex items-center gap-1 text-[11px] text-text-secondary hover:text-text-primary transition-colors px-2 py-1"
             >
@@ -282,7 +320,7 @@ function App() {
               <span className="hidden sm:inline">Save</span>
               <ChevronDown size={10} className={`transition-transform ${showSaveMenu ? 'rotate-180' : ''}`} />
             </button>
-            
+
             {showSaveMenu && (
               <div className="absolute right-0 top-full mt-1 w-56 bg-[#1a1a24] border border-border-medium rounded-lg shadow-2xl z-50 overflow-hidden">
                 {/* Actions */}
@@ -302,7 +340,7 @@ function App() {
                     New Song
                   </button>
                 </div>
-                
+
                 {/* Saved Songs List */}
                 <div className="max-h-48 overflow-y-auto bg-[#1a1a24]">
                   {savedSongs.length === 0 ? (
@@ -314,11 +352,10 @@ function App() {
                         <div
                           key={song.id}
                           onClick={() => handleLoad(song)}
-                          className={`flex items-center justify-between px-3 py-2 text-xs rounded cursor-pointer transition-colors ${
-                            song.id === currentSong.id 
-                              ? 'bg-accent-primary/20 text-accent-primary' 
-                              : 'text-gray-300 hover:bg-[#2a2a3a]'
-                          }`}
+                          className={`flex items-center justify-between px-3 py-2 text-xs rounded cursor-pointer transition-colors ${song.id === currentSong.id
+                            ? 'bg-accent-primary/20 text-accent-primary'
+                            : 'text-gray-300 hover:bg-[#2a2a3a]'
+                            }`}
                         >
                           <div className="flex items-center gap-2 min-w-0">
                             <FolderOpen size={12} className="shrink-0" />
@@ -338,7 +375,7 @@ function App() {
               </div>
             )}
           </div>
-          
+
           <button
             onClick={handleExport}
             className="flex items-center gap-1 text-[11px] bg-text-primary text-bg-primary px-2 py-1 rounded font-medium hover:bg-white transition-colors"
@@ -352,7 +389,7 @@ function App() {
       {/* Main Content Area */}
       <div className="flex-1 flex overflow-hidden min-h-0">
         {/* Left: Wheel + Timeline */}
-        <div className="flex-1 flex flex-col min-w-0 min-h-0">
+        <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">
           {/* Wheel Area - takes remaining space */}
           <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-gradient-to-b from-bg-primary to-bg-secondary/30">
             {/* Zoom toolbar - fixed at top of wheel area */}
@@ -379,10 +416,10 @@ function App() {
             </div>
             {/* Wheel container */}
             <div className="flex-1 flex items-center justify-center min-h-0 overflow-hidden">
-              <ChordWheel 
-                zoomScale={wheelZoom} 
-                zoomOriginY={wheelZoomOrigin} 
-                onZoomChange={handleZoomChange} 
+              <ChordWheel
+                zoomScale={wheelZoom}
+                zoomOriginY={wheelZoomOrigin}
+                onZoomChange={handleZoomChange}
               />
             </div>
           </div>
@@ -391,10 +428,10 @@ function App() {
           {timelineVisible ? (
             <>
               {/* Resize Handle with hide button */}
-              <div 
+              <div
                 className={`h-6 bg-bg-secondary border-t border-border-subtle flex items-center justify-center group transition-colors ${isResizing ? 'bg-accent-primary/20' : ''}`}
               >
-                <div 
+                <div
                   className="flex-1 h-full cursor-ns-resize flex items-center justify-center hover:bg-bg-tertiary transition-colors"
                   onMouseDown={handleMouseDown}
                 >
@@ -411,7 +448,7 @@ function App() {
               </div>
 
               {/* Timeline - resizable height */}
-              <div 
+              <div
                 className="shrink-0 bg-bg-secondary overflow-hidden"
                 style={{ height: timelineHeight }}
               >

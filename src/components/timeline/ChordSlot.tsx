@@ -3,7 +3,7 @@ import { useDraggable, useDroppable } from '@dnd-kit/core';
 import type { ChordSlot as IChordSlot } from '../../types';
 import clsx from 'clsx';
 import { useSongStore } from '../../store/useSongStore';
-import { getWheelColors, normalizeNote } from '../../utils/musicTheory';
+import { getWheelColors, normalizeNote, getContrastingTextColor } from '../../utils/musicTheory';
 
 interface ChordSlotProps {
     slot: IChordSlot;
@@ -44,20 +44,20 @@ export const ChordSlot: React.FC<ChordSlotProps> = ({ slot, sectionId, size = 48
     // Get color for this chord based on its root
     const getChordColor = () => {
         if (!slot.chord) return undefined;
-        
+
         const root = slot.chord.root;
-        
+
         if (colors[root as keyof typeof colors]) {
             return colors[root as keyof typeof colors];
         }
-        
+
         const normalized = normalizeNote(root);
         for (const key of Object.keys(colors)) {
             if (normalizeNote(key) === normalized) {
                 return colors[key as keyof typeof colors];
             }
         }
-        
+
         return 'hsl(230, 60%, 50%)';
     };
 
@@ -96,9 +96,12 @@ export const ChordSlot: React.FC<ChordSlotProps> = ({ slot, sectionId, size = 48
                         isDragging ? "opacity-50" : "opacity-100"
                     )}
                 >
-                    <span 
-                        className="text-black/80 truncate px-0.5 text-center"
-                        style={{ fontSize }}
+                    <span
+                        style={{
+                            fontSize,
+                            color: getContrastingTextColor(chordColor || '')
+                        }}
+                        className="truncate px-0.5 text-center font-bold"
                     >
                         {slot.chord.symbol}
                     </span>

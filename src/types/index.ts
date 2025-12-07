@@ -32,4 +32,4 @@ export interface Song {
     updatedAt: Date;
 }
 
-export type InstrumentType = 'piano' | 'electric' | 'synth';
+export type InstrumentType = 'piano' | 'guitar' | 'organ' | 'synth';

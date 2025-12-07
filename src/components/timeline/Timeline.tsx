@@ -33,7 +33,7 @@ export const Timeline: React.FC<TimelineProps> = ({ height = 180 }) => {
         addChordToSlot,
         moveChord
     } = useSongStore();
-    
+
     // Calculate chord slot size based on timeline height
     // Reserve space for header (~28px) and padding (~12px)
     const availableHeight = height - 40;
@@ -87,11 +87,40 @@ export const Timeline: React.FC<TimelineProps> = ({ height = 180 }) => {
             if (sourceSlotId && sourceSectionId) {
                 if (sourceSlotId === targetSlotId) return;
 
+                // Check if there is a chord in the target slot (Swap Scenario)
+                const state = useSongStore.getState();
+                const targetChord = state.currentSong.sections
+                    .find(s => s.id === targetSectionId)
+                    ?.measures.flatMap(m => m.beats)
+                    .find(b => b.id === targetSlotId)
+                    ?.chord;
+
                 // Use the new moveChord action
                 moveChord(sourceSectionId, sourceSlotId, targetSectionId, targetSlotId);
+
+                if (targetChord) {
+                    // Swap Scenario: 
+                    // The chord we dragged (A) is now in targetSlotId.
+                    // The chord that was there (B) is now in sourceSlotId.
+                    // User Request: "switch from reading the note you're holding [A] to reading the new swapped note [B]"
+                    // So we select the displaced chord (B), which is now in sourceSlotId.
+                    state.setSelectedSlot(sourceSectionId, sourceSlotId);
+                    state.setSelectedChord(targetChord);
+                } else {
+                    // Move Scenario (to empty slot):
+                    // The chord we dragged (A) is now in targetSlotId.
+                    // We select it there.
+                    if (chord) {
+                        state.setSelectedSlot(targetSectionId, targetSlotId);
+                        state.setSelectedChord(chord);
+                    }
+                }
             } else {
                 // If no source (e.g. from wheel?), just add
                 addChordToSlot(chord, targetSectionId, targetSlotId);
+                // Also select it
+                useSongStore.getState().setSelectedSlot(targetSectionId, targetSlotId);
+                useSongStore.getState().setSelectedChord(chord);
             }
         }
     };

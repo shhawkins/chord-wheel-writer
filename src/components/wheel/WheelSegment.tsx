@@ -17,6 +17,7 @@ interface WheelSegmentProps {
     isDiatonic: boolean;
     isSecondary?: boolean;
     onClick: (chord: Chord) => void;
+    onDoubleClick?: (chord: Chord) => void;
     ringType?: 'major' | 'minor' | 'diminished';
     wheelRotation?: number;
     romanNumeral?: string;
@@ -38,6 +39,7 @@ export const WheelSegment: React.FC<WheelSegmentProps> = ({
     isDiatonic,
     isSecondary = false,
     onClick,
+    onDoubleClick,
     ringType = 'major',
     wheelRotation = 0,
     romanNumeral,
@@ -54,8 +56,8 @@ export const WheelSegment: React.FC<WheelSegmentProps> = ({
     // Layout: voicing at TOP (outer), chord in MIDDLE, numeral at BOTTOM (inner)
     const ringHeight = outerRadius - innerRadius;
     const chordRadius = innerRadius + ringHeight * 0.5;    // Center of ring
-    const numeralRadius = innerRadius + ringHeight * 0.18; // Near inner edge (bottom of cell)
-    
+    const numeralRadius = innerRadius + ringHeight * 0.18; // Same position for all major numerals (I, IV, V, II, III)
+
     const chordPos = polarToCartesian(cx, cy, chordRadius, midAngle);
     const numeralPos = polarToCartesian(cx, cy, numeralRadius, midAngle);
 
@@ -67,7 +69,7 @@ export const WheelSegment: React.FC<WheelSegmentProps> = ({
     const getSegmentStyle = () => {
         let baseOpacity = 0.35;
         let baseSaturation = 0.5;
-        
+
         if (isDiatonic) {
             baseOpacity = 1;
             baseSaturation = 1;
@@ -75,40 +77,42 @@ export const WheelSegment: React.FC<WheelSegmentProps> = ({
             baseOpacity = 0.7;
             baseSaturation = 0.65;
         }
-        
+
         const hslMatch = color.match(/hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/);
         if (hslMatch) {
             const h = parseInt(hslMatch[1]);
             const s = Math.round(parseInt(hslMatch[2]) * baseSaturation);
             const l = parseInt(hslMatch[3]);
-            
+
             let adjustedL = l;
             if (ringType === 'minor') {
                 adjustedL = Math.max(l - 8, 30);
             } else if (ringType === 'diminished') {
                 adjustedL = Math.max(l - 15, 25);
             }
-            
+
             return {
                 fill: `hsl(${h}, ${s}%, ${adjustedL}%)`,
                 opacity: baseOpacity
             };
         }
-        
+
         return { fill: color, opacity: baseOpacity };
     };
 
     const segmentStyle = getSegmentStyle();
-    
+
     const getChordFontSize = () => {
         if (ringType === 'diminished') return '10px';
-        if (ringType === 'minor') return '11px';
+        if (ringType === 'minor') return '12px'; // Increased from 11px
         return '14px';
     };
 
     const isHighlighted = isDiatonic || isSecondary;
     const textColor = isHighlighted ? '#000000' : 'rgba(255,255,255,0.7)';
     const textWeight = isDiatonic ? 'bold' : (isSecondary ? '600' : 'normal');
+    
+    const numeralFontSize = ringType === 'diminished' ? '6px' : ringType === 'minor' ? '6px' : '8px';
 
     return (
         <g
@@ -120,9 +124,13 @@ export const WheelSegment: React.FC<WheelSegmentProps> = ({
                 e.stopPropagation();
                 onClick(chord);
             }}
+            onDoubleClick={(e) => {
+                e.stopPropagation();
+                if (onDoubleClick) onDoubleClick(chord);
+            }}
         >
             {/* Define arc path for curved voicing text */}
-            {isDiatonic && voicingSuggestion && (
+            {(isDiatonic || isSecondary) && voicingSuggestion && (
                 <defs>
                     <path id={arcPathId} d={arcPath} fill="none" />
                 </defs>
@@ -140,9 +148,9 @@ export const WheelSegment: React.FC<WheelSegmentProps> = ({
                     isHighlighted && "hover:brightness-105"
                 )}
             />
-            
+
             {/* Curved voicing at TOP of cell (outer edge) - major ring */}
-            {isDiatonic && voicingSuggestion && ringType === 'major' && (
+            {(isDiatonic || isSecondary) && voicingSuggestion && ringType === 'major' && (
                 <text
                     fill="rgba(0,0,0,0.6)"
                     fontSize="6px"
@@ -191,7 +199,7 @@ export const WheelSegment: React.FC<WheelSegmentProps> = ({
                     </textPath>
                 </text>
             )}
-            
+
             {/* Main chord label - CENTER of cell */}
             <text
                 x={chordPos.x}
@@ -206,16 +214,16 @@ export const WheelSegment: React.FC<WheelSegmentProps> = ({
             >
                 {label}
             </text>
-            
+
             {/* Roman numeral - BOTTOM of cell (inner edge) */}
-            {isDiatonic && romanNumeral && (
+            {(isDiatonic || isSecondary) && romanNumeral && (
                 <text
                     x={numeralPos.x}
                     y={numeralPos.y}
                     textAnchor="middle"
                     dominantBaseline="middle"
                     fill="rgba(0,0,0,0.6)"
-                    fontSize={ringType === 'diminished' ? '6px' : ringType === 'minor' ? '6px' : '8px'}
+                    fontSize={numeralFontSize}
                     fontStyle="italic"
                     className="pointer-events-none select-none"
                     transform={`rotate(${textRotation}, ${numeralPos.x}, ${numeralPos.y})`}
