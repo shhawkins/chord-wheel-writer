@@ -1,0 +1,323 @@
+// Guitar chord fingering database
+// Format: { frets: number[], fingers: number[], barres: number[], baseFret: number }
+// frets: -1 = muted, 0 = open, 1-24 = fret number (relative to baseFret)
+// fingers: 0 = none, 1-4 = index to pinky
+// barres: fret numbers where barre is applied
+// baseFret: starting fret position (1 = nut)
+
+export interface GuitarChordShape {
+    frets: number[];
+    fingers: number[];
+    barres: number[];
+    baseFret: number;
+}
+
+export interface ChordVoicings {
+    [quality: string]: GuitarChordShape[];
+}
+
+export interface GuitarChordDatabase {
+    [root: string]: ChordVoicings;
+}
+
+// Common guitar chord voicings organized by root note and quality
+export const guitarChords: GuitarChordDatabase = {
+    'C': {
+        'maj': [{ frets: [-1, 3, 2, 0, 1, 0], fingers: [0, 3, 2, 0, 1, 0], barres: [], baseFret: 1 }],
+        'm': [{ frets: [-1, 3, 1, 0, 1, 3], fingers: [0, 3, 1, 0, 2, 4], barres: [], baseFret: 1 }],
+        '7': [{ frets: [-1, 3, 2, 3, 1, 0], fingers: [0, 3, 2, 4, 1, 0], barres: [], baseFret: 1 }],
+        'maj7': [{ frets: [-1, 3, 2, 0, 0, 0], fingers: [0, 3, 2, 0, 0, 0], barres: [], baseFret: 1 }],
+        'm7': [{ frets: [-1, 3, 1, 3, 1, 3], fingers: [0, 2, 1, 3, 1, 4], barres: [1], baseFret: 3 }],
+        'sus2': [{ frets: [-1, 3, 0, 0, 1, 3], fingers: [0, 2, 0, 0, 1, 3], barres: [], baseFret: 1 }],
+        'sus4': [{ frets: [-1, 3, 3, 0, 1, 1], fingers: [0, 3, 4, 0, 1, 1], barres: [1], baseFret: 1 }],
+        'dim': [{ frets: [-1, 3, 1, -1, 1, 2], fingers: [0, 4, 1, 0, 2, 3], barres: [], baseFret: 1 }],
+        '6': [{ frets: [-1, 3, 2, 2, 1, 0], fingers: [0, 4, 2, 3, 1, 0], barres: [], baseFret: 1 }],
+        'add9': [{ frets: [-1, 3, 2, 0, 3, 0], fingers: [0, 2, 1, 0, 3, 0], barres: [], baseFret: 1 }],
+        '9': [{ frets: [-1, 3, 2, 3, 3, 0], fingers: [0, 2, 1, 3, 4, 0], barres: [], baseFret: 1 }],
+        'm7b5': [{ frets: [-1, 3, 4, 3, 4, -1], fingers: [0, 1, 3, 2, 4, 0], barres: [], baseFret: 1 }],
+    },
+    'C#': {
+        'maj': [{ frets: [-1, 1, 3, 3, 3, 1], fingers: [0, 1, 2, 3, 4, 1], barres: [1], baseFret: 4 }],
+        'm': [{ frets: [-1, 1, 3, 3, 2, 1], fingers: [0, 1, 3, 4, 2, 1], barres: [1], baseFret: 4 }],
+        '7': [{ frets: [-1, 1, 3, 1, 3, 1], fingers: [0, 1, 3, 1, 4, 1], barres: [1], baseFret: 4 }],
+        'maj7': [{ frets: [-1, 1, 3, 3, 3, 0], fingers: [0, 1, 2, 3, 4, 0], barres: [], baseFret: 4 }],
+        'm7': [{ frets: [-1, 1, 3, 1, 2, 1], fingers: [0, 1, 3, 1, 2, 1], barres: [1], baseFret: 4 }],
+        'sus2': [{ frets: [-1, 1, 3, 3, 1, 1], fingers: [0, 1, 3, 4, 1, 1], barres: [1], baseFret: 4 }],
+        'sus4': [{ frets: [-1, 1, 3, 3, 4, 1], fingers: [0, 1, 2, 3, 4, 1], barres: [1], baseFret: 4 }],
+        'dim': [{ frets: [-1, 1, 2, 3, 2, -1], fingers: [0, 1, 2, 4, 3, 0], barres: [], baseFret: 4 }],
+        '6': [{ frets: [-1, 1, 3, 3, 3, 3], fingers: [0, 1, 2, 2, 2, 2], barres: [3], baseFret: 4 }],
+        'add9': [{ frets: [-1, 1, 3, 3, 1, 1], fingers: [0, 1, 3, 4, 1, 1], barres: [1], baseFret: 4 }],
+        '9': [{ frets: [-1, 1, 3, 1, 1, 1], fingers: [0, 2, 4, 1, 1, 1], barres: [1], baseFret: 4 }],
+        'm7b5': [{ frets: [-1, 1, 2, 1, 2, -1], fingers: [0, 1, 3, 2, 4, 0], barres: [], baseFret: 4 }],
+    },
+    'Db': {
+        'maj': [{ frets: [-1, 1, 3, 3, 3, 1], fingers: [0, 1, 2, 3, 4, 1], barres: [1], baseFret: 4 }],
+        'm': [{ frets: [-1, 1, 3, 3, 2, 1], fingers: [0, 1, 3, 4, 2, 1], barres: [1], baseFret: 4 }],
+        '7': [{ frets: [-1, 1, 3, 1, 3, 1], fingers: [0, 1, 3, 1, 4, 1], barres: [1], baseFret: 4 }],
+        'maj7': [{ frets: [-1, 1, 3, 3, 3, 0], fingers: [0, 1, 2, 3, 4, 0], barres: [], baseFret: 4 }],
+        'm7': [{ frets: [-1, 1, 3, 1, 2, 1], fingers: [0, 1, 3, 1, 2, 1], barres: [1], baseFret: 4 }],
+        'sus2': [{ frets: [-1, 1, 3, 3, 1, 1], fingers: [0, 1, 3, 4, 1, 1], barres: [1], baseFret: 4 }],
+        'sus4': [{ frets: [-1, 1, 3, 3, 4, 1], fingers: [0, 1, 2, 3, 4, 1], barres: [1], baseFret: 4 }],
+        'dim': [{ frets: [-1, 1, 2, 3, 2, -1], fingers: [0, 1, 2, 4, 3, 0], barres: [], baseFret: 4 }],
+        '6': [{ frets: [-1, 1, 3, 3, 3, 3], fingers: [0, 1, 2, 2, 2, 2], barres: [3], baseFret: 4 }],
+        'add9': [{ frets: [-1, 1, 3, 3, 1, 1], fingers: [0, 1, 3, 4, 1, 1], barres: [1], baseFret: 4 }],
+        '9': [{ frets: [-1, 1, 3, 1, 1, 1], fingers: [0, 2, 4, 1, 1, 1], barres: [1], baseFret: 4 }],
+        'm7b5': [{ frets: [-1, 1, 2, 1, 2, -1], fingers: [0, 1, 3, 2, 4, 0], barres: [], baseFret: 4 }],
+    },
+    'D': {
+        'maj': [{ frets: [-1, -1, 0, 2, 3, 2], fingers: [0, 0, 0, 1, 3, 2], barres: [], baseFret: 1 }],
+        'm': [{ frets: [-1, -1, 0, 2, 3, 1], fingers: [0, 0, 0, 2, 3, 1], barres: [], baseFret: 1 }],
+        '7': [{ frets: [-1, -1, 0, 2, 1, 2], fingers: [0, 0, 0, 2, 1, 3], barres: [], baseFret: 1 }],
+        'maj7': [{ frets: [-1, -1, 0, 2, 2, 2], fingers: [0, 0, 0, 1, 2, 3], barres: [], baseFret: 1 }],
+        'm7': [{ frets: [-1, -1, 0, 2, 1, 1], fingers: [0, 0, 0, 2, 1, 1], barres: [1], baseFret: 1 }],
+        'sus2': [{ frets: [-1, -1, 0, 2, 3, 0], fingers: [0, 0, 0, 1, 2, 0], barres: [], baseFret: 1 }],
+        'sus4': [{ frets: [-1, -1, 0, 2, 3, 3], fingers: [0, 0, 0, 1, 2, 3], barres: [], baseFret: 1 }],
+        'dim': [{ frets: [-1, -1, 0, 1, 3, 1], fingers: [0, 0, 0, 1, 4, 2], barres: [], baseFret: 1 }],
+        '6': [{ frets: [-1, -1, 0, 2, 0, 2], fingers: [0, 0, 0, 1, 0, 2], barres: [], baseFret: 1 }],
+        'add9': [{ frets: [-1, -1, 0, 2, 3, 0], fingers: [0, 0, 0, 1, 2, 0], barres: [], baseFret: 1 }],
+        '9': [{ frets: [-1, -1, 0, 2, 1, 0], fingers: [0, 0, 0, 2, 1, 0], barres: [], baseFret: 1 }],
+        'm7b5': [{ frets: [-1, -1, 0, 1, 1, 1], fingers: [0, 0, 0, 1, 2, 3], barres: [], baseFret: 1 }],
+    },
+    'D#': {
+        'maj': [{ frets: [-1, 1, 3, 3, 3, 1], fingers: [0, 1, 2, 3, 4, 1], barres: [1], baseFret: 6 }],
+        'm': [{ frets: [-1, 1, 3, 3, 2, 1], fingers: [0, 1, 3, 4, 2, 1], barres: [1], baseFret: 6 }],
+        '7': [{ frets: [-1, 1, 3, 1, 3, 1], fingers: [0, 1, 3, 1, 4, 1], barres: [1], baseFret: 6 }],
+        'maj7': [{ frets: [-1, 1, 3, 2, 3, 1], fingers: [0, 1, 3, 2, 4, 1], barres: [1], baseFret: 6 }],
+        'm7': [{ frets: [-1, 1, 3, 1, 2, 1], fingers: [0, 1, 3, 1, 2, 1], barres: [1], baseFret: 6 }],
+        'sus2': [{ frets: [-1, 1, 3, 3, 1, 1], fingers: [0, 1, 3, 4, 1, 1], barres: [1], baseFret: 6 }],
+        'sus4': [{ frets: [-1, 1, 3, 3, 4, 1], fingers: [0, 1, 2, 3, 4, 1], barres: [1], baseFret: 6 }],
+        'dim': [{ frets: [-1, 1, 2, 3, 2, -1], fingers: [0, 1, 2, 4, 3, 0], barres: [], baseFret: 6 }],
+        '6': [{ frets: [-1, 1, 3, 3, 3, 3], fingers: [0, 1, 2, 2, 2, 2], barres: [3], baseFret: 6 }],
+        'add9': [{ frets: [-1, 1, 3, 3, 1, 1], fingers: [0, 1, 3, 4, 1, 1], barres: [1], baseFret: 6 }],
+        '9': [{ frets: [-1, 1, 3, 1, 1, 1], fingers: [0, 2, 4, 1, 1, 1], barres: [1], baseFret: 6 }],
+        'm7b5': [{ frets: [-1, 1, 2, 1, 2, -1], fingers: [0, 1, 3, 2, 4, 0], barres: [], baseFret: 6 }],
+    },
+    'Eb': {
+        'maj': [{ frets: [-1, 1, 3, 3, 3, 1], fingers: [0, 1, 2, 3, 4, 1], barres: [1], baseFret: 6 }],
+        'm': [{ frets: [-1, 1, 3, 3, 2, 1], fingers: [0, 1, 3, 4, 2, 1], barres: [1], baseFret: 6 }],
+        '7': [{ frets: [-1, 1, 3, 1, 3, 1], fingers: [0, 1, 3, 1, 4, 1], barres: [1], baseFret: 6 }],
+        'maj7': [{ frets: [-1, 1, 3, 2, 3, 1], fingers: [0, 1, 3, 2, 4, 1], barres: [1], baseFret: 6 }],
+        'm7': [{ frets: [-1, 1, 3, 1, 2, 1], fingers: [0, 1, 3, 1, 2, 1], barres: [1], baseFret: 6 }],
+        'sus2': [{ frets: [-1, 1, 3, 3, 1, 1], fingers: [0, 1, 3, 4, 1, 1], barres: [1], baseFret: 6 }],
+        'sus4': [{ frets: [-1, 1, 3, 3, 4, 1], fingers: [0, 1, 2, 3, 4, 1], barres: [1], baseFret: 6 }],
+        'dim': [{ frets: [-1, 1, 2, 3, 2, -1], fingers: [0, 1, 2, 4, 3, 0], barres: [], baseFret: 6 }],
+        '6': [{ frets: [-1, 1, 3, 3, 3, 3], fingers: [0, 1, 2, 2, 2, 2], barres: [3], baseFret: 6 }],
+        'add9': [{ frets: [-1, 1, 3, 3, 1, 1], fingers: [0, 1, 3, 4, 1, 1], barres: [1], baseFret: 6 }],
+        '9': [{ frets: [-1, 1, 3, 1, 1, 1], fingers: [0, 2, 4, 1, 1, 1], barres: [1], baseFret: 6 }],
+        'm7b5': [{ frets: [-1, 1, 2, 1, 2, -1], fingers: [0, 1, 3, 2, 4, 0], barres: [], baseFret: 6 }],
+    },
+    'E': {
+        'maj': [{ frets: [0, 2, 2, 1, 0, 0], fingers: [0, 2, 3, 1, 0, 0], barres: [], baseFret: 1 }],
+        'm': [{ frets: [0, 2, 2, 0, 0, 0], fingers: [0, 2, 3, 0, 0, 0], barres: [], baseFret: 1 }],
+        '7': [{ frets: [0, 2, 0, 1, 0, 0], fingers: [0, 2, 0, 1, 0, 0], barres: [], baseFret: 1 }],
+        'maj7': [{ frets: [0, 2, 1, 1, 0, 0], fingers: [0, 3, 1, 2, 0, 0], barres: [], baseFret: 1 }],
+        'm7': [{ frets: [0, 2, 0, 0, 0, 0], fingers: [0, 1, 0, 0, 0, 0], barres: [], baseFret: 1 }],
+        'sus2': [{ frets: [0, 2, 4, 4, 0, 0], fingers: [0, 1, 3, 4, 0, 0], barres: [], baseFret: 1 }],
+        'sus4': [{ frets: [0, 2, 2, 2, 0, 0], fingers: [0, 2, 3, 4, 0, 0], barres: [], baseFret: 1 }],
+        'dim': [{ frets: [0, 1, 2, 0, 2, 0], fingers: [0, 1, 2, 0, 3, 0], barres: [], baseFret: 1 }],
+        '6': [{ frets: [0, 2, 2, 1, 2, 0], fingers: [0, 2, 3, 1, 4, 0], barres: [], baseFret: 1 }],
+        'add9': [{ frets: [0, 2, 2, 1, 0, 2], fingers: [0, 2, 3, 1, 0, 4], barres: [], baseFret: 1 }],
+        '9': [{ frets: [0, 2, 0, 1, 0, 2], fingers: [0, 2, 0, 1, 0, 3], barres: [], baseFret: 1 }],
+        'm7b5': [{ frets: [0, 1, 0, 0, 2, 0], fingers: [0, 1, 0, 0, 2, 0], barres: [], baseFret: 1 }],
+    },
+    'F': {
+        'maj': [{ frets: [1, 3, 3, 2, 1, 1], fingers: [1, 3, 4, 2, 1, 1], barres: [1], baseFret: 1 }],
+        'm': [{ frets: [1, 3, 3, 1, 1, 1], fingers: [1, 3, 4, 1, 1, 1], barres: [1], baseFret: 1 }],
+        '7': [{ frets: [1, 3, 1, 2, 1, 1], fingers: [1, 3, 1, 2, 1, 1], barres: [1], baseFret: 1 }],
+        'maj7': [{ frets: [-1, -1, 3, 2, 1, 0], fingers: [0, 0, 3, 2, 1, 0], barres: [], baseFret: 1 }],
+        'm7': [{ frets: [1, 3, 1, 1, 1, 1], fingers: [1, 3, 1, 1, 1, 1], barres: [1], baseFret: 1 }],
+        'sus2': [{ frets: [-1, -1, 3, 0, 1, 1], fingers: [0, 0, 3, 0, 1, 1], barres: [1], baseFret: 1 }],
+        'sus4': [{ frets: [1, 3, 3, 3, 1, 1], fingers: [1, 2, 3, 4, 1, 1], barres: [1], baseFret: 1 }],
+        'dim': [{ frets: [1, 2, 3, 1, -1, -1], fingers: [1, 2, 4, 1, 0, 0], barres: [1], baseFret: 1 }],
+        '6': [{ frets: [1, -1, 0, 2, 1, 1], fingers: [1, 0, 0, 3, 1, 1], barres: [1], baseFret: 1 }],
+        'add9': [{ frets: [-1, -1, 3, 2, 1, 3], fingers: [0, 0, 3, 2, 1, 4], barres: [], baseFret: 1 }],
+        '9': [{ frets: [1, 3, 1, 2, 1, 3], fingers: [1, 3, 1, 2, 1, 4], barres: [1], baseFret: 1 }],
+        'm7b5': [{ frets: [1, 2, 3, 1, 4, 1], fingers: [1, 2, 3, 1, 4, 1], barres: [1], baseFret: 1 }],
+    },
+    'F#': {
+        'maj': [{ frets: [1, 3, 3, 2, 1, 1], fingers: [1, 3, 4, 2, 1, 1], barres: [1], baseFret: 2 }],
+        'm': [{ frets: [1, 3, 3, 1, 1, 1], fingers: [1, 3, 4, 1, 1, 1], barres: [1], baseFret: 2 }],
+        '7': [{ frets: [1, 3, 1, 2, 1, 1], fingers: [1, 3, 1, 2, 1, 1], barres: [1], baseFret: 2 }],
+        'maj7': [{ frets: [1, 3, 2, 2, 1, 1], fingers: [1, 4, 2, 3, 1, 1], barres: [1], baseFret: 2 }],
+        'm7': [{ frets: [1, 3, 1, 1, 1, 1], fingers: [1, 3, 1, 1, 1, 1], barres: [1], baseFret: 2 }],
+        'sus2': [{ frets: [1, 3, 3, 1, 1, 1], fingers: [1, 3, 4, 1, 1, 1], barres: [1], baseFret: 2 }],
+        'sus4': [{ frets: [1, 3, 3, 3, 1, 1], fingers: [1, 2, 3, 4, 1, 1], barres: [1], baseFret: 2 }],
+        'dim': [{ frets: [1, 2, 3, 1, -1, -1], fingers: [1, 2, 4, 1, 0, 0], barres: [1], baseFret: 2 }],
+        '6': [{ frets: [1, 3, 3, 2, 3, 1], fingers: [1, 2, 3, 1, 4, 1], barres: [1], baseFret: 2 }],
+        'add9': [{ frets: [1, 3, 3, 2, 1, 3], fingers: [1, 3, 4, 2, 1, 1], barres: [1], baseFret: 2 }],
+        '9': [{ frets: [-1, -1, 4, 3, 2, 4], fingers: [0, 0, 3, 2, 1, 4], barres: [], baseFret: 2 }],
+        'm7b5': [{ frets: [1, 2, 3, 1, 4, 1], fingers: [1, 2, 3, 1, 4, 1], barres: [1], baseFret: 2 }],
+    },
+    'Gb': {
+        'maj': [{ frets: [1, 3, 3, 2, 1, 1], fingers: [1, 3, 4, 2, 1, 1], barres: [1], baseFret: 2 }],
+        'm': [{ frets: [1, 3, 3, 1, 1, 1], fingers: [1, 3, 4, 1, 1, 1], barres: [1], baseFret: 2 }],
+        '7': [{ frets: [1, 3, 1, 2, 1, 1], fingers: [1, 3, 1, 2, 1, 1], barres: [1], baseFret: 2 }],
+        'maj7': [{ frets: [1, 3, 2, 2, 1, 1], fingers: [1, 4, 2, 3, 1, 1], barres: [1], baseFret: 2 }],
+        'm7': [{ frets: [1, 3, 1, 1, 1, 1], fingers: [1, 3, 1, 1, 1, 1], barres: [1], baseFret: 2 }],
+        'sus2': [{ frets: [1, 3, 3, 1, 1, 1], fingers: [1, 3, 4, 1, 1, 1], barres: [1], baseFret: 2 }],
+        'sus4': [{ frets: [1, 3, 3, 3, 1, 1], fingers: [1, 2, 3, 4, 1, 1], barres: [1], baseFret: 2 }],
+        'dim': [{ frets: [1, 2, 3, 1, -1, -1], fingers: [1, 2, 4, 1, 0, 0], barres: [1], baseFret: 2 }],
+        '6': [{ frets: [1, 3, 3, 2, 3, 1], fingers: [1, 2, 3, 1, 4, 1], barres: [1], baseFret: 2 }],
+        'add9': [{ frets: [1, 3, 3, 2, 1, 3], fingers: [1, 3, 4, 2, 1, 1], barres: [1], baseFret: 2 }],
+        '9': [{ frets: [-1, -1, 4, 3, 2, 4], fingers: [0, 0, 3, 2, 1, 4], barres: [], baseFret: 2 }],
+        'm7b5': [{ frets: [1, 2, 3, 1, 4, 1], fingers: [1, 2, 3, 1, 4, 1], barres: [1], baseFret: 2 }],
+    },
+    'G': {
+        'maj': [{ frets: [3, 2, 0, 0, 0, 3], fingers: [2, 1, 0, 0, 0, 3], barres: [], baseFret: 1 }],
+        'm': [{ frets: [3, 1, 0, 0, 3, 3], fingers: [2, 1, 0, 0, 3, 4], barres: [], baseFret: 1 }],
+        '7': [{ frets: [3, 2, 0, 0, 0, 1], fingers: [3, 2, 0, 0, 0, 1], barres: [], baseFret: 1 }],
+        'maj7': [{ frets: [3, 2, 0, 0, 0, 2], fingers: [3, 1, 0, 0, 0, 2], barres: [], baseFret: 1 }],
+        'm7': [{ frets: [3, 1, 0, 0, 3, 0], fingers: [2, 1, 0, 0, 3, 0], barres: [], baseFret: 1 }],
+        'sus2': [{ frets: [3, 0, 0, 0, 3, 3], fingers: [1, 0, 0, 0, 2, 3], barres: [], baseFret: 1 }],
+        'sus4': [{ frets: [3, 3, 0, 0, 1, 3], fingers: [2, 3, 0, 0, 1, 4], barres: [], baseFret: 1 }],
+        'dim': [{ frets: [-1, -1, 0, 3, 2, 3], fingers: [0, 0, 0, 2, 1, 3], barres: [], baseFret: 1 }],
+        '6': [{ frets: [3, 2, 0, 0, 0, 0], fingers: [2, 1, 0, 0, 0, 0], barres: [], baseFret: 1 }],
+        'add9': [{ frets: [3, 0, 0, 0, 0, 3], fingers: [2, 0, 0, 0, 0, 3], barres: [], baseFret: 1 }],
+        '9': [{ frets: [3, 2, 0, 1, 0, 1], fingers: [3, 2, 0, 1, 0, 1], barres: [1], baseFret: 1 }],
+        'm7b5': [{ frets: [-1, -1, 0, 3, 2, 3], fingers: [0, 0, 0, 2, 1, 3], barres: [], baseFret: 1 }],
+    },
+    'G#': {
+        'maj': [{ frets: [1, 3, 3, 2, 1, 1], fingers: [1, 3, 4, 2, 1, 1], barres: [1], baseFret: 4 }],
+        'm': [{ frets: [1, 3, 3, 1, 1, 1], fingers: [1, 3, 4, 1, 1, 1], barres: [1], baseFret: 4 }],
+        '7': [{ frets: [1, 3, 1, 2, 1, 1], fingers: [1, 3, 1, 2, 1, 1], barres: [1], baseFret: 4 }],
+        'maj7': [{ frets: [1, 3, 2, 2, 1, 1], fingers: [1, 4, 2, 3, 1, 1], barres: [1], baseFret: 4 }],
+        'm7': [{ frets: [1, 3, 1, 1, 1, 1], fingers: [1, 3, 1, 1, 1, 1], barres: [1], baseFret: 4 }],
+        'sus2': [{ frets: [1, 3, 3, 1, 1, 1], fingers: [1, 3, 4, 1, 1, 1], barres: [1], baseFret: 4 }],
+        'sus4': [{ frets: [1, 3, 3, 3, 1, 1], fingers: [1, 2, 3, 4, 1, 1], barres: [1], baseFret: 4 }],
+        'dim': [{ frets: [1, 2, 3, 1, -1, -1], fingers: [1, 2, 4, 1, 0, 0], barres: [1], baseFret: 4 }],
+        '6': [{ frets: [1, 3, 3, 2, 3, 1], fingers: [1, 2, 3, 1, 4, 1], barres: [1], baseFret: 4 }],
+        'add9': [{ frets: [1, 3, 3, 2, 1, 3], fingers: [1, 3, 4, 2, 1, 1], barres: [1], baseFret: 4 }],
+        '9': [{ frets: [-1, -1, 4, 3, 2, 4], fingers: [0, 0, 3, 2, 1, 4], barres: [], baseFret: 4 }],
+        'm7b5': [{ frets: [1, 2, 3, 1, 4, 1], fingers: [1, 2, 3, 1, 4, 1], barres: [1], baseFret: 4 }],
+    },
+    'Ab': {
+        'maj': [{ frets: [1, 3, 3, 2, 1, 1], fingers: [1, 3, 4, 2, 1, 1], barres: [1], baseFret: 4 }],
+        'm': [{ frets: [1, 3, 3, 1, 1, 1], fingers: [1, 3, 4, 1, 1, 1], barres: [1], baseFret: 4 }],
+        '7': [{ frets: [1, 3, 1, 2, 1, 1], fingers: [1, 3, 1, 2, 1, 1], barres: [1], baseFret: 4 }],
+        'maj7': [{ frets: [1, 3, 2, 2, 1, 1], fingers: [1, 4, 2, 3, 1, 1], barres: [1], baseFret: 4 }],
+        'm7': [{ frets: [1, 3, 1, 1, 1, 1], fingers: [1, 3, 1, 1, 1, 1], barres: [1], baseFret: 4 }],
+        'sus2': [{ frets: [1, 3, 3, 1, 1, 1], fingers: [1, 3, 4, 1, 1, 1], barres: [1], baseFret: 4 }],
+        'sus4': [{ frets: [1, 3, 3, 3, 1, 1], fingers: [1, 2, 3, 4, 1, 1], barres: [1], baseFret: 4 }],
+        'dim': [{ frets: [1, 2, 3, 1, -1, -1], fingers: [1, 2, 4, 1, 0, 0], barres: [1], baseFret: 4 }],
+        '6': [{ frets: [1, 3, 3, 2, 3, 1], fingers: [1, 2, 3, 1, 4, 1], barres: [1], baseFret: 4 }],
+        'add9': [{ frets: [1, 3, 3, 2, 1, 3], fingers: [1, 3, 4, 2, 1, 1], barres: [1], baseFret: 4 }],
+        '9': [{ frets: [-1, -1, 4, 3, 2, 4], fingers: [0, 0, 3, 2, 1, 4], barres: [], baseFret: 4 }],
+        'm7b5': [{ frets: [1, 2, 3, 1, 4, 1], fingers: [1, 2, 3, 1, 4, 1], barres: [1], baseFret: 4 }],
+    },
+    'A': {
+        'maj': [{ frets: [-1, 0, 2, 2, 2, 0], fingers: [0, 0, 1, 2, 3, 0], barres: [], baseFret: 1 }],
+        'm': [{ frets: [-1, 0, 2, 2, 1, 0], fingers: [0, 0, 2, 3, 1, 0], barres: [], baseFret: 1 }],
+        '7': [{ frets: [-1, 0, 2, 0, 2, 0], fingers: [0, 0, 1, 0, 2, 0], barres: [], baseFret: 1 }],
+        'maj7': [{ frets: [-1, 0, 2, 1, 2, 0], fingers: [0, 0, 2, 1, 3, 0], barres: [], baseFret: 1 }],
+        'm7': [{ frets: [-1, 0, 2, 0, 1, 0], fingers: [0, 0, 2, 0, 1, 0], barres: [], baseFret: 1 }],
+        'sus2': [{ frets: [-1, 0, 2, 2, 0, 0], fingers: [0, 0, 1, 2, 0, 0], barres: [], baseFret: 1 }],
+        'sus4': [{ frets: [-1, 0, 2, 2, 3, 0], fingers: [0, 0, 1, 2, 3, 0], barres: [], baseFret: 1 }],
+        'dim': [{ frets: [-1, 0, 1, 2, 1, -1], fingers: [0, 0, 1, 3, 2, 0], barres: [], baseFret: 1 }],
+        '6': [{ frets: [-1, 0, 2, 2, 2, 2], fingers: [0, 0, 1, 1, 1, 1], barres: [2], baseFret: 1 }],
+        'add9': [{ frets: [-1, 0, 2, 2, 0, 0], fingers: [0, 0, 1, 2, 0, 0], barres: [], baseFret: 1 }],
+        '9': [{ frets: [-1, 0, 2, 4, 2, 3], fingers: [0, 0, 1, 3, 1, 2], barres: [2], baseFret: 1 }],
+        'm7b5': [{ frets: [-1, 0, 1, 0, 1, -1], fingers: [0, 0, 1, 0, 2, 0], barres: [], baseFret: 1 }],
+    },
+    'A#': {
+        'maj': [{ frets: [-1, 1, 3, 3, 3, 1], fingers: [0, 1, 2, 3, 4, 1], barres: [1], baseFret: 1 }],
+        'm': [{ frets: [-1, 1, 3, 3, 2, 1], fingers: [0, 1, 3, 4, 2, 1], barres: [1], baseFret: 1 }],
+        '7': [{ frets: [-1, 1, 3, 1, 3, 1], fingers: [0, 1, 3, 1, 4, 1], barres: [1], baseFret: 1 }],
+        'maj7': [{ frets: [-1, 1, 3, 2, 3, 1], fingers: [0, 1, 3, 2, 4, 1], barres: [1], baseFret: 1 }],
+        'm7': [{ frets: [-1, 1, 3, 1, 2, 1], fingers: [0, 1, 3, 1, 2, 1], barres: [1], baseFret: 1 }],
+        'sus2': [{ frets: [-1, 1, 3, 3, 1, 1], fingers: [0, 1, 3, 4, 1, 1], barres: [1], baseFret: 1 }],
+        'sus4': [{ frets: [-1, 1, 3, 3, 4, 1], fingers: [0, 1, 2, 3, 4, 1], barres: [1], baseFret: 1 }],
+        'dim': [{ frets: [-1, 1, 2, 3, 2, -1], fingers: [0, 1, 2, 4, 3, 0], barres: [], baseFret: 1 }],
+        '6': [{ frets: [-1, 1, 3, 3, 3, 3], fingers: [0, 1, 2, 2, 2, 2], barres: [3], baseFret: 1 }],
+        'add9': [{ frets: [-1, 1, 0, 3, 1, 1], fingers: [0, 1, 0, 4, 2, 3], barres: [], baseFret: 1 }],
+        '9': [{ frets: [-1, 1, 0, 1, 1, 1], fingers: [0, 2, 0, 3, 3, 3], barres: [1], baseFret: 1 }],
+        'm7b5': [{ frets: [-1, 1, 2, 1, 2, -1], fingers: [0, 1, 3, 2, 4, 0], barres: [], baseFret: 1 }],
+    },
+    'Bb': {
+        'maj': [{ frets: [-1, 1, 3, 3, 3, 1], fingers: [0, 1, 2, 3, 4, 1], barres: [1], baseFret: 1 }],
+        'm': [{ frets: [-1, 1, 3, 3, 2, 1], fingers: [0, 1, 3, 4, 2, 1], barres: [1], baseFret: 1 }],
+        '7': [{ frets: [-1, 1, 3, 1, 3, 1], fingers: [0, 1, 3, 1, 4, 1], barres: [1], baseFret: 1 }],
+        'maj7': [{ frets: [-1, 1, 3, 2, 3, 1], fingers: [0, 1, 3, 2, 4, 1], barres: [1], baseFret: 1 }],
+        'm7': [{ frets: [-1, 1, 3, 1, 2, 1], fingers: [0, 1, 3, 1, 2, 1], barres: [1], baseFret: 1 }],
+        'sus2': [{ frets: [-1, 1, 3, 3, 1, 1], fingers: [0, 1, 3, 4, 1, 1], barres: [1], baseFret: 1 }],
+        'sus4': [{ frets: [-1, 1, 3, 3, 4, 1], fingers: [0, 1, 2, 3, 4, 1], barres: [1], baseFret: 1 }],
+        'dim': [{ frets: [-1, 1, 2, 3, 2, -1], fingers: [0, 1, 2, 4, 3, 0], barres: [], baseFret: 1 }],
+        '6': [{ frets: [-1, 1, 3, 3, 3, 3], fingers: [0, 1, 2, 2, 2, 2], barres: [3], baseFret: 1 }],
+        'add9': [{ frets: [-1, 1, 0, 3, 1, 1], fingers: [0, 1, 0, 4, 2, 3], barres: [], baseFret: 1 }],
+        '9': [{ frets: [-1, 1, 0, 1, 1, 1], fingers: [0, 2, 0, 3, 3, 3], barres: [1], baseFret: 1 }],
+        'm7b5': [{ frets: [-1, 1, 2, 1, 2, -1], fingers: [0, 1, 3, 2, 4, 0], barres: [], baseFret: 1 }],
+    },
+    'B': {
+        'maj': [{ frets: [-1, 1, 3, 3, 3, 1], fingers: [0, 1, 2, 3, 4, 1], barres: [1], baseFret: 2 }],
+        'm': [{ frets: [-1, 1, 3, 3, 2, 1], fingers: [0, 1, 3, 4, 2, 1], barres: [1], baseFret: 2 }],
+        '7': [{ frets: [-1, 2, 1, 2, 0, 2], fingers: [0, 2, 1, 3, 0, 4], barres: [], baseFret: 1 }],
+        'maj7': [{ frets: [-1, 1, 3, 2, 3, 1], fingers: [0, 1, 3, 2, 4, 1], barres: [1], baseFret: 2 }],
+        'm7': [{ frets: [-1, 2, 0, 2, 0, 2], fingers: [0, 1, 0, 2, 0, 3], barres: [], baseFret: 1 }],
+        'sus2': [{ frets: [-1, 1, 3, 3, 1, 1], fingers: [0, 1, 3, 4, 1, 1], barres: [1], baseFret: 2 }],
+        'sus4': [{ frets: [-1, 1, 3, 3, 4, 1], fingers: [0, 1, 2, 3, 4, 1], barres: [1], baseFret: 2 }],
+        'dim': [{ frets: [-1, 1, 2, 3, 2, -1], fingers: [0, 1, 2, 4, 3, 0], barres: [], baseFret: 2 }],
+        '6': [{ frets: [-1, 1, 3, 3, 3, 3], fingers: [0, 1, 2, 2, 2, 2], barres: [3], baseFret: 2 }],
+        'add9': [{ frets: [-1, 1, 3, 3, 1, 1], fingers: [0, 1, 3, 4, 1, 1], barres: [1], baseFret: 2 }],
+        '9': [{ frets: [-1, 2, 1, 2, 2, 2], fingers: [0, 2, 1, 3, 3, 3], barres: [2], baseFret: 1 }],
+        'm7b5': [{ frets: [-1, 1, 2, 1, 2, -1], fingers: [0, 1, 3, 2, 4, 0], barres: [], baseFret: 2 }],
+    },
+};
+
+// Helper function to normalize root note (handle enharmonics)
+export function normalizeRoot(root: string): string {
+    // Handle common enharmonic equivalents
+    const enharmonicMap: Record<string, string> = {
+        'C♯': 'C#', 'D♭': 'Db',
+        'D♯': 'D#', 'E♭': 'Eb',
+        'F♯': 'F#', 'G♭': 'Gb',
+        'G♯': 'G#', 'A♭': 'Ab',
+        'A♯': 'A#', 'B♭': 'Bb',
+    };
+    return enharmonicMap[root] || root.replace('♯', '#').replace('♭', 'b');
+}
+
+// Helper function to normalize chord quality
+export function normalizeQuality(quality: string): string {
+    // Map various quality names to our database keys
+    const qualityMap: Record<string, string> = {
+        'major': 'maj',
+        'minor': 'm',
+        'min': 'm',
+        'dom7': '7',
+        'dominant7': '7',
+        'major7': 'maj7',
+        'minor7': 'm7',
+        'min7': 'm7',
+        'suspended2': 'sus2',
+        'suspended4': 'sus4',
+        'diminished': 'dim',
+        'half-diminished': 'm7b5',
+        'm7♭5': 'm7b5',
+        'sixth': '6',
+        'ninth': '9',
+        'added9': 'add9',
+        // Extended voicings may fall back to simpler forms
+        'maj9': 'maj7',
+        'maj13': 'maj7',
+        'm9': 'm7',
+        'm11': 'm7',
+        'm6': 'm',
+        '11': '9',
+        '13': '7',
+    };
+    return qualityMap[quality] || quality;
+}
+
+// Get chord shape for a given root and quality
+export function getGuitarChord(root: string, quality: string): GuitarChordShape | null {
+    const normalizedRoot = normalizeRoot(root);
+    const normalizedQuality = normalizeQuality(quality);
+
+    const rootChords = guitarChords[normalizedRoot];
+    if (!rootChords) return null;
+
+    const voicings = rootChords[normalizedQuality];
+    if (!voicings || voicings.length === 0) return null;
+
+    // Return first voicing (can extend to support multiple)
+    return voicings[0];
+}

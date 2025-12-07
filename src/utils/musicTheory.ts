@@ -311,17 +311,32 @@ export function getIntervalFromKey(keyRoot: string, note: string): string {
  * Assumes background is an HSL string or hex code
  */
 export function getContrastingTextColor(backgroundColor: string): string {
-    // Basic heuristic: if lightness > 50%, use black, else white.
-    // This is simple but effective for the wheel colors which use HSL.
-
     // Check for HSL format: hsl(H, S%, L%)
     const hslMatch = backgroundColor.match(/hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/);
     if (hslMatch) {
+        const h = parseInt(hslMatch[1]);
+        const s = parseInt(hslMatch[2]);
         const l = parseInt(hslMatch[3]);
 
-        // Adjust threshold based on hue (yellow/cyan need higher threshold, blue/red lower)
-        // But for simplicity, 60% is a safe cutoff for white text vs black text
-        if (l > 55) return '#000000';
+        // Yellow-green hues (roughly 40-100) have higher perceived brightness
+        // and need black text at lower lightness values
+        // Cyan (around 180) also appears bright
+        let threshold = 55;
+
+        if (h >= 40 && h <= 100) {
+            // Yellow-green range: use black text at lower lightness
+            threshold = 45;
+        } else if (h >= 160 && h <= 200) {
+            // Cyan range: also bright
+            threshold = 50;
+        }
+
+        // High saturation colors appear brighter
+        if (s > 60 && l >= 45) {
+            threshold -= 5;
+        }
+
+        if (l > threshold) return '#000000';
         return '#ffffff';
     }
 

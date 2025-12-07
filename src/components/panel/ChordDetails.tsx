@@ -1,5 +1,6 @@
 import { useSongStore } from '../../store/useSongStore';
 import { PianoKeyboard } from './PianoKeyboard';
+import { GuitarChord } from './GuitarChord';
 import { getWheelColors, getChordNotes, getIntervalFromKey } from '../../utils/musicTheory';
 import { PanelRightClose, PanelRight, GripVertical, HelpCircle, ChevronUp, ChevronDown } from 'lucide-react';
 import { playChord } from '../../utils/audioEngine';
@@ -40,6 +41,7 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
     const [showVariations, setShowVariations] = useState(false); // Collapsed by default
     const [showSuggested, setShowSuggested] = useState(false); // Also collapsed by default
     const [showTheory, setShowTheory] = useState(false); // Collapsed by default
+    const [showGuitar, setShowGuitar] = useState(true); // Expanded by default since it's new/useful
 
     const voicingTooltips: Record<string, string> = {
         'maj': 'Bright, stable major triad — home base sound.',
@@ -405,8 +407,8 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
                 ) : (
                     <div className="flex-1 overflow-y-auto min-h-0 overscroll-contain">
                         {/* Piano & Voicing Section - Key indicator removed, now in header */}
-                        <div className={`${isMobile ? 'px-4 py-1.5' : 'px-4 py-3'} border-b border-border-subtle`}>
-                            <div className="flex items-center justify-between mb-2">
+                        <div className={`${isMobile ? 'px-4 pt-3 pb-2' : 'px-4 py-3'} border-b border-border-subtle`}>
+                            <div className="flex items-center justify-between mb-3">
                                 <h3 className={`${isMobile ? 'text-[11px]' : 'text-[10px]'} font-semibold text-text-muted uppercase tracking-wide`}>
                                     Voicing {previewVariant && <span className="text-accent-primary ml-1">({previewVariant})</span>}
                                 </h3>
@@ -425,16 +427,16 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
                                 color={chordColor}
                             />
                             {/* Notes display with flexbox layout for better spacing */}
-                            <div className={`${isMobile ? 'mt-3' : 'mt-5'} w-full`}>
-                                <div className="flex flex-col gap-3">
+                            <div className={`${isMobile ? 'mt-4' : 'mt-5'} w-full`}>
+                                <div className="flex flex-col gap-1">
                                     {/* Notes row */}
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-20 shrink-0 text-[10px] font-semibold uppercase tracking-wide text-text-muted">Notes</div>
-                                        <div className="flex-1 flex justify-around gap-3">
+                                    <div className="flex items-center">
+                                        <div className={`${isMobile ? 'w-16' : 'w-20'} shrink-0 text-[10px] font-semibold uppercase tracking-wide text-text-muted`}>Notes</div>
+                                        <div className="flex-1 flex justify-center">
                                             {displayNotes.map((note, i) => (
                                                 <div
                                                     key={`note-${i}`}
-                                                    className="flex-1 text-center text-sm font-bold text-text-primary py-2"
+                                                    className={`${isMobile ? 'w-10' : 'flex-1'} text-center ${isMobile ? 'text-xs' : 'text-sm'} font-bold text-text-primary py-1`}
                                                 >
                                                     {note}
                                                 </div>
@@ -443,13 +445,13 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
                                     </div>
 
                                     {/* Absolute row */}
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-20 shrink-0 text-[10px] font-semibold uppercase tracking-wide text-text-muted">Absolute</div>
-                                        <div className="flex-1 flex justify-around gap-3">
+                                    <div className="flex items-center">
+                                        <div className={`${isMobile ? 'w-16' : 'w-20'} shrink-0 text-[10px] font-semibold uppercase tracking-wide text-text-muted`}>Absolute</div>
+                                        <div className="flex-1 flex justify-center">
                                             {displayNotes.map((note, i) => (
                                                 <div
                                                     key={`abs-${i}`}
-                                                    className="flex-1 text-center text-xs text-text-primary font-semibold py-2"
+                                                    className={`${isMobile ? 'w-10' : 'flex-1'} text-center ${isMobile ? 'text-[11px]' : 'text-xs'} text-text-primary font-semibold py-1`}
                                                 >
                                                     {getAbsoluteDegree(note)}
                                                 </div>
@@ -458,13 +460,13 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
                                     </div>
 
                                     {/* Relative to Key row */}
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-20 shrink-0 text-[10px] font-semibold uppercase tracking-wide text-text-muted">Relative</div>
-                                        <div className="flex-1 flex justify-around gap-3">
+                                    <div className="flex items-center">
+                                        <div className={`${isMobile ? 'w-16' : 'w-20'} shrink-0 text-[10px] font-semibold uppercase tracking-wide text-text-muted`}>Relative</div>
+                                        <div className="flex-1 flex justify-center">
                                             {displayNotes.map((note, i) => (
                                                 <div
                                                     key={`rel-${i}`}
-                                                    className="flex-1 text-center text-xs text-text-secondary py-2"
+                                                    className={`${isMobile ? 'w-10' : 'flex-1'} text-center ${isMobile ? 'text-[11px]' : 'text-xs'} text-text-secondary py-1`}
                                                 >
                                                     {getIntervalFromKey(selectedKey, note).replace(/^1/, 'R')}
                                                 </div>
@@ -473,6 +475,33 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
                                     </div>
                                 </div>
                             </div>
+                        </div>
+
+                        {/* Guitar Fingering */}
+                        <div className={`${isMobile ? 'px-4 py-2 mt-2' : 'px-4 py-3'} border-b border-border-subtle rounded-none`}>
+                            <button
+                                onClick={() => isMobile && setShowGuitar(!showGuitar)}
+                                className={`w-full flex items-center justify-between ${showGuitar && isMobile ? 'mb-2' : 'mb-0'} ${isMobile ? 'cursor-pointer py-0.5' : ''}`}
+                            >
+                                <h3 className={`${isMobile ? 'text-[11px]' : 'text-[10px]'} font-semibold text-text-muted uppercase tracking-wide`}>
+                                    Guitar Fingering
+                                </h3>
+                                {isMobile && (
+                                    <ChevronDown
+                                        size={14}
+                                        className={`text-text-muted transition-transform ${showGuitar ? 'rotate-180' : ''}`}
+                                    />
+                                )}
+                            </button>
+                            {(!isMobile || showGuitar) && (
+                                <div className="flex justify-center py-2">
+                                    <GuitarChord
+                                        root={chord.root}
+                                        quality={previewVariant || chord.quality}
+                                        color={chordColor}
+                                    />
+                                </div>
+                            )}
                         </div>
 
                         {/* Variations */}
