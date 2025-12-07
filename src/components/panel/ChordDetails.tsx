@@ -20,6 +20,48 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
     const [panelWidth, setPanelWidth] = useState(280);
     const [isResizing, setIsResizing] = useState(false);
     const [showHelp, setShowHelp] = useState(false);
+    const [persistedChord, setPersistedChord] = useState(selectedChord);
+    const chord = selectedChord ?? persistedChord;
+    const voicingTooltips: Record<string, string> = {
+        'maj': 'Bright, stable major triad — home base sound.',
+        '7': 'Dominant 7: bluesy tension that wants to resolve.',
+        'maj7': 'Dreamy, smooth major color — great on I or IV.',
+        'maj9': 'Airy, modern major flavor; adds sparkle without tension.',
+        'maj13': 'Lush, extended major pad; orchestral/jazz sheen.',
+        '6': 'Warm vintage major; softer than maj7 for tonic use.',
+        '13': 'Dominant with a soulful top; funky/jazz turnaround vibe.',
+        'm7': 'Soulful, laid-back minor — default jazz ii sound.',
+        'm9': 'Lush, cinematic minor color with extra depth.',
+        'm11': 'Spacious, modal minor; great for grooves and vamps.',
+        'm6': 'Bittersweet/film-noir minor; nice tonic minor option.',
+        'sus2': 'Open and airy with no third; neutral pop/ambient feel.',
+        'sus4': 'Suspended tension that likes to resolve to major.',
+        'dim': 'Tense and unstable; classic passing/leading chord.',
+        'm7b5': 'Half-diminished; dark ii chord in minor keys.',
+        'add9': 'Sparkly major with no 7th; modern pop shimmer.',
+        '9': 'Dominant 9: rich funk/jazz tension with color.',
+        '11': 'Dominant 11: suspended, modal flavor over V.',
+    };
+    const voicingOptions = [
+        'maj',
+        '7',
+        'maj7',
+        'maj9',
+        'maj13',
+        '6',
+        '13',
+        'm7',
+        'm9',
+        'm11',
+        'm6',
+        'sus2',
+        'sus4',
+        'dim',
+        'm7b5',
+        'add9',
+        '9',
+        '11',
+    ];
 
     // Handle resize drag
     const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -49,27 +91,84 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
         };
     }, [isResizing]);
 
-    // Clear preview when selected chord changes
+    useEffect(() => {
+        if (selectedChord) {
+            setPersistedChord(selectedChord);
+        }
+    }, [selectedChord]);
+
+    // Clear preview when chord changes
     useEffect(() => {
         setPreviewVariant(null);
         setPreviewNotes([]);
-    }, [selectedChord?.root, selectedChord?.quality]);
+    }, [chord?.root, chord?.quality]);
 
-    const chordColor = selectedChord
-        ? (colors[selectedChord.root as keyof typeof colors] || '#6366f1')
+    const chordColor = chord
+        ? (colors[chord.root as keyof typeof colors] || '#6366f1')
         : '#6366f1';
+
+    const getAbsoluteDegree = (note: string): string => {
+        if (!chord?.root) return '-';
+
+        const normalize = (n: string) => n.replace(/[\d]/g, '').replace(/♭/, 'b').replace(/♯/, '#');
+        const semitoneMap: Record<string, number> = {
+            'C': 0,
+            'B#': 0,
+            'C#': 1,
+            'Db': 1,
+            'D': 2,
+            'D#': 3,
+            'Eb': 3,
+            'E': 4,
+            'Fb': 4,
+            'E#': 5,
+            'F': 5,
+            'F#': 6,
+            'Gb': 6,
+            'G': 7,
+            'G#': 8,
+            'Ab': 8,
+            'A': 9,
+            'A#': 10,
+            'Bb': 10,
+            'B': 11,
+            'Cb': 11,
+        };
+
+        const rootPc = semitoneMap[normalize(chord.root)];
+        const notePc = semitoneMap[normalize(note)];
+        if (rootPc === undefined || notePc === undefined) return '-';
+
+        const interval = (notePc - rootPc + 12) % 12;
+        const degreeMap: Record<number, string> = {
+            0: 'R',
+            1: '♭2',
+            2: '2',
+            3: '♭3',
+            4: '3',
+            5: '4',
+            6: '♭5',
+            7: '5',
+            8: '♭6',
+            9: '6',
+            10: '♭7',
+            11: '7',
+        };
+
+        return degreeMap[interval] ?? '-';
+    };
 
     // Notes to display: preview notes (if any) > selected chord notes
     const displayNotes = previewNotes.length > 0
         ? previewNotes
-        : (selectedChord?.notes || []);
+        : (chord?.notes || []);
 
     // Play chord variation and show notes until another is clicked
     const handleVariationClick = (variant: string) => {
-        if (!selectedChord) return;
+        if (!chord) return;
 
-        const variantNotes = getChordNotes(selectedChord.root, variant);
-        console.log(`Playing ${selectedChord.root}${variant}:`, variantNotes);
+        const variantNotes = getChordNotes(chord.root, variant);
+        console.log(`Playing ${chord.root}${variant}:`, variantNotes);
 
         playChord(variantNotes);
         setPreviewVariant(variant);
@@ -87,9 +186,9 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
 
             // We'll update the selected chord in the store to reflect the change immediately
             const newChord = {
-                ...selectedChord,
+                ...chord,
                 quality: variant as any, // Cast to any because our variant string might be 'sus2' etc which are valid qualities
-                symbol: `${selectedChord.root}${variant === 'major' ? '' : variant}`, // basic symbol construction
+                symbol: `${chord.root}${variant === 'major' ? '' : variant}`, // basic symbol construction
                 notes: variantNotes
             };
 
@@ -97,7 +196,7 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
             // We can improve symbol generation logic or import CHORD_SYMBOLS reversed or similar.
             // For 'maj7', symbol is Root + 'maj7'. For '7', Root + '7'.
             // The button labels match common symbol suffixes.
-            newChord.symbol = `${selectedChord.root}${variant}`;
+            newChord.symbol = `${chord.root}${variant}`;
 
             addChordToSlot(newChord, selectedSectionId, selectedSlotId);
             setSelectedChord(newChord);
@@ -114,8 +213,8 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
 
     // Get theory note
     const getTheoryNote = () => {
-        if (!selectedChord) return '';
-        const numeral = selectedChord.numeral;
+        if (!chord) return '';
+        const numeral = chord.numeral;
 
         const theoryNotes: Record<string, string> = {
             'I': 'The tonic chord — your home base. Most songs begin and end here. Try adding maj7 or 6 for a jazzier sound.',
@@ -134,8 +233,8 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
 
     // Get suggested voicings based on chord function
     const getSuggestedVoicings = (): { extensions: string[], description: string } => {
-        if (!selectedChord) return { extensions: [], description: '' };
-        let numeral = selectedChord.numeral;
+        if (!chord) return { extensions: [], description: '' };
+        let numeral = chord.numeral;
         
         // Extract base numeral if it contains parentheses (e.g., "II (V of V)" -> "II")
         if (numeral && numeral.includes('(')) {
@@ -218,9 +317,9 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
                 {/* Header with single hide button */}
                 <div className="p-3 border-b border-border-subtle flex justify-between items-center shrink-0">
                     <span className="text-[10px] text-text-muted uppercase tracking-wider font-bold">
-                        {selectedChord ? selectedChord.symbol : 'Chord Details'}
-                        {selectedChord?.numeral && (
-                            <span className="ml-2 font-serif italic text-text-secondary">{selectedChord.numeral}</span>
+                        {chord ? chord.symbol : 'Chord Details'}
+                        {chord?.numeral && (
+                            <span className="ml-2 font-serif italic text-text-secondary">{chord.numeral}</span>
                         )}
                     </span>
                     <button
@@ -233,7 +332,7 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
                 </div>
 
                 {/* Content */}
-                {!selectedChord ? (
+                {!chord ? (
                     <div className="flex-1 flex items-center justify-center p-6">
                         <p className="text-sm text-text-muted text-center">
                             Select a chord from the wheel or timeline
@@ -259,28 +358,58 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
                                         onClick={clearPreview}
                                         className="text-[9px] text-accent-primary hover:text-accent-secondary transition-colors"
                                     >
-                                        ← back to {selectedChord.symbol}
+                                        ← back to {chord.symbol}
                                     </button>
                                 )}
                             </div>
                             <PianoKeyboard
                                 highlightedNotes={displayNotes}
-                                rootNote={selectedChord.root}
+                                rootNote={chord.root}
                                 color={chordColor}
                             />
-                            {/* Notes display - improved spacing */}
-                            <div className="mt-4 flex flex-wrap gap-2 justify-center">
-                                {displayNotes.map((note, i) => (
-                                    <div
-                                        key={i}
-                                        className="flex flex-col items-center px-3 py-2 bg-bg-elevated rounded-lg min-w-[44px]"
-                                    >
-                                        <span className="font-bold text-text-primary text-sm">{note}</span>
-                                        <span className="text-[9px] text-text-muted mt-0.5">
-                                            {getIntervalFromKey(selectedKey, note)}
-                                        </span>
-                                    </div>
-                                ))}
+                            {/* Notes display with absolute and relative lines */}
+                            <div className="mt-4 w-full">
+                                <div
+                                    className="grid w-full items-center gap-y-1"
+                                    style={{
+                                        gridTemplateColumns: `auto repeat(${displayNotes.length}, minmax(0,1fr))`,
+                                        columnGap: '6px',
+                                        rowGap: '4px',
+                                    }}
+                                >
+                                    <div className="text-[9px] font-semibold uppercase tracking-wide text-text-muted leading-tight">Notes</div>
+                                    {displayNotes.map((note, i) => (
+                                        <div
+                                            key={`note-${i}`}
+                                            className="text-center text-[12px] font-bold text-text-primary leading-none py-1"
+                                            style={{ minHeight: 24 }}
+                                        >
+                                            {note}
+                                        </div>
+                                    ))}
+
+                                    <div className="text-[9px] font-semibold uppercase tracking-wide text-text-muted leading-tight">Absolute</div>
+                                    {displayNotes.map((note, i) => (
+                                        <div
+                                            key={`abs-${i}`}
+                                            className="text-center text-[11px] text-text-primary font-semibold leading-none py-1"
+                                            style={{ minHeight: 24 }}
+                                        >
+                                            {getAbsoluteDegree(note)}
+                                        </div>
+                                    ))}
+
+                                    <div className="text-[9px] font-semibold uppercase tracking-wide text-text-muted leading-tight">Relative to Key</div>
+                                    {displayNotes.map((note, i) => (
+                                        <div
+                                            key={`rel-${i}`}
+                                            className="text-center text-[11px] text-text-secondary leading-none py-1"
+                                            style={{ minHeight: 24 }}
+                                        >
+                                            {getIntervalFromKey(selectedKey, note).replace(/^1/, 'R')}
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         </div>
 
@@ -289,39 +418,74 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
                             <h3 className="text-[10px] font-bold text-text-muted uppercase tracking-wider mb-3">
                                 Variations
                             </h3>
-                            <div className="grid grid-cols-3 gap-1.5">
-                                {['7', 'maj7', 'm7', 'sus2', 'sus4', 'dim', 'add9', '9', '11'].map((ext) => (
-                                    <button
-                                        key={ext}
-                                        className={`px-2 py-1.5 rounded text-[10px] font-medium transition-colors border ${previewVariant === ext
-                                            ? 'bg-accent-primary text-white border-accent-primary'
-                                            : 'bg-bg-elevated hover:bg-bg-tertiary text-text-secondary hover:text-text-primary border-border-subtle'
-                                            }`}
-                                        onClick={() => handleVariationClick(ext)}
-                                    >
-                                        {ext}
-                                    </button>
-                                ))}
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                                {voicingOptions.map((ext, idx) => {
+                                    const colIndex = idx % 3;
+                                    const isLeftCol = colIndex === 0;
+                                    const tooltipPositionStyle = isLeftCol
+                                        ? { left: 'calc(100% + 10px)', top: '50%', transform: 'translateY(-50%)' }
+                                        : { right: 'calc(100% + 10px)', top: '50%', transform: 'translateY(-50%)' };
+
+                                    return (
+                                        <button
+                                            key={ext}
+                                            className={`relative group px-2 py-1.5 rounded text-[10px] font-medium transition-colors border ${previewVariant === ext
+                                                ? 'bg-accent-primary text-white border-accent-primary'
+                                                : 'bg-bg-elevated hover:bg-bg-tertiary text-text-secondary hover:text-text-primary border-border-subtle'
+                                                }`}
+                                            onClick={() => handleVariationClick(ext)}
+                                            onDoubleClick={() => handleVariationClick(ext)}
+                                        >
+                                            {ext}
+                                            {voicingTooltips[ext] && (
+                                                <span
+                                                    className="pointer-events-none absolute whitespace-normal text-[10px] leading-tight bg-black text-white px-3 py-2 rounded border border-white/10 shadow-xl opacity-0 group-hover:opacity-100 group-active:opacity-0 group-active:delay-1000 group-focus:opacity-0 transition-opacity duration-150 group-hover:delay-150 z-50 w-44 text-left"
+                                                    style={{
+                                                        ...tooltipPositionStyle,
+                                                        backgroundColor: '#000',
+                                                        color: '#fff',
+                                                        padding: '8px 10px'
+                                                    }}
+                                                >
+                                                    {voicingTooltips[ext]}
+                                                </span>
+                                            )}
+                                        </button>
+                                    );
+                                })}
                             </div>
                         </div>
 
                         {/* Suggested Voicings - now after variations */}
-                        {selectedChord?.numeral && getSuggestedVoicings().extensions.length > 0 && (
+                        {chord?.numeral && getSuggestedVoicings().extensions.length > 0 && (
                             <div className="px-4 py-4 border-b border-border-subtle bg-accent-primary/5">
                                 <h3 className="text-[10px] font-bold text-accent-primary uppercase tracking-wider mb-3">
-                                    Suggested for {selectedChord.numeral}
+                                    Suggested for {chord.numeral}
                                 </h3>
                                 <div className="flex flex-wrap gap-2 mb-3">
                                     {getSuggestedVoicings().extensions.map((ext) => (
                                         <button
                                             key={ext}
-                                            className={`px-3 py-1.5 rounded text-xs font-semibold transition-colors ${previewVariant === ext
+                                            className={`relative group px-3 py-1.5 rounded text-xs font-semibold transition-colors ${previewVariant === ext
                                                 ? 'bg-accent-primary text-white'
                                                 : 'bg-bg-elevated hover:bg-accent-primary/20 text-text-primary border border-border-subtle'
                                                 }`}
                                             onClick={() => handleVariationClick(ext)}
                                         >
-                                            {selectedChord.root}{ext}
+                                            {chord.root}{ext}
+                                            {voicingTooltips[ext] && (
+                                                <span
+                                                    className="pointer-events-none absolute left-1/2 -translate-x-1/2 whitespace-normal text-[10px] leading-tight bg-black text-white px-3 py-2 rounded border border-white/10 shadow-xl opacity-0 group-hover:opacity-100 group-active:opacity-0 group-active:delay-1000 group-focus:opacity-0 transition-opacity duration-150 group-hover:delay-150 z-50 w-44 text-left"
+                                                    style={{
+                                                        top: 'calc(100% + 10px)',
+                                                        backgroundColor: '#000',
+                                                        color: '#fff',
+                                                        padding: '8px 10px'
+                                                    }}
+                                                >
+                                                    {voicingTooltips[ext]}
+                                                </span>
+                                            )}
                                         </button>
                                     ))}
                                 </div>
