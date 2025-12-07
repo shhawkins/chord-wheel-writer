@@ -9,7 +9,7 @@ import {
     type Chord
 } from '../../utils/musicTheory';
 import { WheelSegment } from './WheelSegment';
-import { RotateCw, RotateCcw, Compass } from 'lucide-react';
+import { RotateCw, RotateCcw } from 'lucide-react';
 import { playChord } from '../../utils/audioEngine';
 import { useIsMobile } from '../../hooks/useIsMobile';
 
@@ -839,9 +839,9 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({ zoomScale, zoomOriginY, 
                         </g>
                     </g>
 
-                    {/* Wheel Mode Toggle - larger on mobile */}
+                    {/* Wheel Mode Toggle - Google Maps style compass */}
                     <g
-                        transform={`translate(${cx}, ${cy + 52})`}
+                        transform={`translate(${cx}, ${cy + 38})`}
                         onClick={toggleWheelMode}
                         onTouchEnd={(e) => {
                             e.preventDefault();
@@ -851,26 +851,48 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({ zoomScale, zoomOriginY, 
                         className="cursor-pointer"
                         style={{ pointerEvents: 'all', cursor: 'pointer' }}
                     >
-                        <rect
-                            x={isMobile ? -24 : -18}
-                            y={isMobile ? -10 : -6}
-                            width={isMobile ? 48 : 36}
-                            height={isMobile ? 20 : 12}
-                            rx={isMobile ? 10 : 6}
-                            fill={wheelMode === 'fixed' ? '#6366f1' : '#282833'}
-                            className="hover:brightness-110 transition-all"
+                        {/* Circular background - slightly larger than rotate buttons */}
+                        <circle
+                            r={isMobile ? 16 : 11}
+                            fill="#282833"
+                            className="hover:fill-[#3a3a4a] transition-colors"
                             style={{ pointerEvents: 'all' }}
-                        />
-                        <g style={{ pointerEvents: 'none' }}>
-                            {wheelMode === 'fixed' ? (
-                                <g transform={isMobile ? "translate(-5, -5)" : "translate(-4, -4)"}>
-                                    <Compass size={isMobile ? 10 : 8} color="white" />
-                                </g>
-                            ) : (
-                                <g transform={isMobile ? "translate(-5, -5) rotate(-35 5 5)" : "translate(-4, -4) rotate(-35 4 4)"}>
-                                    <Compass size={isMobile ? 10 : 8} color="#ef4444" />
-                                </g>
-                            )}
+                        >
+                            <title>{wheelMode === 'rotating' ? 'Lock wheel (C at top)' : 'Pin current key to top'}</title>
+                        </circle>
+                        <g
+                            style={{
+                                pointerEvents: 'none',
+                                transition: 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                                transform: wheelMode === 'rotating' ? 'rotate(0deg)' : `rotate(${keyIndex * 30}deg)`,
+                                transformOrigin: '0px 0px'
+                            }}
+                        >
+                            {/* Compass diamond - North (red) half */}
+                            <polygon
+                                points={isMobile
+                                    ? "0,-10 4,0 0,1.5 -4,0"
+                                    : "0,-7 2.5,0 0,1 -2.5,0"}
+                                fill="#ef4444"
+                                stroke="#b91c1c"
+                                strokeWidth="0.5"
+                            />
+                            {/* Compass diamond - South (white) half */}
+                            <polygon
+                                points={isMobile
+                                    ? "0,10 4,0 0,-1.5 -4,0"
+                                    : "0,7 2.5,0 0,-1 -2.5,0"}
+                                fill="#f1f5f9"
+                                stroke="#94a3b8"
+                                strokeWidth="0.5"
+                            />
+                            {/* Center circle */}
+                            <circle
+                                cx={0}
+                                cy={0}
+                                r={isMobile ? 2 : 1.5}
+                                fill={wheelMode === 'rotating' ? '#fef2f2' : '#6b7280'}
+                            />
                         </g>
                     </g>
                 </svg>

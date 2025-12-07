@@ -424,48 +424,53 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
                                 rootNote={chord.root}
                                 color={chordColor}
                             />
-                            {/* Notes display with single labels and compact rows */}
-                            <div className={`${isMobile ? 'mt-2' : 'mt-4'} w-full`}>
-                                <div
-                                    className="grid w-full items-center gap-y-1"
-                                    style={{
-                                        gridTemplateColumns: `auto repeat(${displayNotes.length}, minmax(0,1fr))`,
-                                        columnGap: '6px',
-                                        rowGap: '4px',
-                                    }}
-                                >
-                                    <div className="text-[9px] font-semibold uppercase tracking-wide text-text-muted leading-tight">Notes</div>
-                                    {displayNotes.map((note, i) => (
-                                        <div
-                                            key={`note-${i}`}
-                                            className="text-center text-[12px] font-bold text-text-primary leading-none py-1"
-                                            style={{ minHeight: 24 }}
-                                        >
-                                            {note}
+                            {/* Notes display with flexbox layout for better spacing */}
+                            <div className={`${isMobile ? 'mt-3' : 'mt-5'} w-full`}>
+                                <div className="flex flex-col gap-3">
+                                    {/* Notes row */}
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-20 shrink-0 text-[10px] font-semibold uppercase tracking-wide text-text-muted">Notes</div>
+                                        <div className="flex-1 flex justify-around gap-3">
+                                            {displayNotes.map((note, i) => (
+                                                <div
+                                                    key={`note-${i}`}
+                                                    className="flex-1 text-center text-sm font-bold text-text-primary py-2"
+                                                >
+                                                    {note}
+                                                </div>
+                                            ))}
                                         </div>
-                                    ))}
+                                    </div>
 
-                                    <div className="text-[9px] font-semibold uppercase tracking-wide text-text-muted leading-tight">Absolute</div>
-                                    {displayNotes.map((note, i) => (
-                                        <div
-                                            key={`abs-${i}`}
-                                            className="text-center text-[11px] text-text-primary font-semibold leading-none py-1"
-                                            style={{ minHeight: 24 }}
-                                        >
-                                            {getAbsoluteDegree(note)}
+                                    {/* Absolute row */}
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-20 shrink-0 text-[10px] font-semibold uppercase tracking-wide text-text-muted">Absolute</div>
+                                        <div className="flex-1 flex justify-around gap-3">
+                                            {displayNotes.map((note, i) => (
+                                                <div
+                                                    key={`abs-${i}`}
+                                                    className="flex-1 text-center text-xs text-text-primary font-semibold py-2"
+                                                >
+                                                    {getAbsoluteDegree(note)}
+                                                </div>
+                                            ))}
                                         </div>
-                                    ))}
+                                    </div>
 
-                                    <div className="text-[9px] font-semibold uppercase tracking-wide text-text-muted leading-tight">Relative to Key</div>
-                                    {displayNotes.map((note, i) => (
-                                        <div
-                                            key={`rel-${i}`}
-                                            className="text-center text-[11px] text-text-secondary leading-none py-1"
-                                            style={{ minHeight: 24 }}
-                                        >
-                                            {getIntervalFromKey(selectedKey, note).replace(/^1/, 'R')}
+                                    {/* Relative to Key row */}
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-20 shrink-0 text-[10px] font-semibold uppercase tracking-wide text-text-muted">Relative</div>
+                                        <div className="flex-1 flex justify-around gap-3">
+                                            {displayNotes.map((note, i) => (
+                                                <div
+                                                    key={`rel-${i}`}
+                                                    className="flex-1 text-center text-xs text-text-secondary py-2"
+                                                >
+                                                    {getIntervalFromKey(selectedKey, note).replace(/^1/, 'R')}
+                                                </div>
+                                            ))}
                                         </div>
-                                    ))}
+                                    </div>
                                 </div>
                             </div>
                         </div>
