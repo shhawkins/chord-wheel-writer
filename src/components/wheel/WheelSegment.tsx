@@ -49,7 +49,7 @@ export const WheelSegment: React.FC<WheelSegmentProps> = ({
 }) => {
     const path = describeSector(cx, cy, innerRadius, outerRadius, startAngle, endAngle);
     const midAngle = (startAngle + endAngle) / 2;
-    
+
     // Track touch timing for double-tap detection
     const lastTouchTimeRef = React.useRef<number>(0);
     const touchTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -119,7 +119,7 @@ export const WheelSegment: React.FC<WheelSegmentProps> = ({
     const isHighlighted = isDiatonic || isSecondary;
     const textColor = isHighlighted ? '#000000' : 'rgba(255,255,255,0.7)';
     const textWeight = isDiatonic ? 'bold' : (isSecondary ? '600' : 'normal');
-    
+
     const numeralFontSize = ringType === 'diminished' ? '6px' : ringType === 'minor' ? '6px' : '8px';
 
     const glowStrokeWidth =
@@ -140,21 +140,21 @@ export const WheelSegment: React.FC<WheelSegmentProps> = ({
         e.preventDefault();
         e.stopPropagation();
         setIsTouching(false);
-        
+
         // Start audio context on first touch (required for iOS)
         if (Tone.context.state !== 'running') {
             await Tone.start();
         }
-        
+
         const now = Date.now();
         const timeSinceLastTouch = now - lastTouchTimeRef.current;
-        
+
         // Clear any pending single-tap timeout
         if (touchTimeoutRef.current) {
             clearTimeout(touchTimeoutRef.current);
             touchTimeoutRef.current = null;
         }
-        
+
         // Double-tap detected (within 300ms)
         if (timeSinceLastTouch < 300 && timeSinceLastTouch > 0) {
             lastTouchTimeRef.current = 0; // Reset
@@ -202,7 +202,7 @@ export const WheelSegment: React.FC<WheelSegmentProps> = ({
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
             onTouchCancel={handleTouchCancel}
-            style={{ 
+            style={{
                 pointerEvents: 'all',
                 WebkitTapHighlightColor: 'transparent'
             }}
@@ -221,12 +221,13 @@ export const WheelSegment: React.FC<WheelSegmentProps> = ({
                 </clipPath>
             </defs>
 
+            {/* Thicker border for the I chord (current key tonic) */}
             <path
                 d={path}
                 fill={segmentStyle.fill}
                 opacity={segmentStyle.opacity}
-                stroke="rgba(0,0,0,0.3)"
-                strokeWidth="1"
+                stroke={romanNumeral === 'I' ? 'rgba(0,0,0,0.6)' : 'rgba(0,0,0,0.3)'}
+                strokeWidth={romanNumeral === 'I' ? 2.5 : 1}
                 className={clsx(
                     "transition-all duration-200 hover:brightness-110",
                     isSelected && "brightness-125 stroke-white stroke-2",

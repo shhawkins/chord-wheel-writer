@@ -471,7 +471,7 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
                         </div>
 
                         {/* Variations */}
-                        <div className={`${isMobile ? 'px-4 py-1' : 'px-4 py-2'} border-b border-border-subtle`}>
+                        <div className={`${isMobile ? 'px-4 py-2 mt-2' : 'px-4 py-3'} border-b border-border-subtle rounded-none`}>
                             <button
                                 onClick={() => isMobile && setShowVariations(!showVariations)}
                                 className={`w-full flex items-center justify-between ${showVariations && isMobile ? 'mb-2' : 'mb-0'} ${isMobile ? 'cursor-pointer py-0.5' : ''}`}
@@ -527,7 +527,7 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
 
                         {/* Suggested Voicings - now after variations (always visible when chord selected) */}
                         {chord && (
-                            <div className={`${isMobile ? 'px-4 py-1' : 'px-4 py-2'} border-b border-border-subtle bg-accent-primary/5`}>
+                            <div className={`${isMobile ? 'px-4 py-2 mt-2' : 'px-4 py-3'} border-b border-border-subtle bg-accent-primary/5 rounded-none`}>
                                 <button
                                     onClick={() => isMobile && setShowSuggested(!showSuggested)}
                                     className={`w-full flex items-center justify-between ${showSuggested && isMobile ? 'mb-2' : 'mb-0'} ${isMobile ? 'cursor-pointer py-0.5' : ''}`}
@@ -586,7 +586,7 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
                         )}
 
                         {/* Theory Note - with proper text wrapping */}
-                        <div className={`${isMobile ? 'px-4 py-1' : 'px-4 py-2'} ${isMobile ? 'pb-1' : ''}`}>
+                        <div className={`${isMobile ? 'px-4 py-2 mt-2 pb-2' : 'px-4 py-3'}`}>
                             <button
                                 onClick={() => isMobile && setShowTheory(!showTheory)}
                                 className={`w-full flex items-center justify-between ${isMobile ? 'cursor-pointer py-0.5' : 'mb-0'} ${showTheory && isMobile ? 'mb-2' : 'mb-0'}`}
@@ -602,7 +602,7 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
                                 )}
                             </button>
                             {(!isMobile || showTheory) && (
-                                <div className={`${isMobile ? 'p-3' : 'p-4'} bg-bg-elevated border border-border-subtle`}>
+                                <div className={`${isMobile ? 'p-3' : 'p-4'} bg-bg-elevated border border-border-subtle rounded-none`}>
                                     <p className={`${isMobile ? 'text-sm' : 'text-xs'} text-text-secondary leading-relaxed`}>
                                         {getTheoryNote()}
                                     </p>
