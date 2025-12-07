@@ -34,7 +34,7 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
     const [persistedChord, setPersistedChord] = useState(selectedChord);
     const chord = selectedChord ?? persistedChord;
     const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 768 : false);
-    
+
     // Collapsible sections state (for mobile) - most collapsed by default to save space
     const [showVariations, setShowVariations] = useState(false); // Collapsed by default
     const [showSuggested, setShowSuggested] = useState(false); // Also collapsed by default
@@ -262,7 +262,7 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
     const getSuggestedVoicings = (): { extensions: string[], description: string } => {
         if (!chord) return { extensions: [], description: '' };
         let numeral = chord.numeral;
-        
+
         // Extract base numeral if it contains parentheses (e.g., "II (V of V)" -> "II")
         if (numeral && numeral.includes('(')) {
             const match = numeral.match(/^(.+?)\s*\(/);
@@ -485,101 +485,107 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
                                     Variations
                                 </h3>
                                 {isMobile && (
-                                    <ChevronDown 
-                                        size={14} 
-                                        className={`text-text-muted transition-transform ${showVariations ? 'rotate-180' : ''}`} 
+                                    <ChevronDown
+                                        size={14}
+                                        className={`text-text-muted transition-transform ${showVariations ? 'rotate-180' : ''}`}
                                     />
                                 )}
                             </button>
                             {(!isMobile || showVariations) && (
-                            <div className={`grid ${isMobile ? 'grid-cols-3' : 'grid-cols-2 sm:grid-cols-3'} ${isMobile ? 'gap-2' : 'gap-1.5'}`}>
-                                {voicingOptions.map((ext, idx) => {
-                                    const isLeftCol = idx % 2 === 0;
-                                    const tooltipPositionStyle = isLeftCol
-                                        ? { left: 'calc(100% + 10px)' }
-                                        : { right: 'calc(100% + 10px)' };
+                                <div className={`grid ${isMobile ? 'grid-cols-3' : 'grid-cols-2 sm:grid-cols-3'} ${isMobile ? 'gap-2' : 'gap-1.5'}`}>
+                                    {voicingOptions.map((ext, idx) => {
+                                        const isLeftCol = idx % 2 === 0;
+                                        const tooltipPositionStyle = isLeftCol
+                                            ? { left: 'calc(100% + 10px)' }
+                                            : { right: 'calc(100% + 10px)' };
 
-                                    return (
-                                    <button
-                                        key={ext}
-                                        className={`relative group ${isMobile ? 'px-3 py-3 min-h-[48px] text-xs' : 'px-2 py-1.5 text-[10px]'} rounded font-medium transition-colors border touch-feedback ${previewVariant === ext
-                                            ? 'bg-accent-primary text-white border-accent-primary'
-                                            : 'bg-bg-elevated hover:bg-bg-tertiary text-text-secondary hover:text-text-primary border-border-subtle'
-                                            }`}
-                                        onClick={() => handleVariationClick(ext)}
-                                        onDoubleClick={() => handleVariationDoubleClick(ext)}
-                                    >
-                                        {ext}
-                                        {!isMobile && voicingTooltips[ext] && (
-                                            <span
-                                                className="pointer-events-none absolute top-1/2 -translate-y-1/2 whitespace-normal text-[10px] leading-tight bg-black text-white px-3 py-2 rounded border border-white/10 shadow-xl opacity-0 group-hover:opacity-100 group-active:opacity-0 group-focus:opacity-0 transition-opacity duration-150 group-hover:delay-150 z-50 w-44 text-left"
-                                                style={{
-                                                    ...tooltipPositionStyle,
-                                                    backgroundColor: '#000',
-                                                    color: '#fff',
-                                                    padding: '8px 10px'
-                                                }}
+                                        return (
+                                            <button
+                                                key={ext}
+                                                className={`relative group ${isMobile ? 'px-3 py-3 min-h-[48px] text-xs' : 'px-2 py-1.5 text-[10px]'} rounded font-medium transition-colors border touch-feedback ${previewVariant === ext
+                                                    ? 'bg-accent-primary text-white border-accent-primary'
+                                                    : 'bg-bg-elevated hover:bg-bg-tertiary text-text-secondary hover:text-text-primary border-border-subtle'
+                                                    }`}
+                                                onClick={() => handleVariationClick(ext)}
+                                                onDoubleClick={() => handleVariationDoubleClick(ext)}
                                             >
-                                                {voicingTooltips[ext]}
-                                            </span>
-                                        )}
-                                    </button>
-                                    );
-                                })}
-                            </div>
+                                                {ext}
+                                                {!isMobile && voicingTooltips[ext] && (
+                                                    <span
+                                                        className="pointer-events-none absolute top-1/2 -translate-y-1/2 whitespace-normal text-[10px] leading-tight bg-black text-white px-3 py-2 rounded border border-white/10 shadow-xl opacity-0 group-hover:opacity-100 group-active:opacity-0 group-focus:opacity-0 transition-opacity duration-150 group-hover:delay-150 z-50 w-44 text-left"
+                                                        style={{
+                                                            ...tooltipPositionStyle,
+                                                            backgroundColor: '#000',
+                                                            color: '#fff',
+                                                            padding: '8px 10px'
+                                                        }}
+                                                    >
+                                                        {voicingTooltips[ext]}
+                                                    </span>
+                                                )}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
                             )}
                         </div>
 
-                        {/* Suggested Voicings - now after variations */}
-                        {chord?.numeral && getSuggestedVoicings().extensions.length > 0 && (
+                        {/* Suggested Voicings - now after variations (always visible when chord selected) */}
+                        {chord && (
                             <div className={`${isMobile ? 'px-4 py-1' : 'px-4 py-2'} border-b border-border-subtle bg-accent-primary/5`}>
                                 <button
                                     onClick={() => isMobile && setShowSuggested(!showSuggested)}
                                     className={`w-full flex items-center justify-between ${showSuggested && isMobile ? 'mb-2' : 'mb-0'} ${isMobile ? 'cursor-pointer py-0.5' : ''}`}
                                 >
                                     <h3 className={`${isMobile ? 'text-[11px]' : 'text-[10px]'} font-semibold text-accent-primary uppercase tracking-wide`}>
-                                        Suggested for {chord.numeral}
+                                        Suggested for {chord.numeral || chord.symbol}
                                     </h3>
                                     {isMobile && (
-                                        <ChevronDown 
-                                            size={14} 
-                                            className={`text-accent-primary transition-transform ${showSuggested ? 'rotate-180' : ''}`} 
+                                        <ChevronDown
+                                            size={14}
+                                            className={`text-accent-primary transition-transform ${showSuggested ? 'rotate-180' : ''}`}
                                         />
                                     )}
                                 </button>
                                 {(!isMobile || showSuggested) && (
-                                <>
-                                <div className={`flex flex-wrap ${isMobile ? 'gap-2.5' : 'gap-2'} mb-2`}>
-                                    {getSuggestedVoicings().extensions.map((ext) => (
-                                        <button
-                                            key={ext}
-                                            className={`relative group ${isMobile ? 'px-4 py-2.5 text-sm min-h-[44px]' : 'px-3 py-1.5 text-xs'} rounded font-semibold transition-colors touch-feedback ${previewVariant === ext
-                                                ? 'bg-accent-primary text-white'
-                                                : 'bg-bg-elevated hover:bg-accent-primary/20 text-text-primary border border-border-subtle'
-                                                }`}
-                                            onClick={() => handleVariationClick(ext)}
-                                            onDoubleClick={() => handleVariationDoubleClick(ext)}
-                                        >
-                                            {chord.root}{ext}
-                                            {!isMobile && voicingTooltips[ext] && (
-                                                <span
-                                                    className="pointer-events-none absolute -top-6 -translate-y-full left-1/2 -translate-x-1/2 whitespace-normal text-[10px] leading-tight bg-black text-white px-3 py-2 rounded border border-white/10 shadow-xl opacity-0 group-hover:opacity-100 group-active:opacity-0 group-focus:opacity-0 transition-opacity duration-150 group-hover:delay-150 z-50 w-44 text-left"
-                                                    style={{
-                                                        backgroundColor: '#000',
-                                                        color: '#fff',
-                                                        padding: '8px 10px'
-                                                    }}
-                                                >
-                                                    {voicingTooltips[ext]}
-                                                </span>
-                                            )}
-                                        </button>
-                                    ))}
-                                </div>
-                                <p className={`${isMobile ? 'text-xs' : 'text-[10px]'} text-text-muted leading-relaxed`}>
-                                    {getSuggestedVoicings().description}
-                                </p>
-                                </>
+                                    <>
+                                        {getSuggestedVoicings().extensions.length > 0 ? (
+                                            <div className={`flex flex-wrap ${isMobile ? 'gap-2.5' : 'gap-2'} mb-2`}>
+                                                {getSuggestedVoicings().extensions.map((ext) => (
+                                                    <button
+                                                        key={ext}
+                                                        className={`relative group ${isMobile ? 'px-4 py-2.5 text-sm min-h-[44px]' : 'px-3 py-1.5 text-xs'} rounded font-semibold transition-colors touch-feedback ${previewVariant === ext
+                                                            ? 'bg-accent-primary text-white'
+                                                            : 'bg-bg-elevated hover:bg-accent-primary/20 text-text-primary border border-border-subtle'
+                                                            }`}
+                                                        onClick={() => handleVariationClick(ext)}
+                                                        onDoubleClick={() => handleVariationDoubleClick(ext)}
+                                                    >
+                                                        {chord.root}{ext}
+                                                        {!isMobile && voicingTooltips[ext] && (
+                                                            <span
+                                                                className="pointer-events-none absolute -top-6 -translate-y-full left-1/2 -translate-x-1/2 whitespace-normal text-[10px] leading-tight bg-black text-white px-3 py-2 rounded border border-white/10 shadow-xl opacity-0 group-hover:opacity-100 group-active:opacity-0 group-focus:opacity-0 transition-opacity duration-150 group-hover:delay-150 z-50 w-44 text-left"
+                                                                style={{
+                                                                    backgroundColor: '#000',
+                                                                    color: '#fff',
+                                                                    padding: '8px 10px'
+                                                                }}
+                                                            >
+                                                                {voicingTooltips[ext]}
+                                                            </span>
+                                                        )}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <p className={`${isMobile ? 'text-sm py-2' : 'text-xs py-1.5'} text-text-muted italic`}>
+                                                Not in the key of {selectedKey}
+                                            </p>
+                                        )}
+                                        <p className={`${isMobile ? 'text-xs' : 'text-[10px]'} text-text-muted leading-relaxed`}>
+                                            {getSuggestedVoicings().description}
+                                        </p>
+                                    </>
                                 )}
                             </div>
                         )}
@@ -594,14 +600,14 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
                                     Theory
                                 </h3>
                                 {isMobile && (
-                                    <ChevronDown 
-                                        size={14} 
-                                        className={`text-accent-primary transition-transform ${showTheory ? 'rotate-180' : ''}`} 
+                                    <ChevronDown
+                                        size={14}
+                                        className={`text-accent-primary transition-transform ${showTheory ? 'rotate-180' : ''}`}
                                     />
                                 )}
                             </button>
                             {(!isMobile || showTheory) && (
-                                <div className={`${isMobile ? 'p-3' : 'p-4'} bg-bg-elevated rounded-lg border border-border-subtle`}>
+                                <div className={`${isMobile ? 'p-3' : 'p-4'} bg-bg-elevated border border-border-subtle`}>
                                     <p className={`${isMobile ? 'text-sm' : 'text-xs'} text-text-secondary leading-relaxed`}>
                                         {getTheoryNote()}
                                     </p>

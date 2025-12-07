@@ -19,6 +19,24 @@ let instruments: Record<InstrumentName, Tone.Sampler | Tone.PolySynth | null> = 
     choir: null,
 };
 
+// Fallback synth that requires NO external loading - created immediately for mobile reliability
+let fallbackSynth: Tone.PolySynth | null = null;
+
+const createFallbackSynth = () => {
+    if (!fallbackSynth) {
+        try {
+            fallbackSynth = new Tone.PolySynth(Tone.Synth, {
+                oscillator: { type: "triangle" },
+                envelope: { attack: 0.02, decay: 0.3, sustain: 0.4, release: 0.8 }
+            }).toDestination();
+            console.log("Fallback synth created for mobile reliability");
+        } catch (err) {
+            console.error("Failed to create fallback synth", err);
+        }
+    }
+    return fallbackSynth;
+};
+
 let currentInstrument: InstrumentName = 'piano';
 let initPromise: Promise<void> | null = null;
 
@@ -215,7 +233,7 @@ const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
  */
 export const playChord = async (notes: string[], duration: string = "1n") => {
     console.log('playChord called with notes:', notes);
-    
+
     if (Tone.context.state !== 'running') {
         console.log('Starting Tone context...');
         await Tone.start();
@@ -266,7 +284,7 @@ export const playChord = async (notes: string[], duration: string = "1n") => {
 
     let inst = instruments[currentInstrument];
     console.log(`Trying to play with instrument: ${currentInstrument}, available:`, inst !== null);
-    
+
     if (!inst) {
         console.warn(`Instrument "${currentInstrument}" not ready, falling back to piano`);
         inst = instruments.piano;
