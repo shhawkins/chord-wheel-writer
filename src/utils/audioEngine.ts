@@ -25,6 +25,83 @@ let initPromise: Promise<void> | null = null;
 let scheduledEvents: number[] = [];
 let sectionStartTimes: Record<string, number> = {}; // Map sectionId -> startTime (beats)
 
+// iOS-specific audio unlock state
+let isAudioUnlocked = false;
+let silentAudioElement: HTMLAudioElement | null = null;
+
+/**
+ * Comprehensive iOS audio unlock function.
+ * Must be called from a user gesture handler (click/tap).
+ * 
+ * Key insight: On iOS, playing a LOOPING silent HTML audio element
+ * forces the Web Audio API into the "media playback" category,
+ * which allows audio to play even when the ringer switch is on silent.
+ */
+export const unlockAudioForIOS = async (): Promise<void> => {
+    if (isAudioUnlocked) return;
+
+    console.log('[iOS Audio] Starting unlock sequence...');
+
+    // 1. Set audio session type to "playback" (iOS 17+)
+    // This is the official API but may not work on older iOS
+    if ('audioSession' in navigator) {
+        try {
+            (navigator as any).audioSession.type = 'playback';
+            console.log('[iOS Audio] Set audioSession.type to playback');
+        } catch (e) {
+            console.warn('[iOS Audio] Could not set audioSession type:', e);
+        }
+    }
+
+    // 2. Create and play a LOOPING silent audio element
+    // This forces Web Audio into the "media" category, bypassing ringer switch
+    // The audio must keep playing (loop) to maintain the unlock state
+    if (!silentAudioElement) {
+        silentAudioElement = document.createElement('audio');
+        // Use a longer silent audio with loop to ensure iOS keeps the media session active
+        // This is a ~1 second silent MP3 that loops
+        silentAudioElement.src = 'data:audio/mpeg;base64,/+NIxAAAAAANIAAAAAExBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/jSMQADwAAADSAAAAAVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVU=';
+        silentAudioElement.loop = true;
+        silentAudioElement.volume = 0.001; // Nearly silent but not zero
+        silentAudioElement.muted = false;
+        silentAudioElement.setAttribute('playsinline', 'true');
+        silentAudioElement.setAttribute('x-webkit-airplay', 'deny');
+        // Append to body to ensure it stays alive
+        document.body.appendChild(silentAudioElement);
+    }
+
+    try {
+        const playPromise = silentAudioElement.play();
+        if (playPromise !== undefined) {
+            await playPromise;
+        }
+        console.log('[iOS Audio] Silent looping audio started successfully');
+    } catch (e) {
+        console.warn('[iOS Audio] Silent audio failed:', e);
+    }
+
+    // 3. Start Tone.js context (must happen in user gesture)
+    try {
+        await Tone.start();
+        console.log('[iOS Audio] Tone.start() completed, state:', Tone.context.state);
+    } catch (e) {
+        console.warn('[iOS Audio] Tone.start() failed:', e);
+    }
+
+    // 4. Ensure context is running
+    if (Tone.context.state !== 'running') {
+        try {
+            await Tone.context.resume();
+            console.log('[iOS Audio] Context resumed, state:', Tone.context.state);
+        } catch (e) {
+            console.warn('[iOS Audio] Context resume failed:', e);
+        }
+    }
+
+    isAudioUnlocked = true;
+    console.log('[iOS Audio] Unlock sequence complete');
+};
+
 export const setInstrument = (name: string) => {
     if (name in instruments) {
         currentInstrument = name as InstrumentName;
@@ -330,12 +407,12 @@ export const scheduleSong = (song: Song) => {
                     Tone.Draw.schedule(() => {
                         useSongStore.getState().setPlayingSlot(section.id, beat.id);
                     }, time);
-                    
+
                     // Play Sound
                     if (beat.chord) {
-                         // We need to pass the raw notes array from the chord object
-                         // Assuming chord object has 'notes' property which is string[]
-                         playChord(beat.chord.notes, durationStr, time);
+                        // We need to pass the raw notes array from the chord object
+                        // Assuming chord object has 'notes' property which is string[]
+                        playChord(beat.chord.notes, durationStr, time);
                     }
                 }, time);
 
@@ -358,12 +435,17 @@ export const scheduleSong = (song: Song) => {
     // "if the cycle button is toggled, the currently playing (or selected) section will loop"
 };
 
+
+export const preloadAudio = async () => {
+    await initAudio();
+};
+
 export const playSong = async () => {
     await initAudio();
     if (Tone.context.state !== 'running') {
         await Tone.context.resume();
     }
-    
+
     // Always sync tempo
     const { tempo, currentSong } = useSongStore.getState();
     Tone.Transport.bpm.value = tempo;
@@ -372,7 +454,7 @@ export const playSong = async () => {
     if (scheduledEvents.length === 0) {
         scheduleSong(currentSong);
     }
-    
+
     Tone.Transport.start();
 };
 
@@ -409,7 +491,7 @@ export const skipToSection = (direction: 'prev' | 'next') => {
     const transportTime = beatsToTransportTime(targetTimeBeats);
 
     Tone.Transport.position = transportTime;
-    
+
     // Manually trigger the UI update in case Transport doesn't fire immediately
     // or if paused
     // Finding the first beat of that section
@@ -421,19 +503,19 @@ export const skipToSection = (direction: 'prev' | 'next') => {
 
 export const toggleLoopMode = () => {
     const { isLooping, playingSectionId, selectedSectionId, currentSong } = useSongStore.getState();
-    
+
     if (isLooping) {
         // Find section to loop: either currently playing or selected
         const targetSectionId = playingSectionId || selectedSectionId;
         const section = currentSong.sections.find(s => s.id === targetSectionId);
-        
+
         if (section) {
             const startBeats = sectionStartTimes[section.id] ?? 0;
-            
+
             // Calculate duration of section
             let duration = 0;
             section.measures.forEach(m => m.beats.forEach(b => duration += b.duration));
-            
+
             const endBeats = startBeats + duration;
 
             Tone.Transport.loopStart = beatsToTransportTime(startBeats);
@@ -442,7 +524,7 @@ export const toggleLoopMode = () => {
             return;
         }
     }
-    
+
     Tone.Transport.loop = false;
 };
 

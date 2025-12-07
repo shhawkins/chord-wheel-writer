@@ -572,11 +572,7 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
                                                     </button>
                                                 ))}
                                             </div>
-                                        ) : (
-                                            <p className={`${isMobile ? 'text-sm py-2' : 'text-xs py-1.5'} text-text-muted italic`}>
-                                                Not in the key of {selectedKey}
-                                            </p>
-                                        )}
+                                        ) : null}
                                         <p className={`${isMobile ? 'text-xs' : 'text-[10px]'} text-text-muted leading-relaxed`}>
                                             {getSuggestedVoicings().description}
                                         </p>

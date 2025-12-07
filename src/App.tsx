@@ -11,6 +11,11 @@ import { saveSong, getSavedSongs, deleteSong } from './utils/storage';
 import type { Song } from './types';
 import { setInstrument, setVolume, setMute, initAudio } from './utils/audioEngine';
 
+// Enable Web Audio even with iOS mute switch on
+// This must be called early in the page lifecycle
+import unmuteAudio from 'unmute-ios-audio';
+unmuteAudio();
+
 function App() {
   const { currentSong, selectedKey, timelineVisible, toggleTimeline, selectedSectionId, selectedSlotId, clearSlot, setTitle, loadSong: loadSongToStore, newSong, instrument, volume, isMuted, undo, redo, canUndo, canRedo } = useSongStore();
 
@@ -30,7 +35,7 @@ function App() {
   // Resizable panel state - timeline height in pixels
   const [timelineHeight, setTimelineHeight] = useState(180);
   const [isResizing, setIsResizing] = useState(false);
-  const [timelineScale, setTimelineScale] = useState(1);
+  const [timelineScale, setTimelineScale] = useState(0.6);
 
   // Wheel zoom state
   const [wheelZoom, setWheelZoom] = useState(1);
@@ -375,11 +380,27 @@ function App() {
       doc.text(`[${section.name}]`, 20, y);
       y += 10;
 
-      const chordLine = section.measures
-        .flatMap(m => m.beats)
-        .filter(b => b.chord)
-        .map(b => b.chord?.symbol)
-        .join('  |  ');
+      // Build rhythm notation for each measure
+      const measureNotations = section.measures.map(measure => {
+        const beatCount = measure.beats.length;
+
+        if (beatCount === 1) {
+          // Whole note: "C — — —"
+          const chord = measure.beats[0]?.chord?.symbol || '—';
+          return `${chord} — — —`;
+        } else if (beatCount === 2) {
+          // Half notes: "C — D —"
+          return measure.beats.map(beat => {
+            const chord = beat.chord?.symbol || '—';
+            return `${chord} —`;
+          }).join(' ');
+        } else {
+          // Quarter notes (4 beats) or other: just chord symbols
+          return measure.beats.map(beat => beat.chord?.symbol || '—').join(' ');
+        }
+      });
+
+      const chordLine = measureNotations.join('  |  ');
 
       doc.setFontSize(12);
       doc.setFont("helvetica", "normal");
@@ -432,12 +453,12 @@ function App() {
           )}
         </div>
 
-        <div className={`flex items-center ${isMobile ? 'gap-2' : 'gap-[20px]'} shrink-0 justify-self-end ${isMobile ? 'mr-0' : 'mr-2'}`}>
+        <div className={`flex items-center ${isMobile ? 'gap-3' : 'gap-4'} shrink-0 justify-self-end`}>
           {/* Timeline Toggle for Mobile - make it prominent */}
           {isMobile && !isLandscape && (
             <button
               onClick={toggleTimeline}
-              className={`flex items-center gap-1 px-3 py-2 min-h-[48px] rounded-lg ${timelineVisible ? 'bg-accent-primary text-white' : 'bg-bg-tertiary text-text-muted'} hover:bg-accent-primary/80 hover:text-white transition-all border border-border-subtle shadow-md active:scale-95`}
+              className={`flex items-center gap-1.5 px-3 py-2 min-h-[44px] rounded-lg ${timelineVisible ? 'bg-accent-primary text-white' : 'bg-bg-tertiary text-text-muted'} hover:bg-accent-primary/80 hover:text-white transition-all border border-border-subtle shadow-md active:scale-95`}
               title={timelineVisible ? "Hide Timeline" : "Show Timeline"}
             >
               <GripHorizontal size={16} className="shrink-0" />
@@ -447,13 +468,13 @@ function App() {
 
           {/* Song Duration (Task 33) - Hide on very small screens */}
           {!isMobile && (
-            <div className="flex items-center gap-[6px] text-[10px] text-text-muted">
+            <div className="flex items-center gap-1.5 text-[10px] text-text-muted">
               <Clock size={11} className="shrink-0" />
               <span className="leading-none">{songDuration}</span>
             </div>
           )}
 
-          <div className={`flex items-center gap-[6px] ${isMobile ? 'text-xs' : 'text-[10px]'} text-text-muted`}>
+          <div className={`flex items-center gap-1.5 ${isMobile ? 'text-xs' : 'text-[10px]'} text-text-muted`}>
             <span className="uppercase font-bold">Key</span>
             <span className={`font-bold text-accent-primary ${isMobile ? 'text-base' : 'text-sm'}`}>{selectedKey}</span>
           </div>
@@ -462,7 +483,7 @@ function App() {
           <div className="relative" ref={saveMenuRef}>
             <button
               onClick={() => setShowSaveMenu(!showSaveMenu)}
-              className={`flex items-center ${isMobile ? 'gap-1' : 'gap-[20px]'} ${isMobile ? 'text-xs' : 'text-[11px]'} text-text-secondary hover:text-text-primary transition-colors ${isMobile ? 'px-1 py-1.5 min-w-[44px]' : 'px-2 py-1'} touch-feedback`}
+              className={`flex items-center gap-1.5 ${isMobile ? 'text-xs px-2 py-1.5 min-w-[44px]' : 'text-[11px] px-2 py-1'} text-text-secondary hover:text-text-primary transition-colors touch-feedback`}
             >
               <Save size={isMobile ? 16 : 12} />
               <span className="hidden sm:inline">Save</span>
@@ -526,7 +547,7 @@ function App() {
 
           <button
             onClick={handleExport}
-            className={`flex items-center ${isMobile ? 'gap-1' : 'gap-[20px]'} ${isMobile ? 'text-xs' : 'text-[11px]'} bg-text-primary text-bg-primary ${isMobile ? 'px-2 py-1.5 min-w-[44px]' : 'px-2 py-1'} rounded font-medium hover:bg-white transition-colors touch-feedback`}
+            className={`flex items-center gap-1.5 ${isMobile ? 'text-xs px-3 py-1.5 min-w-[44px]' : 'text-[11px] px-2.5 py-1'} bg-text-primary text-bg-primary rounded font-medium hover:bg-white transition-colors touch-feedback`}
           >
             <Download size={isMobile ? 16 : 12} />
             <span className="hidden sm:inline">Export</span>

@@ -1,10 +1,9 @@
 import React, { useEffect } from 'react';
 import { useSongStore } from '../../store/useSongStore';
-import { Play, Pause, SkipBack, SkipForward, Repeat, Volume2, VolumeX, ChevronLeft, ChevronRight } from 'lucide-react';
-import { playSong, pauseSong, skipToSection, scheduleSong, setTempo as setAudioTempo, toggleLoopMode, setInstrument as setAudioInstrument } from '../../utils/audioEngine';
+import { Play, Pause, SkipBack, SkipForward, Repeat, Volume2, VolumeX, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { playSong, pauseSong, skipToSection, scheduleSong, setTempo as setAudioTempo, toggleLoopMode, setInstrument as setAudioInstrument, unlockAudioForIOS } from '../../utils/audioEngine';
 import type { InstrumentType } from '../../types';
 import { useIsMobile } from '../../hooks/useIsMobile';
-import * as Tone from 'tone';
 
 export const PlaybackControls: React.FC = () => {
     const {
@@ -26,6 +25,8 @@ export const PlaybackControls: React.FC = () => {
 
     const isMobile = useIsMobile();
 
+    const [isLoading, setIsLoading] = React.useState(false);
+
     // Sync song structure to audio engine
     useEffect(() => {
         scheduleSong(currentSong);
@@ -46,14 +47,32 @@ export const PlaybackControls: React.FC = () => {
         toggleLoopMode();
     }, [isLooping, currentSong, playingSectionId, selectedSectionId]);
 
+    // Preload audio on mount
+    useEffect(() => {
+        // Just call it immediately
+        import('../../utils/audioEngine').then(mod => {
+            setIsLoading(true);
+            mod.preloadAudio().finally(() => setIsLoading(false));
+        });
+    }, []);
+
     const handlePlayPause = async () => {
-        await Tone.start();
-        if (!isPlaying) {
-            await playSong();
-            useSongStore.getState().setIsPlaying(true);
-        } else {
-            pauseSong();
-            useSongStore.getState().setIsPlaying(false);
+        try {
+            // CRITICAL: iOS audio unlock must be called FIRST, synchronously in the gesture handler
+            await unlockAudioForIOS();
+
+            if (!isPlaying) {
+                setIsLoading(true);
+                await playSong();
+                useSongStore.getState().setIsPlaying(true);
+            } else {
+                pauseSong();
+                useSongStore.getState().setIsPlaying(false);
+            }
+        } catch (err) {
+            console.error("Playback error:", err);
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -102,9 +121,16 @@ export const PlaybackControls: React.FC = () => {
                 </button>
                 <button
                     onClick={handlePlayPause}
-                    className={`${isMobile ? 'w-12 h-12' : 'w-9 h-9'} rounded-full bg-accent-primary hover:bg-indigo-500 flex items-center justify-center text-white shadow-lg transition-all hover:scale-105 active:scale-95 touch-feedback`}
+                    disabled={isLoading}
+                    className={`${isMobile ? 'w-12 h-12' : 'w-9 h-9'} rounded-full bg-accent-primary hover:bg-indigo-500 disabled:bg-accent-primary/50 flex items-center justify-center text-white shadow-lg transition-all hover:scale-105 active:scale-95 touch-feedback`}
                 >
-                    {isPlaying ? <Pause size={isMobile ? 22 : 18} fill="currentColor" /> : <Play size={isMobile ? 22 : 18} fill="currentColor" className="ml-0.5" />}
+                    {isLoading ? (
+                        <Loader2 size={isMobile ? 22 : 18} className="animate-spin" />
+                    ) : isPlaying ? (
+                        <Pause size={isMobile ? 22 : 18} fill="currentColor" />
+                    ) : (
+                        <Play size={isMobile ? 22 : 18} fill="currentColor" className="ml-0.5" />
+                    )}
                 </button>
                 <button
                     onClick={() => handleSkip('next')}
