@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { Song, Section, InstrumentType } from '../types';
+import type { Song, Section, InstrumentType, Measure } from '../types';
 import { CIRCLE_OF_FIFTHS, type Chord } from '../utils/musicTheory';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -36,6 +36,7 @@ interface SongState {
 
     setSelectedChord: (chord: Chord | null) => void;
     setSelectedSlot: (sectionId: string | null, slotId: string | null) => void;
+    selectNextSlotAfter: (sectionId: string, slotId: string) => boolean;
 
     setTempo: (tempo: number) => void;
     setVolume: (volume: number) => void;
@@ -52,11 +53,65 @@ interface SongState {
     removeSection: (id: string) => void;
     duplicateSection: (id: string) => void;
     reorderSections: (sections: Section[]) => void;
+    setSectionMeasures: (id: string, count: number) => void;
+    setSectionTimeSignature: (id: string, signature: [number, number]) => void;
+    setMeasureSubdivision: (sectionId: string, measureId: string, steps: number) => void;
 
     addChordToSlot: (chord: Chord, sectionId: string, slotId: string) => void;
     clearSlot: (sectionId: string, slotId: string) => void;
     moveChord: (fromSectionId: string, fromSlotId: string, toSectionId: string, toSlotId: string) => void;
 }
+
+const DEFAULT_TIME_SIGNATURE: [number, number] = [4, 4];
+
+const beatsFromSignature = (signature: [number, number] = DEFAULT_TIME_SIGNATURE) => {
+    const [top, bottom] = signature;
+    if (!top || !bottom) return 4;
+    return top * (4 / bottom);
+};
+
+const createEmptyMeasure = (signature: [number, number]) => {
+    const duration = beatsFromSignature(signature);
+    return {
+        id: uuidv4(),
+        beats: [{ id: uuidv4(), chord: null, duration }],
+    };
+};
+
+const ensureSelectionStillExists = (
+    sections: Section[],
+    selectedSectionId: string | null,
+    selectedSlotId: string | null
+) => {
+    if (!selectedSlotId || !selectedSectionId) return { selectedSectionId, selectedSlotId };
+
+    const slotExists = sections.some(
+        (section) =>
+            section.id === selectedSectionId &&
+            section.measures.some((measure) => measure.beats.some((beat) => beat.id === selectedSlotId))
+    );
+
+    return slotExists ? { selectedSectionId, selectedSlotId } : { selectedSectionId: null, selectedSlotId: null };
+};
+
+const findNextSlot = (sections: Section[], sectionId: string, slotId: string) => {
+    let foundCurrent = false;
+
+    for (const section of sections) {
+        for (const measure of section.measures) {
+            for (const beat of measure.beats) {
+                if (foundCurrent) {
+                    return { sectionId: section.id, slotId: beat.id };
+                }
+                if (section.id === sectionId && beat.id === slotId) {
+                    foundCurrent = true;
+                }
+            }
+        }
+    }
+
+    return null;
+};
 
 const DEFAULT_SONG: Song = {
     id: 'default',
@@ -70,23 +125,15 @@ const DEFAULT_SONG: Song = {
             id: 'verse-1',
             name: 'Verse 1',
             type: 'verse',
-            measures: [
-                { id: uuidv4(), beats: [{ id: uuidv4(), chord: null, duration: 4 }] },
-                { id: uuidv4(), beats: [{ id: uuidv4(), chord: null, duration: 4 }] },
-                { id: uuidv4(), beats: [{ id: uuidv4(), chord: null, duration: 4 }] },
-                { id: uuidv4(), beats: [{ id: uuidv4(), chord: null, duration: 4 }] },
-            ],
+            timeSignature: DEFAULT_TIME_SIGNATURE,
+            measures: Array(4).fill(null).map(() => createEmptyMeasure(DEFAULT_TIME_SIGNATURE)),
         },
         {
             id: 'chorus-1',
             name: 'Chorus',
             type: 'chorus',
-            measures: [
-                { id: uuidv4(), beats: [{ id: uuidv4(), chord: null, duration: 4 }] },
-                { id: uuidv4(), beats: [{ id: uuidv4(), chord: null, duration: 4 }] },
-                { id: uuidv4(), beats: [{ id: uuidv4(), chord: null, duration: 4 }] },
-                { id: uuidv4(), beats: [{ id: uuidv4(), chord: null, duration: 4 }] },
-            ],
+            timeSignature: DEFAULT_TIME_SIGNATURE,
+            measures: Array(4).fill(null).map(() => createEmptyMeasure(DEFAULT_TIME_SIGNATURE)),
         },
     ],
     notes: '',
@@ -146,8 +193,34 @@ export const useSongStore = create<SongState>()(
 
             setSelectedChord: (chord) => set({ selectedChord: chord }),
             setSelectedSlot: (sectionId, slotId) => set({ selectedSectionId: sectionId, selectedSlotId: slotId }),
+            selectNextSlotAfter: (sectionId, slotId) => {
+                let advanced = false;
+                set((state) => {
+                    const next = findNextSlot(state.currentSong.sections, sectionId, slotId);
+                    if (!next) return {};
 
-            setTempo: (tempo) => set({ tempo }),
+                    const nextChord = state.currentSong.sections
+                        .find((s) => s.id === next.sectionId)
+                        ?.measures.flatMap((m) => m.beats)
+                        .find((b) => b.id === next.slotId)?.chord ?? null;
+
+                    advanced = true;
+                    return {
+                        selectedSectionId: next.sectionId,
+                        selectedSlotId: next.slotId,
+                        selectedChord: nextChord
+                    };
+                });
+                return advanced;
+            },
+
+            setTempo: (tempo) => set((state) => ({
+                tempo,
+                currentSong: {
+                    ...state.currentSong,
+                    tempo
+                }
+            })),
             setVolume: (volume) => set({ volume }),
             setInstrument: (instrument) => set({ instrument }),
             setIsPlaying: (isPlaying) => set({ isPlaying }),
@@ -159,6 +232,7 @@ export const useSongStore = create<SongState>()(
 
             loadSong: (song) => set((state) => {
                 const key = song.key || 'C';
+                const tempo = song.tempo ?? DEFAULT_SONG.tempo;
                 let rotation = 0;
 
                 if (state.wheelMode === 'rotating') {
@@ -169,12 +243,13 @@ export const useSongStore = create<SongState>()(
                 }
 
                 return {
-                    currentSong: song,
+                    currentSong: { ...song, tempo },
                     selectedKey: key,
                     wheelRotation: rotation,
                     selectedChord: null,
                     selectedSectionId: null,
                     selectedSlotId: null,
+                    tempo,
                 };
             }),
 
@@ -185,28 +260,21 @@ export const useSongStore = create<SongState>()(
                     title: 'Untitled Song',
                     createdAt: new Date(),
                     updatedAt: new Date(),
+                    tempo: DEFAULT_SONG.tempo,
                     sections: [
                         {
                             id: uuidv4(),
                             name: 'Verse 1',
                             type: 'verse',
-                            measures: [
-                                { id: uuidv4(), beats: [{ id: uuidv4(), chord: null, duration: 4 }] },
-                                { id: uuidv4(), beats: [{ id: uuidv4(), chord: null, duration: 4 }] },
-                                { id: uuidv4(), beats: [{ id: uuidv4(), chord: null, duration: 4 }] },
-                                { id: uuidv4(), beats: [{ id: uuidv4(), chord: null, duration: 4 }] },
-                            ],
+                            timeSignature: DEFAULT_TIME_SIGNATURE,
+                            measures: Array(4).fill(null).map(() => createEmptyMeasure(DEFAULT_TIME_SIGNATURE)),
                         },
                         {
                             id: uuidv4(),
                             name: 'Chorus',
                             type: 'chorus',
-                            measures: [
-                                { id: uuidv4(), beats: [{ id: uuidv4(), chord: null, duration: 4 }] },
-                                { id: uuidv4(), beats: [{ id: uuidv4(), chord: null, duration: 4 }] },
-                                { id: uuidv4(), beats: [{ id: uuidv4(), chord: null, duration: 4 }] },
-                                { id: uuidv4(), beats: [{ id: uuidv4(), chord: null, duration: 4 }] },
-                            ],
+                            timeSignature: DEFAULT_TIME_SIGNATURE,
+                            measures: Array(4).fill(null).map(() => createEmptyMeasure(DEFAULT_TIME_SIGNATURE)),
                         },
                     ],
                 },
@@ -215,6 +283,7 @@ export const useSongStore = create<SongState>()(
                 selectedChord: null,
                 selectedSectionId: null,
                 selectedSlotId: null,
+                tempo: DEFAULT_SONG.tempo,
             }),
 
             addSection: (type) => set((state) => {
@@ -222,10 +291,8 @@ export const useSongStore = create<SongState>()(
                     id: uuidv4(),
                     name: type.charAt(0).toUpperCase() + type.slice(1),
                     type,
-                    measures: Array(4).fill(null).map(() => ({
-                        id: uuidv4(),
-                        beats: [{ id: uuidv4(), chord: null, duration: 4 }]
-                    }))
+                    timeSignature: state.currentSong.timeSignature || DEFAULT_TIME_SIGNATURE,
+                    measures: Array(4).fill(null).map(() => createEmptyMeasure(state.currentSong.timeSignature || DEFAULT_TIME_SIGNATURE))
                 };
                 return {
                     currentSong: {
@@ -257,6 +324,7 @@ export const useSongStore = create<SongState>()(
                     ...sectionToCopy,
                     id: uuidv4(),
                     name: `${sectionToCopy.name} (Copy)`,
+                    timeSignature: sectionToCopy.timeSignature || state.currentSong.timeSignature || DEFAULT_TIME_SIGNATURE,
                     measures: sectionToCopy.measures.map(m => ({
                         ...m,
                         id: uuidv4(),
@@ -279,6 +347,101 @@ export const useSongStore = create<SongState>()(
             reorderSections: (sections) => set((state) => ({
                 currentSong: { ...state.currentSong, sections }
             })),
+
+            setSectionMeasures: (id, count) => set((state) => {
+                const targetCount = Math.max(1, Math.min(32, Math.round(count)));
+
+                const newSections = state.currentSong.sections.map((section) => {
+                    if (section.id !== id) return section;
+
+                    const signature = section.timeSignature || state.currentSong.timeSignature || DEFAULT_TIME_SIGNATURE;
+                    let measures: Measure[] = [...section.measures];
+
+                    if (measures.length < targetCount) {
+                        while (measures.length < targetCount) {
+                            measures.push(createEmptyMeasure(signature));
+                        }
+                    } else if (measures.length > targetCount) {
+                        measures = measures.slice(0, targetCount);
+                    }
+
+                    return { ...section, measures };
+                });
+
+                const selection = ensureSelectionStillExists(newSections, state.selectedSectionId, state.selectedSlotId);
+
+                return {
+                    currentSong: { ...state.currentSong, sections: newSections },
+                    ...selection,
+                };
+            }),
+
+            setSectionTimeSignature: (id, signature) => set((state) => {
+                const newSections = state.currentSong.sections.map((section) => {
+                    if (section.id !== id) return section;
+
+                    const newTotalBeats = beatsFromSignature(signature);
+
+                    return {
+                        ...section,
+                        timeSignature: signature,
+                        // Reset beats to align with the new meter and clear chords to avoid mismatched slots
+                        measures: section.measures.map((measure) => ({
+                            ...measure,
+                            beats: [
+                                {
+                                    id: uuidv4(),
+                                    chord: null,
+                                    duration: newTotalBeats,
+                                },
+                            ],
+                        })),
+                    };
+                });
+
+                const selection = ensureSelectionStillExists(newSections, state.selectedSectionId, state.selectedSlotId);
+
+                return {
+                    currentSong: { ...state.currentSong, sections: newSections },
+                    ...selection,
+                };
+            }),
+
+            setMeasureSubdivision: (sectionId, measureId, steps) => set((state) => {
+                const targetSteps = Math.max(1, Math.min(16, Math.round(steps)));
+
+                const newSections = state.currentSong.sections.map((section) => {
+                    if (section.id !== sectionId) return section;
+                    const signature = section.timeSignature || state.currentSong.timeSignature || DEFAULT_TIME_SIGNATURE;
+                    const totalBeats = beatsFromSignature(signature);
+
+                    return {
+                        ...section,
+                        measures: section.measures.map((measure) => {
+                            if (measure.id !== measureId) return measure;
+
+                            const beatDuration = totalBeats / targetSteps;
+                            const nextBeats = Array.from({ length: targetSteps }).map((_, idx) => {
+                                const existing = measure.beats[idx];
+                                return {
+                                    id: existing?.id ?? uuidv4(),
+                                    chord: existing?.chord ?? null,
+                                    duration: beatDuration,
+                                };
+                            });
+
+                            return { ...measure, beats: nextBeats };
+                        }),
+                    };
+                });
+
+                const selection = ensureSelectionStillExists(newSections, state.selectedSectionId, state.selectedSlotId);
+
+                return {
+                    currentSong: { ...state.currentSong, sections: newSections },
+                    ...selection,
+                };
+            }),
 
             addChordToSlot: (chord, sectionId, slotId) => set((state) => {
                 const newSections = state.currentSong.sections.map(section => {

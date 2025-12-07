@@ -10,10 +10,20 @@ import clsx from 'clsx';
 interface SectionProps {
     section: ISection;
     chordSize?: number;
+    scale?: number;
 }
 
-export const Section: React.FC<SectionProps> = ({ section, chordSize = 48 }) => {
-    const { removeSection, duplicateSection, updateSection, selectedSectionId, setSelectedSlot } = useSongStore();
+export const Section: React.FC<SectionProps> = ({ section, chordSize = 48, scale = 1 }) => {
+    const {
+        removeSection,
+        duplicateSection,
+        updateSection,
+        selectedSectionId,
+        setSelectedSlot,
+        setSectionMeasures,
+        setSectionTimeSignature,
+        currentSong
+    } = useSongStore();
     
     // Editable section name state (Task 24)
     const [isEditingName, setIsEditingName] = useState(false);
@@ -76,6 +86,38 @@ export const Section: React.FC<SectionProps> = ({ section, chordSize = 48 }) => 
         setSelectedSlot(section.id, null);
     };
 
+    const sectionTimeSignature = section.timeSignature || currentSong.timeSignature || [4, 4];
+    const measureCount = section.measures.length;
+
+    const handleMeasureCountChange = (value: number) => {
+        const safeValue = Number.isFinite(value) ? value : measureCount;
+        setSectionMeasures(section.id, safeValue);
+    };
+
+    const handleTimeSignatureChange = (value: string) => {
+        const [top, bottom] = value.split('/').map((n) => parseInt(n, 10));
+        if (!top || !bottom) return;
+
+        const hasChords = section.measures.some((measure) =>
+            measure.beats.some((beat) => Boolean(beat.chord))
+        );
+
+        if (hasChords) {
+            const proceed = confirm('Changing the time signature will clear chords in this section. Continue?');
+            if (!proceed) return;
+        }
+
+        setSectionTimeSignature(section.id, [top, bottom]);
+    };
+
+    const signatureValue = `${sectionTimeSignature[0]}/${sectionTimeSignature[1]}`;
+    const timeSignatureOptions: Array<[number, number]> = [
+        [4, 4],
+        [3, 4],
+        [2, 4],
+        [6, 8],
+    ];
+
     return (
         <div
             ref={setNodeRef}
@@ -89,7 +131,7 @@ export const Section: React.FC<SectionProps> = ({ section, chordSize = 48 }) => 
         >
             {/* Compact Header */}
             <div className="flex items-center justify-between px-2 py-1.5 bg-bg-elevated border-b border-border-subtle group">
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-2">
                     <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-text-muted hover:text-text-primary">
                         <GripVertical size={12} />
                     </div>
@@ -115,6 +157,39 @@ export const Section: React.FC<SectionProps> = ({ section, chordSize = 48 }) => 
                             {section.name}
                         </span>
                     )}
+
+                    <div
+                        className="flex items-center gap-1 text-[10px] text-text-muted bg-bg-tertiary/70 border border-border-subtle rounded px-1.5 py-0.5"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <span className="uppercase font-semibold tracking-wider text-[8px]">Bars</span>
+                        <input
+                            type="number"
+                            min={1}
+                            max={32}
+                            value={measureCount}
+                            onChange={(e) => handleMeasureCountChange(parseInt(e.target.value, 10))}
+                            className="w-12 bg-transparent text-text-primary text-xs focus:outline-none"
+                        />
+                    </div>
+
+                    <div
+                        className="flex items-center gap-1 text-[10px] text-text-muted bg-bg-tertiary/70 border border-border-subtle rounded px-1.5 py-0.5"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <span className="uppercase font-semibold tracking-wider text-[8px]">Meter</span>
+                        <select
+                            value={signatureValue}
+                            onChange={(e) => handleTimeSignatureChange(e.target.value)}
+                            className="bg-transparent text-text-primary text-xs focus:outline-none"
+                        >
+                            {timeSignatureOptions.map(([top, bottom]) => (
+                                <option key={`${top}/${bottom}`} value={`${top}/${bottom}`} className="bg-bg-secondary text-text-primary">
+                                    {top}/{bottom}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
                 </div>
 
                 <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -145,6 +220,8 @@ export const Section: React.FC<SectionProps> = ({ section, chordSize = 48 }) => 
                         sectionId={section.id}
                         index={idx}
                         chordSize={chordSize}
+                        timeSignature={sectionTimeSignature}
+                        scale={scale}
                     />
                 ))}
             </div>

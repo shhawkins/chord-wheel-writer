@@ -11,7 +11,18 @@ interface ChordDetailsProps {
 }
 
 export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' }) => {
-    const { selectedChord, selectedKey, chordPanelVisible, toggleChordPanel, selectedSectionId, selectedSlotId, addChordToSlot, setSelectedChord } = useSongStore();
+    const {
+        selectedChord,
+        selectedKey,
+        chordPanelVisible,
+        toggleChordPanel,
+        selectedSectionId,
+        selectedSlotId,
+        addChordToSlot,
+        setSelectedChord,
+        selectNextSlotAfter,
+        setSelectedSlot
+    } = useSongStore();
     const colors = getWheelColors();
     const [previewVariant, setPreviewVariant] = useState<string | null>(null);
     const [previewNotes, setPreviewNotes] = useState<string[]>([]);
@@ -20,6 +31,8 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
     const [showHelp, setShowHelp] = useState(false);
     const lastVariationClickTime = useRef<number>(0);
     const isDrawer = variant === 'drawer';
+    const [persistedChord, setPersistedChord] = useState(selectedChord);
+    const chord = selectedChord ?? persistedChord;
     const voicingTooltips: Record<string, string> = {
         'maj': 'Bright, stable major triad — home base sound.',
         '7': 'Dominant 7: bluesy tension that wants to resolve.',
@@ -62,7 +75,7 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
     ];
 
     const getAbsoluteDegree = (note: string): string => {
-        if (!selectedChord?.root) return '-';
+        if (!chord?.root) return '-';
 
         const normalize = (n: string) => n.replace(/[\d]/g, '').replace(/♭/, 'b').replace(/♯/, '#');
         const semitoneMap: Record<string, number> = {
@@ -89,7 +102,7 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
             'Cb': 11,
         };
 
-        const rootPc = semitoneMap[normalize(selectedChord.root)];
+        const rootPc = semitoneMap[normalize(chord.root)];
         const notePc = semitoneMap[normalize(note)];
         if (rootPc === undefined || notePc === undefined) return '-';
 
@@ -140,20 +153,26 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
         };
     }, [isResizing, isDrawer]);
 
-    // Clear preview when selected chord changes
+    useEffect(() => {
+        if (selectedChord) {
+            setPersistedChord(selectedChord);
+        }
+    }, [selectedChord]);
+
+    // Clear preview when chord changes
     useEffect(() => {
         setPreviewVariant(null);
         setPreviewNotes([]);
-    }, [selectedChord?.root, selectedChord?.quality]);
+    }, [chord?.root, chord?.quality]);
 
-    const chordColor = selectedChord
-        ? (colors[selectedChord.root as keyof typeof colors] || '#6366f1')
+    const chordColor = chord
+        ? (colors[chord.root as keyof typeof colors] || '#6366f1')
         : '#6366f1';
 
     // Notes to display: preview notes (if any) > selected chord notes
     const displayNotes = previewNotes.length > 0
         ? previewNotes
-        : (selectedChord?.notes || []);
+        : (chord?.notes || []);
 
     // Play chord variation and show notes until another is clicked
     const handleVariationClick = (variant: string) => {
@@ -164,10 +183,10 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
         }
         lastVariationClickTime.current = now;
 
-        if (!selectedChord) return;
+        if (!chord) return;
 
-        const variantNotes = getChordNotes(selectedChord.root, variant);
-        console.log(`Playing ${selectedChord.root}${variant}:`, variantNotes);
+        const variantNotes = getChordNotes(chord.root, variant);
+        console.log(`Playing ${chord.root}${variant}:`, variantNotes);
 
         playChord(variantNotes);
         setPreviewVariant(variant);
@@ -180,18 +199,23 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
         // Reset the single-click timer so the next interaction isn't blocked
         lastVariationClickTime.current = 0;
 
-        if (!selectedChord || !selectedSectionId || !selectedSlotId) return;
+        if (!chord || !selectedSectionId || !selectedSlotId) return;
 
-        const variantNotes = getChordNotes(selectedChord.root, variant);
+        const variantNotes = getChordNotes(chord.root, variant);
         const newChord = {
-            ...selectedChord,
+            ...chord,
             quality: variant as any,
-            symbol: `${selectedChord.root}${variant}`,
+            symbol: `${chord.root}${variant}`,
             notes: variantNotes
         };
 
         addChordToSlot(newChord, selectedSectionId, selectedSlotId);
-        setSelectedChord(newChord);
+        const advanced = selectNextSlotAfter(selectedSectionId, selectedSlotId);
+
+        if (!advanced) {
+            setSelectedSlot(selectedSectionId, selectedSlotId);
+            setSelectedChord(newChord);
+        }
     };
 
     // Clear preview (back to base chord)
@@ -204,8 +228,8 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
 
     // Get theory note
     const getTheoryNote = () => {
-        if (!selectedChord) return '';
-        const numeral = selectedChord.numeral;
+        if (!chord) return '';
+        const numeral = chord.numeral;
 
         const theoryNotes: Record<string, string> = {
             'I': 'The tonic chord — your home base. Most songs begin and end here. Try adding maj7 or 6 for a jazzier sound.',
@@ -224,8 +248,8 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
 
     // Get suggested voicings based on chord function
     const getSuggestedVoicings = (): { extensions: string[], description: string } => {
-        if (!selectedChord) return { extensions: [], description: '' };
-        let numeral = selectedChord.numeral;
+        if (!chord) return { extensions: [], description: '' };
+        let numeral = chord.numeral;
         
         // Extract base numeral if it contains parentheses (e.g., "II (V of V)" -> "II")
         if (numeral && numeral.includes('(')) {
@@ -330,10 +354,10 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
                 <div className={`p-3 border-b border-border-subtle flex justify-between items-center gap-2 shrink-0 ${isDrawer ? 'bg-bg-secondary/80 backdrop-blur-md' : ''}`}>
                     <span className="flex items-center">
                         <span className="text-base sm:text-lg font-bold text-text-primary leading-none">
-                            {selectedChord ? selectedChord.symbol : 'Chord Details'}
+                            {chord ? chord.symbol : 'Chord Details'}
                         </span>
-                        {selectedChord?.numeral && (
-                            <span className="text-[11px] font-serif italic text-text-secondary ml-3">{selectedChord.numeral}</span>
+                        {chord?.numeral && (
+                            <span className="text-[11px] font-serif italic text-text-secondary ml-3">{chord.numeral}</span>
                         )}
                     </span>
                     <div className="flex items-center gap-2">
@@ -348,7 +372,7 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
                 </div>
 
                 {/* Content */}
-                {!selectedChord ? (
+                {!chord ? (
                     <div className="flex-1 flex items-center justify-center p-6">
                         <p className="text-sm text-text-muted text-center">
                             Select a chord from the wheel or timeline
@@ -374,13 +398,13 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
                                         onClick={clearPreview}
                                         className="text-[9px] text-accent-primary hover:text-accent-secondary transition-colors"
                                     >
-                                        ← back to {selectedChord.symbol}
+                                        ← back to {chord.symbol}
                                     </button>
                                 )}
                             </div>
                             <PianoKeyboard
                                 highlightedNotes={displayNotes}
-                                rootNote={selectedChord.root}
+                                rootNote={chord.root}
                                 color={chordColor}
                             />
                             {/* Notes display with single labels and compact rows */}
@@ -395,21 +419,33 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
                                 >
                                     <div className="text-[9px] font-semibold uppercase tracking-wide text-text-muted leading-tight">Notes</div>
                                     {displayNotes.map((note, i) => (
-                                        <div key={`note-${i}`} className="text-center text-[12px] font-bold text-text-primary leading-tight">
+                                        <div
+                                            key={`note-${i}`}
+                                            className="text-center text-[12px] font-bold text-text-primary leading-none py-1"
+                                            style={{ minHeight: 24 }}
+                                        >
                                             {note}
                                         </div>
                                     ))}
 
                                     <div className="text-[9px] font-semibold uppercase tracking-wide text-text-muted leading-tight">Absolute</div>
                                     {displayNotes.map((note, i) => (
-                                        <div key={`abs-${i}`} className="text-center text-[11px] text-text-primary font-semibold leading-tight">
+                                        <div
+                                            key={`abs-${i}`}
+                                            className="text-center text-[11px] text-text-primary font-semibold leading-none py-1"
+                                            style={{ minHeight: 24 }}
+                                        >
                                             {getAbsoluteDegree(note)}
                                         </div>
                                     ))}
 
                                     <div className="text-[9px] font-semibold uppercase tracking-wide text-text-muted leading-tight">Relative to Key</div>
                                     {displayNotes.map((note, i) => (
-                                        <div key={`rel-${i}`} className="text-center text-[11px] text-text-secondary leading-tight">
+                                        <div
+                                            key={`rel-${i}`}
+                                            className="text-center text-[11px] text-text-secondary leading-none py-1"
+                                            style={{ minHeight: 24 }}
+                                        >
                                             {getIntervalFromKey(selectedKey, note).replace(/^1/, 'R')}
                                         </div>
                                     ))}
@@ -423,7 +459,13 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
                                 Variations
                             </h3>
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-                                {voicingOptions.map((ext) => (
+                                {voicingOptions.map((ext, idx) => {
+                                    const isLeftCol = idx % 2 === 0;
+                                    const tooltipPositionStyle = isLeftCol
+                                        ? { left: 'calc(100% + 10px)' }
+                                        : { right: 'calc(100% + 10px)' };
+
+                                    return (
                                     <button
                                         key={ext}
                                         className={`relative group px-2 py-1.5 rounded text-[10px] font-medium transition-colors border ${previewVariant === ext
@@ -436,22 +478,28 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
                                         {ext}
                                         {voicingTooltips[ext] && (
                                             <span
-                                                className="pointer-events-none absolute top-1/2 -translate-y-1/2 whitespace-normal text-[10px] leading-tight bg-bg-primary text-text-primary px-3 py-2 rounded border border-border-subtle shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-150 group-hover:delay-150 z-20 w-44 text-left"
-                                                style={{ right: 'calc(100% + 8px)' }}
+                                                className="pointer-events-none absolute top-1/2 -translate-y-1/2 whitespace-normal text-[10px] leading-tight bg-black text-white px-3 py-2 rounded border border-white/10 shadow-xl opacity-0 group-hover:opacity-100 group-active:opacity-0 group-focus:opacity-0 transition-opacity duration-150 group-hover:delay-150 z-50 w-44 text-left"
+                                                style={{
+                                                    ...tooltipPositionStyle,
+                                                    backgroundColor: '#000',
+                                                    color: '#fff',
+                                                    padding: '8px 10px'
+                                                }}
                                             >
                                                 {voicingTooltips[ext]}
                                             </span>
                                         )}
                                     </button>
-                                ))}
+                                    );
+                                })}
                             </div>
                         </div>
 
                         {/* Suggested Voicings - now after variations */}
-                        {selectedChord?.numeral && getSuggestedVoicings().extensions.length > 0 && (
+                        {chord?.numeral && getSuggestedVoicings().extensions.length > 0 && (
                             <div className="px-4 py-4 border-b border-border-subtle bg-accent-primary/5">
                                 <h3 className="text-[10px] font-bold text-accent-primary uppercase tracking-wider mb-3">
-                                    Suggested for {selectedChord.numeral}
+                                    Suggested for {chord.numeral}
                                 </h3>
                                 <div className="flex flex-wrap gap-2 mb-3">
                                     {getSuggestedVoicings().extensions.map((ext) => (
@@ -464,7 +512,7 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
                                             onClick={() => handleVariationClick(ext)}
                                             onDoubleClick={() => handleVariationDoubleClick(ext)}
                                         >
-                                            {selectedChord.root}{ext}
+                                            {chord.root}{ext}
                                         </button>
                                     ))}
                                 </div>

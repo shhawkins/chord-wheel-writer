@@ -33,6 +33,7 @@ function App() {
   // Resizable panel state - timeline height in pixels
   const [timelineHeight, setTimelineHeight] = useState(180);
   const [isResizing, setIsResizing] = useState(false);
+  const [timelineScale, setTimelineScale] = useState(1);
 
   // Wheel zoom state
   const [wheelZoom, setWheelZoom] = useState(1);
@@ -297,10 +298,12 @@ function App() {
     doc.save(`${currentSong.title.replace(/\s+/g, '-').toLowerCase()}.pdf`);
   };
 
+  const timelineContentHeight = Math.max(80, timelineHeight - 42);
+
   return (
     <div className={`${isMobile ? 'min-h-screen' : 'h-screen'} w-screen flex flex-col bg-bg-primary text-text-primary overflow-x-hidden`}>
       {/* Header */}
-      <header className="h-12 border-b border-border-subtle flex items-center justify-between px-3 bg-bg-secondary shrink-0 z-20 sticky top-0">
+      <header className="h-12 border-b border-border-subtle grid grid-cols-[1fr_auto_1fr] items-center px-3 bg-bg-secondary shrink-0 z-20 sticky top-0">
         <div className="flex items-center gap-3 shrink-0">
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded bg-gradient-to-br from-accent-primary to-purple-600 flex items-center justify-center shadow-lg">
@@ -308,33 +311,33 @@ function App() {
             </div>
             <span className="font-bold text-sm tracking-tight hidden sm:block text-text-muted">Songwriter's Wheel</span>
           </div>
-
-          {/* Editable Song Title (Task 23) */}
-          <div className="hidden md:block">
-            {isEditingTitle ? (
-              <input
-                type="text"
-                value={titleInput}
-                onChange={(e) => setTitleInput(e.target.value)}
-                onBlur={handleTitleSave}
-                onKeyDown={handleTitleKeyDown}
-                autoFocus
-                className="bg-bg-tertiary border border-border-medium rounded px-2 py-0.5 text-sm font-medium text-text-primary focus:outline-none focus:border-accent-primary w-48"
-                maxLength={50}
-              />
-            ) : (
-              <span
-                onDoubleClick={handleTitleDoubleClick}
-                className="text-sm font-medium text-text-primary cursor-pointer hover:text-accent-primary transition-colors px-2 py-0.5"
-                title="Double-click to edit title"
-              >
-                {currentSong.title}
-              </span>
-            )}
-          </div>
         </div>
 
-        <div className="flex items-center gap-[20px] shrink-0 mr-2">
+        {/* Editable Song Title (Task 23) */}
+        <div className="flex items-center justify-center">
+          {isEditingTitle ? (
+            <input
+              type="text"
+              value={titleInput}
+              onChange={(e) => setTitleInput(e.target.value)}
+              onBlur={handleTitleSave}
+              onKeyDown={handleTitleKeyDown}
+              autoFocus
+              className="bg-bg-tertiary border border-border-medium rounded px-3 py-1 text-sm font-medium text-text-primary focus:outline-none focus:border-accent-primary text-center w-56 max-w-[70vw]"
+              maxLength={50}
+            />
+          ) : (
+            <span
+              onDoubleClick={handleTitleDoubleClick}
+              className="text-sm font-medium text-text-primary cursor-pointer hover:text-accent-primary transition-colors px-3 py-1 rounded text-center"
+              title="Double-click to edit title"
+            >
+              {currentSong.title}
+            </span>
+          )}
+        </div>
+
+        <div className="flex items-center gap-[20px] shrink-0 justify-self-end mr-2">
           {/* Song Duration (Task 33) */}
           <div className="flex items-center gap-[6px] text-[10px] text-text-muted">
             <Clock size={11} className="shrink-0" />
@@ -483,14 +486,6 @@ function App() {
                 >
                   <GripHorizontal size={14} className="text-text-muted group-hover:text-text-secondary" />
                 </div>
-                <button
-                  onClick={toggleTimeline}
-                  className="px-2 h-full flex items-center gap-1 text-[9px] text-text-muted hover:text-text-primary hover:bg-bg-tertiary transition-colors"
-                  title="Hide timeline"
-                >
-                  <ChevronDown size={12} />
-                  <span className="uppercase tracking-wider font-bold">Hide</span>
-                </button>
               </div>
 
               {/* Timeline - resizable height */}
@@ -498,7 +493,32 @@ function App() {
                 className="shrink-0 bg-bg-secondary overflow-hidden"
                 style={{ height: timelineHeight }}
               >
-                <Timeline height={timelineHeight} />
+                <div className="flex items-center justify-between px-3 py-2 border-b border-border-subtle bg-bg-secondary/90 backdrop-blur-sm">
+                  <div className="flex items-center gap-2 text-[10px] text-text-muted">
+                    <span className="uppercase font-bold tracking-wider text-[9px]">Scale</span>
+                    <input
+                      type="range"
+                      min={0.1}
+                      max={1.6}
+                      step={0.05}
+                      value={timelineScale}
+                      onChange={(e) => setTimelineScale(parseFloat(e.target.value))}
+                      className="w-32"
+                      style={{ accentColor: '#8b5cf6' }}
+                      aria-label="Timeline scale"
+                    />
+                    <span className="text-[10px] text-text-secondary w-12 text-right">{Math.round(timelineScale * 100)}%</span>
+                  </div>
+                  <button
+                    onClick={toggleTimeline}
+                    className="text-[10px] text-text-muted hover:text-text-primary px-2 py-1 rounded hover:bg-bg-tertiary transition-colors flex items-center gap-1"
+                    title="Hide timeline"
+                  >
+                    <ChevronDown size={12} />
+                    <span className="uppercase tracking-wider font-bold">Hide</span>
+                  </button>
+                </div>
+                <Timeline height={timelineContentHeight} scale={timelineScale} />
               </div>
             </>
           ) : (

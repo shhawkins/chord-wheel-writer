@@ -23,9 +23,10 @@ import type { Chord } from '../../utils/musicTheory';
 
 interface TimelineProps {
     height?: number;
+    scale?: number;
 }
 
-export const Timeline: React.FC<TimelineProps> = ({ height = 180 }) => {
+export const Timeline: React.FC<TimelineProps> = ({ height = 180, scale = 1 }) => {
     const {
         currentSong,
         addSection,
@@ -33,6 +34,8 @@ export const Timeline: React.FC<TimelineProps> = ({ height = 180 }) => {
         addChordToSlot,
         moveChord
     } = useSongStore();
+
+    const horizontalScale = Math.max(0.1, Math.min(1.6, scale));
 
     // Calculate chord slot size based on timeline height
     // Reserve space for header (~28px) and padding (~12px)
@@ -153,7 +156,7 @@ export const Timeline: React.FC<TimelineProps> = ({ height = 180 }) => {
                     >
                         <div className="flex gap-3 min-w-max h-full items-stretch">
                             {currentSong.sections.map((section) => (
-                                <Section key={section.id} section={section} chordSize={chordSize} />
+                                <Section key={section.id} section={section} chordSize={chordSize} scale={horizontalScale} />
                             ))}
 
                             {/* Add Section Button - matches section height */}

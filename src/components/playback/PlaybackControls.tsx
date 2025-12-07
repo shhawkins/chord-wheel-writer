@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useSongStore } from '../../store/useSongStore';
 import { Play, Pause, SkipBack, SkipForward, Repeat, Volume2, VolumeX, ChevronLeft, ChevronRight } from 'lucide-react';
 import { initAudio } from '../../utils/audioEngine';
@@ -12,35 +11,11 @@ export const PlaybackControls: React.FC = () => {
         setIsPlaying,
         setTempo,
         setVolume,
-        currentSong,
         instrument,
         setInstrument,
         isMuted,
-        toggleMute,
-        setTitle
+        toggleMute
     } = useSongStore();
-
-    const [isEditing, setIsEditing] = useState(false);
-    const [tempTitle, setTempTitle] = useState("");
-
-    const handleDoubleClick = () => {
-        setTempTitle(currentSong.title);
-        setIsEditing(true);
-    };
-
-    const handleSave = () => {
-        const finalTitle = tempTitle.trim() || "Untitled Song";
-        setTitle(finalTitle);
-        setIsEditing(false);
-    };
-
-    const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter') {
-            handleSave();
-        } else if (e.key === 'Escape') {
-            setIsEditing(false);
-        }
-    };
 
     const handlePlayPause = async () => {
         if (!isPlaying) {
@@ -53,19 +28,16 @@ export const PlaybackControls: React.FC = () => {
 
     const instrumentOptions: { value: InstrumentType, label: string }[] = [
         { value: 'piano', label: 'Piano' },
-        { value: 'epiano', label: 'E-Piano' },
-        { value: 'guitar', label: 'Guitar' },
+        { value: 'epiano', label: 'Electric Piano' },
         { value: 'organ', label: 'Organ' },
-        { value: 'synth', label: 'Synth' },
-        { value: 'strings', label: 'Strings' },
         { value: 'pad', label: 'Pad' },
-        { value: 'brass', label: 'Brass' },
-        { value: 'marimba', label: 'Marimba' },
-        { value: 'bell', label: 'Bell' },
-        { value: 'lead', label: 'Lead' },
-        { value: 'bass', label: 'Bass' },
-        { value: 'choir', label: 'Choir' },
+        { value: 'guitar', label: 'Guitar' },
     ];
+
+    // Clamp instrument to available options
+    if (!instrumentOptions.find((o) => o.value === instrument)) {
+        setInstrument('piano');
+    }
 
     const cycleInstrument = (direction: 'prev' | 'next') => {
         const idx = instrumentOptions.findIndex(o => o.value === instrument);
@@ -101,59 +73,36 @@ export const PlaybackControls: React.FC = () => {
             </div>
 
             {/* Tempo & Info */}
-            <div className="flex flex-col items-center">
-                <div className="text-xs font-medium text-text-primary h-5 flex items-center justify-center min-w-[120px]">
-                    {isEditing ? (
-                        <input
-                            type="text"
-                            value={tempTitle}
-                            onChange={(e) => setTempTitle(e.target.value)}
-                            onBlur={handleSave}
-                            onKeyDown={handleKeyDown}
-                            autoFocus
-                            className="bg-bg-tertiary border border-border-subtle rounded px-1.5 py-0.5 text-center text-xs text-text-primary focus:outline-none focus:border-accent-primary w-full"
-                        />
-                    ) : (
-                        <span
-                            onDoubleClick={handleDoubleClick}
-                            className="cursor-pointer hover:text-accent-primary transition-colors px-2 py-0.5 rounded hover:bg-bg-tertiary"
-                            title="Double-click to edit"
-                        >
-                            {currentSong.title}
-                        </span>
-                    )}
+            <div className="flex items-center gap-3 text-[10px] text-text-muted">
+                <div className="flex items-center gap-1.5">
+                    <span>Tempo</span>
+                    <input
+                        type="number"
+                        value={tempo}
+                        onChange={(e) => setTempo(Number(e.target.value))}
+                        className="w-10 bg-bg-tertiary border border-border-subtle rounded px-1 py-0.5 text-center text-text-primary text-[10px]"
+                    />
+                    <span>BPM</span>
                 </div>
-                <div className="flex items-center gap-3 text-[10px] text-text-muted">
-                    <div className="flex items-center gap-1.5">
-                        <span>Tempo</span>
-                        <input
-                            type="number"
-                            value={tempo}
-                            onChange={(e) => setTempo(Number(e.target.value))}
-                            className="w-10 bg-bg-tertiary border border-border-subtle rounded px-1 py-0.5 text-center text-text-primary text-[10px]"
-                        />
-                        <span>BPM</span>
-                    </div>
-                    <span className="text-text-muted">•</span>
-                    <span>4/4</span>
-                </div>
+                <span className="text-text-muted">•</span>
+                <span>4/4</span>
             </div>
 
             {/* Volume & Instrument */}
             <div className="flex items-center gap-4">
                 {/* Instrument Selector with quick cycle buttons */}
                 <div className="flex items-center gap-2">
-                    <div className="flex items-center rounded bg-bg-tertiary/60 border border-border-subtle/70">
+                    <div className="flex items-center rounded bg-bg-tertiary/60 border border-border-subtle/70 h-8">
                         <button
                             onClick={() => cycleInstrument('prev')}
-                            className="px-1.5 py-1 text-text-secondary hover:text-text-primary hover:bg-bg-tertiary rounded-l transition-colors"
+                            className="px-1.5 h-full text-text-secondary hover:text-text-primary hover:bg-bg-tertiary rounded-l transition-colors flex items-center"
                             title="Previous instrument"
                         >
                             <ChevronLeft size={12} />
                         </button>
                         <button
                             onClick={() => cycleInstrument('next')}
-                            className="px-1.5 py-1 text-text-secondary hover:text-text-primary hover:bg-bg-tertiary rounded-r transition-colors"
+                            className="px-1.5 h-full text-text-secondary hover:text-text-primary hover:bg-bg-tertiary rounded-r transition-colors flex items-center"
                             title="Next instrument"
                         >
                             <ChevronRight size={12} />
@@ -162,7 +111,7 @@ export const PlaybackControls: React.FC = () => {
                     <select
                         value={instrument}
                         onChange={(e) => setInstrument(e.target.value as InstrumentType)}
-                        className="bg-bg-tertiary border border-border-subtle rounded px-2 py-1 text-[10px] text-text-secondary focus:outline-none focus:border-accent-primary cursor-pointer min-w-[120px]"
+                        className="bg-bg-tertiary border border-border-subtle rounded px-2 h-8 text-[10px] text-text-secondary focus:outline-none focus:border-accent-primary cursor-pointer min-w-[140px]"
                     >
                         {instrumentOptions.map((opt) => (
                             <option key={opt.value} value={opt.value}>{opt.label}</option>

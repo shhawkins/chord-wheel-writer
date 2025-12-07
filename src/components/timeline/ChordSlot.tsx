@@ -9,11 +9,13 @@ interface ChordSlotProps {
     slot: IChordSlot;
     sectionId: string;
     size?: number;
+    width?: number;
 }
 
-export const ChordSlot: React.FC<ChordSlotProps> = ({ slot, sectionId, size = 48 }) => {
+export const ChordSlot: React.FC<ChordSlotProps> = ({ slot, sectionId, size = 48, width }) => {
     const { selectedSlotId, setSelectedSlot, selectedSectionId, setSelectedChord } = useSongStore();
     const colors = getWheelColors();
+    const resolvedWidth = width ?? size;
 
     const { isOver, setNodeRef: setDroppableRef } = useDroppable({
         id: `slot-${slot.id}`,
@@ -70,7 +72,7 @@ export const ChordSlot: React.FC<ChordSlotProps> = ({ slot, sectionId, size = 48
         <div
             ref={setDroppableRef}
             onClick={handleClick}
-            style={{ width: size, height: size }}
+            style={{ width: resolvedWidth, height: size }}
             className={clsx(
                 "rounded border-2 flex items-center justify-center transition-all relative flex-shrink-0",
                 isOver ? "border-accent-primary bg-accent-glow scale-105" : "border-border-medium bg-bg-elevated",

@@ -15,6 +15,10 @@ export interface Section {
     id: string;
     name: string;
     type: 'intro' | 'verse' | 'chorus' | 'pre-chorus' | 'bridge' | 'outro' | 'custom';
+    /**
+     * Optional per-section time signature. Falls back to song timeSignature when undefined.
+     */
+    timeSignature?: [number, number];
     measures: Measure[];
     lyrics?: string;
 }
