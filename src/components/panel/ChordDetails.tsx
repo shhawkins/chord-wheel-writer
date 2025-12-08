@@ -483,23 +483,24 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
                         </div>
 
                         {/* Combined Guitar / Suggested section */}
-                        <div className={`${isMobile ? 'px-5 py-4' : 'px-5 py-4'} border-b border-border-subtle bg-bg-tertiary rounded-none`}>
+                        <div className={`${isMobile ? 'px-5 py-3' : 'px-5 py-4'} rounded-none`} style={{ backgroundColor: '#1e1e28', borderBottom: '1px solid #3a3a4a' }}>
                             <button
                                 onClick={() => isMobile && setShowGuitar(!showGuitar)}
-                                className={`w-full flex items-center justify-between ${showGuitar && isMobile ? 'mb-3' : 'mb-0'} ${isMobile ? 'cursor-pointer py-0.5' : ''} rounded-none`}
+                                className={`w-full flex items-center justify-between ${showGuitar && isMobile ? 'mb-3' : 'mb-0'} ${isMobile ? 'cursor-pointer' : ''} rounded-none`}
+                                style={{ backgroundColor: 'transparent' }}
                             >
-                                <h3 className={`${isMobile ? 'text-[11px]' : 'text-[10px]'} font-semibold text-accent-primary uppercase tracking-wide`}>
+                                <h3 className={`${isMobile ? 'text-[11px]' : 'text-[10px]'} font-semibold text-text-secondary uppercase tracking-wide`}>
                                     Guitar Chart & Suggested Voicings for {chord.numeral || chord.symbol}
                                 </h3>
                                 {isMobile && (
                                     <ChevronDown
                                         size={14}
-                                        className={`text-accent-primary transition-transform ${showGuitar ? 'rotate-180' : ''}`}
+                                        className={`text-text-secondary transition-transform ${showGuitar ? 'rotate-180' : ''}`}
                                     />
                                 )}
                             </button>
                             {(!isMobile || showGuitar) && (
-                                <div className="flex flex-row gap-4 mt-3">
+                                <div className="flex flex-row gap-4" style={{ marginTop: '16px', paddingTop: '8px' }}>
                                     {/* Left: Guitar (1/3 width) */}
                                     <div className="w-1/3 min-w-[130px] flex justify-center items-start shrink-0">
                                         <GuitarChord
@@ -517,10 +518,11 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
                                                 {getSuggestedVoicings().extensions.map((ext) => (
                                                     <button
                                                         key={ext}
-                                                        className={`relative group ${isMobile ? 'px-4 py-2.5 text-sm min-h-[44px]' : 'px-3 py-1.5 text-xs'} rounded font-semibold transition-colors touch-feedback ${previewVariant === ext
-                                                            ? 'bg-accent-primary text-white border border-accent-primary'
-                                                            : 'bg-bg-elevated hover:bg-bg-elevated/80 text-text-primary border border-border-subtle'
-                                                            }`}
+                                                        className={`relative group ${isMobile ? 'px-4 py-2.5 text-sm min-h-[44px]' : 'px-3 py-1.5 text-xs'} rounded font-semibold transition-colors touch-feedback`}
+                                                        style={previewVariant === ext
+                                                            ? { backgroundColor: '#4f46e5', color: '#ffffff', border: '1px solid #4f46e5' }
+                                                            : { backgroundColor: '#282833', color: '#f0f0f5', border: '1px solid rgba(255,255,255,0.08)' }
+                                                        }
                                                         onClick={() => handleVariationClick(ext)}
                                                         onDoubleClick={() => handleVariationDoubleClick(ext)}
                                                     >
@@ -564,18 +566,19 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
                         </div>
 
                         {/* Variations */}
-                        <div className={`${isMobile ? 'px-5 py-4 mt-2' : 'px-5 py-4'} border-b border-border-subtle bg-bg-tertiary rounded-none`}>
+                        <div className={`${isMobile ? 'px-5 py-3 mt-2' : 'px-5 py-4'} rounded-none`} style={{ backgroundColor: '#1e1e28', borderBottom: '1px solid #3a3a4a' }}>
                             <button
                                 onClick={() => isMobile && setShowVariations(!showVariations)}
-                                className={`w-full flex items-center justify-between ${showVariations && isMobile ? 'mb-3' : 'mb-0'} ${isMobile ? 'cursor-pointer py-0.5' : ''} rounded-none`}
+                                className={`w-full flex items-center justify-between ${showVariations && isMobile ? 'mb-3' : 'mb-0'} ${isMobile ? 'cursor-pointer' : ''} rounded-none`}
+                                style={{ backgroundColor: 'transparent' }}
                             >
-                                <h3 className={`${isMobile ? 'text-[11px]' : 'text-[10px]'} font-semibold text-accent-primary uppercase tracking-wide`}>
+                                <h3 className={`${isMobile ? 'text-[11px]' : 'text-[10px]'} font-semibold text-text-secondary uppercase tracking-wide`}>
                                     Voicings
                                 </h3>
                                 {isMobile && (
                                     <ChevronDown
                                         size={14}
-                                        className={`text-text-muted transition-transform ${showVariations ? 'rotate-180' : ''}`}
+                                        className={`text-text-secondary transition-transform ${showVariations ? 'rotate-180' : ''}`}
                                     />
                                 )}
                             </button>
@@ -590,10 +593,11 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
                                         return (
                                             <button
                                                 key={ext}
-                                                className={`relative group ${isMobile ? 'px-3 py-3 min-h-[48px] text-xs' : 'px-2 py-1.5 text-[10px]'} rounded font-medium transition-colors border touch-feedback ${previewVariant === ext
-                                                    ? 'bg-accent-primary text-white border-accent-primary'
-                                                    : 'bg-bg-elevated hover:bg-bg-elevated/80 text-text-secondary hover:text-text-primary border-border-subtle'
-                                                    }`}
+                                                className={`relative group ${isMobile ? 'px-3 py-3 min-h-[48px] text-xs' : 'px-2 py-1.5 text-[10px]'} rounded font-medium transition-colors touch-feedback`}
+                                                style={previewVariant === ext
+                                                    ? { backgroundColor: '#4f46e5', color: '#ffffff', border: '1px solid #4f46e5' }
+                                                    : { backgroundColor: '#282833', color: '#9898a6', border: '1px solid rgba(255,255,255,0.08)' }
+                                                }
                                                 onClick={() => handleVariationClick(ext)}
                                                 onDoubleClick={() => handleVariationDoubleClick(ext)}
                                             >
@@ -625,23 +629,24 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
                         </div>
 
                         {/* Theory Note - with proper text wrapping */}
-                        <div className={`${isMobile ? 'px-5 py-4 mt-2 pb-4' : 'px-5 py-4'} bg-bg-tertiary rounded-none`}>
+                        <div className={`${isMobile ? 'px-5 py-3 mt-2 pb-4' : 'px-5 py-4'} rounded-none`} style={{ backgroundColor: '#1e1e28', borderBottom: '1px solid #3a3a4a' }}>
                             <button
                                 onClick={() => isMobile && setShowTheory(!showTheory)}
-                                className={`w-full flex items-center justify-between ${isMobile ? 'cursor-pointer py-0.5' : 'mb-0'} ${showTheory && isMobile ? 'mb-3' : 'mb-0'} rounded-none`}
+                                className={`w-full flex items-center justify-between ${isMobile ? 'cursor-pointer' : 'mb-0'} ${showTheory && isMobile ? 'mb-3' : 'mb-0'} rounded-none`}
+                                style={{ backgroundColor: 'transparent' }}
                             >
-                                <h3 className={`${isMobile ? 'text-[11px]' : 'text-[10px]'} font-semibold text-accent-primary uppercase tracking-wide ${!isMobile ? 'mb-2' : ''}`}>
+                                <h3 className={`${isMobile ? 'text-[11px]' : 'text-[10px]'} font-semibold text-text-secondary uppercase tracking-wide ${!isMobile ? 'mb-2' : ''}`}>
                                     Theory
                                 </h3>
                                 {isMobile && (
                                     <ChevronDown
                                         size={14}
-                                        className={`text-accent-primary transition-transform ${showTheory ? 'rotate-180' : ''}`}
+                                        className={`text-text-secondary transition-transform ${showTheory ? 'rotate-180' : ''}`}
                                     />
                                 )}
                             </button>
                             {(!isMobile || showTheory) && (
-                                <div className={`${isMobile ? 'p-3' : 'p-4'} bg-bg-elevated border border-border-subtle rounded-none`}>
+                                <div className={`${isMobile ? 'p-3' : 'p-4'} bg-bg-elevated rounded-none`}>
                                     <p className={`${isMobile ? 'text-sm' : 'text-xs'} text-text-secondary leading-relaxed`}>
                                         {getTheoryNote()}
                                     </p>
