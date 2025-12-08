@@ -152,7 +152,7 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
 
         const handleMouseMove = (e: MouseEvent) => {
             const newWidth = window.innerWidth - e.clientX;
-            setPanelWidth(Math.max(200, Math.min(400, newWidth)));
+            setPanelWidth(Math.max(288, Math.min(400, newWidth)));
         };
 
         const handleMouseUp = () => {
@@ -489,7 +489,7 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
                                 className={`w-full flex items-center justify-between ${showGuitar && isMobile ? 'mb-3' : 'mb-0'} ${isMobile ? 'cursor-pointer' : ''} rounded-none`}
                                 style={{ backgroundColor: 'transparent' }}
                             >
-                                <h3 className={`${isMobile ? 'text-[11px]' : 'text-[10px]'} font-semibold text-text-secondary uppercase tracking-wide`}>
+                                <h3 className={`${isMobile ? 'text-[11px]' : 'text-[10px]'} font-semibold text-text-secondary uppercase tracking-wide whitespace-nowrap`}>
                                     Guitar Chart & Suggested Voicings for {chord.numeral || chord.symbol}
                                 </h3>
                                 {isMobile && (

@@ -8,6 +8,7 @@ import { Download, Save, Music, GripHorizontal, ChevronDown, ChevronUp, Plus, Mi
 import * as Tone from 'tone';
 import jsPDF from 'jspdf';
 import { saveSong, getSavedSongs, deleteSong } from './utils/storage';
+import { getGuitarChord, type GuitarChordShape } from './utils/guitarChordData';
 import type { Song } from './types';
 import { setInstrument, setVolume, setMute, initAudio } from './utils/audioEngine';
 
@@ -369,6 +370,10 @@ function App() {
     doc.text(`Key: ${selectedKey} | Tempo: ${currentSong.tempo} BPM`, 20, 30);
 
     let y = 50;
+
+    // Collect unique chords for diagram section
+    const uniqueChords: Set<string> = new Set();
+
     currentSong.sections.forEach(section => {
       if (y > 270) {
         doc.addPage();
@@ -383,6 +388,28 @@ function App() {
       // Build rhythm notation for each measure
       const measureNotations = section.measures.map(measure => {
         const beatCount = measure.beats.length;
+
+        // Collect chords for diagrams
+        measure.beats.forEach(beat => {
+          if (beat.chord) {
+            const root = beat.chord.root;
+            // Map full quality names to short names used by guitarChordData
+            const qualityMap: Record<string, string> = {
+              'major': 'maj',
+              'minor': 'm',
+              'diminished': 'dim',
+              'augmented': 'aug',
+              'major7': 'maj7',
+              'minor7': 'm7',
+              'dominant7': '7',
+              'halfDiminished7': 'm7b5',
+              'sus2': 'sus2',
+              'sus4': 'sus4',
+            };
+            const quality = qualityMap[beat.chord.quality] || beat.chord.quality || 'maj';
+            uniqueChords.add(`${root}|${quality}`);
+          }
+        });
 
         if (beatCount === 1) {
           // Whole note: "C — — —"
@@ -408,7 +435,155 @@ function App() {
       y += 15;
     });
 
-    doc.save(`${currentSong.title.replace(/\s+/g, '-').toLowerCase()}.pdf`);
+    // Draw chord diagrams on right margin
+    if (uniqueChords.size > 0) {
+      const chordArray = Array.from(uniqueChords);
+      const maxHeightAvailable = 245; // Available height on page (280 - 35 for header)
+      const diagramSpacing = 5; // Extra spacing between diagrams
+
+      // Calculate if we need two columns
+      const singleColumnHeight = 22; // Height per diagram in single column
+      const totalSingleColumnHeight = chordArray.length * (singleColumnHeight + diagramSpacing);
+      const needsTwoColumns = totalSingleColumnHeight > maxHeightAvailable;
+
+      // Adjust sizing based on column mode
+      const diagramHeight = needsTwoColumns ? 18 : 22; // Smaller when two columns
+      const diagramWidth = needsTwoColumns ? 18 : 20;
+      const columnWidth = needsTwoColumns ? 22 : 25;
+      const diagramStartX = needsTwoColumns ? 155 : 170; // Move left for two columns
+
+      let currentColumn = 0;
+      let diagramY = 35; // Start below header
+      const chordsPerColumn = needsTwoColumns
+        ? Math.ceil(chordArray.length / 2)
+        : chordArray.length;
+
+      chordArray.forEach((chordKey, index) => {
+        const [root, quality] = chordKey.split('|');
+        const chord = getGuitarChord(root, quality);
+
+        if (!chord) return;
+
+        // Switch to second column if needed
+        if (needsTwoColumns && index === chordsPerColumn) {
+          currentColumn = 1;
+          diagramY = 35;
+        }
+
+        const xOffset = currentColumn * columnWidth;
+
+        // Draw chord name
+        const chordName = `${root}${quality === 'maj' ? '' : quality}`;
+        doc.setFontSize(needsTwoColumns ? 6 : 7);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(0, 0, 0);
+        doc.text(chordName, diagramStartX + xOffset + diagramWidth / 2 + 2, diagramY, { align: 'center' });
+
+        // Draw chord diagram
+        drawChordDiagram(doc, chord, diagramStartX + xOffset, diagramY + 3, needsTwoColumns);
+
+        diagramY += diagramHeight + diagramSpacing;
+      });
+    }
+
+    // Save PDF using jsPDF's native save method
+    const fileName = `${currentSong.title.replace(/\s+/g, '-').toLowerCase()}.pdf`;
+    doc.save(fileName);
+  };
+
+  // Helper function to draw a chord diagram using jsPDF primitives (black & white, compact)
+  const drawChordDiagram = (doc: jsPDF, chord: GuitarChordShape, startX: number, startY: number, compact: boolean = false) => {
+    const { frets, barres, baseFret } = chord;
+
+    // Layout constants (adjust for compact two-column mode)
+    const stringSpacing = compact ? 2.5 : 3;
+    const fretSpacing = compact ? 3 : 4;
+    const numFrets = 4;
+    const numStrings = 6;
+    const dotRadius = compact ? 1 : 1.2;
+
+    // String positions
+    const stringPositions = Array.from({ length: numStrings }, (_, i) => startX + i * stringSpacing);
+    const fretPositions = Array.from({ length: numFrets + 1 }, (_, i) => startY + i * fretSpacing);
+
+    const isAtNut = baseFret === 1;
+    const fretboardWidth = stringSpacing * (numStrings - 1);
+    const fretboardHeight = fretSpacing * numFrets;
+
+    // Draw nut (thick line) or fret indicator
+    doc.setDrawColor(0, 0, 0);
+    if (isAtNut) {
+      doc.setLineWidth(1);
+      doc.line(startX, startY, startX + fretboardWidth, startY);
+    } else {
+      doc.setLineWidth(0.3);
+      doc.line(startX, startY, startX + fretboardWidth, startY);
+      doc.setFontSize(compact ? 6 : 7);
+      doc.setFont("helvetica", "bold");
+      doc.text(baseFret.toString(), startX - 3, startY + fretSpacing / 2 + 1);
+    }
+
+    // Draw fret lines (horizontal)
+    doc.setLineWidth(0.2);
+    fretPositions.slice(1).forEach(fretY => {
+      doc.line(startX, fretY, startX + fretboardWidth, fretY);
+    });
+
+    // Draw string lines (vertical)
+    stringPositions.forEach(stringX => {
+      doc.line(stringX, startY, stringX, startY + fretboardHeight);
+    });
+
+    // Draw barre lines
+    barres.forEach(barreFret => {
+      const barreStrings = frets
+        .map((f, idx) => ({ fret: f, idx }))
+        .filter(({ fret }) => fret === barreFret);
+
+      if (barreStrings.length < 2) return;
+
+      const minIdx = Math.min(...barreStrings.map(s => s.idx));
+      const maxIdx = Math.max(...barreStrings.map(s => s.idx));
+      const barreY = startY + (barreFret - 0.5) * fretSpacing;
+
+      // Draw barre as thick line
+      doc.setLineWidth(dotRadius * 2);
+      doc.line(stringPositions[minIdx], barreY, stringPositions[maxIdx], barreY);
+      doc.setLineWidth(0.2);
+    });
+
+    // Draw finger dots and open/muted indicators
+    frets.forEach((fret, stringIndex) => {
+      const x = stringPositions[stringIndex];
+
+      if (fret === -1) {
+        // Muted string (X)
+        doc.setFontSize(compact ? 6 : 7);
+        doc.setFont("helvetica", "bold");
+        doc.text('x', x, startY - 1, { align: 'center' });
+        return;
+      }
+
+      if (fret === 0) {
+        // Open string (O)
+        doc.setLineWidth(0.3);
+        doc.circle(x, startY - 1.5, 0.8, 'S');
+        return;
+      }
+
+      // Fingered fret - skip if part of a barre (unless first string)
+      const isInBarre = barres.includes(fret);
+      if (isInBarre) {
+        const firstBarreString = frets.findIndex(f => f === fret);
+        if (stringIndex !== firstBarreString) return;
+      }
+
+      const dotY = startY + (fret - 0.5) * fretSpacing;
+
+      // Draw filled circle for finger position
+      doc.setFillColor(0, 0, 0);
+      doc.circle(x, dotY, dotRadius, 'F');
+    });
   };
 
   const timelineContentHeight = Math.max(80, timelineHeight - 42);
