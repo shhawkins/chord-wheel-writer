@@ -4,12 +4,16 @@ interface PianoKeyboardProps {
     highlightedNotes: string[]; // e.g., ['C', 'E', 'G']
     rootNote?: string;
     color?: string;
+    octave?: number;
+    onNotePlay?: (note: string, octave: number) => void;
 }
 
 export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
     highlightedNotes,
     rootNote,
-    color = '#6366f1'
+    color = '#6366f1',
+    octave = 4,
+    onNotePlay
 }) => {
     const whiteKeys = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
 
@@ -46,11 +50,18 @@ export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
         return noteToPitchClass(note) === rootPitchClass;
     };
 
+    const handleKeyClick = (note: string, keyOctave: number) => {
+        if (onNotePlay) {
+            onNotePlay(note, keyOctave);
+        }
+    };
+
     const renderWhiteKeys = () => {
         const keys: React.ReactNode[] = [];
         const totalWhiteKeys = 14;
 
         for (let oct = 0; oct < 2; oct++) {
+            const keyOctave = octave + oct;
             whiteKeys.forEach((note) => {
                 const isHighlighted = getIsHighlighted(note);
                 const isRoot = getIsRoot(note);
@@ -58,17 +69,18 @@ export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
                 keys.push(
                     <div
                         key={`white-${oct}-${note}`}
-                        className="h-full rounded-b-md relative border-x border-b border-gray-400"
+                        className="h-full rounded-b-md relative border-x border-b border-gray-400 cursor-pointer hover:brightness-95 active:brightness-90 transition-all"
                         style={{
                             width: `${100 / totalWhiteKeys}%`,
                             background: 'linear-gradient(180deg, #fafafa 0%, #e8e8e8 70%, #d0d0d0 100%)',
                             boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.9), inset 0 -2px 4px rgba(0,0,0,0.08)'
                         }}
+                        onClick={() => handleKeyClick(note, keyOctave)}
                     >
                         {/* Dot indicator for highlighted notes */}
                         {isHighlighted && (
                             <div
-                                className="absolute left-1/2 rounded-full"
+                                className="absolute left-1/2 rounded-full pointer-events-none"
                                 style={{
                                     bottom: '6px',
                                     transform: 'translateX(-50%)',
@@ -99,6 +111,7 @@ export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
 
         for (let oct = 0; oct < 2; oct++) {
             const octaveOffset = oct * 50;
+            const keyOctave = octave + oct;
 
             blackKeyPositions.forEach(({ note, offset }) => {
                 const isHighlighted = getIsHighlighted(note);
@@ -108,20 +121,22 @@ export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
                 keys.push(
                     <div
                         key={`black-${oct}-${note}`}
-                        className="absolute top-0 rounded-b-md"
+                        className="absolute top-0 rounded-b-md cursor-pointer hover:brightness-125 active:brightness-150 transition-all"
                         style={{
                             left: `${leftPos}%`,
                             width: '5.5%',
                             height: '58%',
                             transform: 'translateX(-50%)',
                             background: 'linear-gradient(180deg, #333 0%, #1a1a1a 70%, #0a0a0a 100%)',
-                            boxShadow: '0 3px 6px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08)'
+                            boxShadow: '0 3px 6px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08)',
+                            pointerEvents: 'auto'
                         }}
+                        onClick={() => handleKeyClick(note, keyOctave)}
                     >
                         {/* Dot indicator for highlighted notes */}
                         {isHighlighted && (
                             <div
-                                className="absolute left-1/2 rounded-full"
+                                className="absolute left-1/2 rounded-full pointer-events-none"
                                 style={{
                                     bottom: '4px',
                                     transform: 'translateX(-50%)',

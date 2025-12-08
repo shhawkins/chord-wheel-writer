@@ -24,6 +24,7 @@ interface WheelSegmentProps {
     romanNumeral?: string;
     voicingSuggestion?: string;
     segmentId?: string;
+    onHover?: (text: string | null, x: number, y: number) => void;
 }
 
 export const WheelSegment: React.FC<WheelSegmentProps> = ({
@@ -45,7 +46,8 @@ export const WheelSegment: React.FC<WheelSegmentProps> = ({
     wheelRotation = 0,
     romanNumeral,
     voicingSuggestion,
-    segmentId = 'seg'
+    segmentId = 'seg',
+    onHover
 }) => {
     const path = describeSector(cx, cy, innerRadius, outerRadius, startAngle, endAngle);
     const midAngle = (startAngle + endAngle) / 2;
@@ -182,12 +184,55 @@ export const WheelSegment: React.FC<WheelSegmentProps> = ({
     // Handle mouse events for desktop
     const handleMouseClick = (e: React.MouseEvent) => {
         e.stopPropagation();
+
+        // Clear tooltip immediately on click
+        if (hoverTimerRef.current) {
+            clearTimeout(hoverTimerRef.current);
+            hoverTimerRef.current = null;
+        }
+        if (onHover) {
+            onHover(null, 0, 0);
+        }
+
         onClick(chord);
     };
 
     const handleMouseDoubleClick = (e: React.MouseEvent) => {
         e.stopPropagation();
+
+        // Clear tooltip immediately on double click
+        if (hoverTimerRef.current) {
+            clearTimeout(hoverTimerRef.current);
+            hoverTimerRef.current = null;
+        }
+        if (onHover) {
+            onHover(null, 0, 0);
+        }
+
         if (onDoubleClick) onDoubleClick(chord);
+    };
+
+    const hoverTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const handleMouseEnter = (e: React.MouseEvent) => {
+        if (!onHover) return;
+
+        const x = e.clientX;
+        const y = e.clientY;
+
+        hoverTimerRef.current = setTimeout(() => {
+            onHover(`Select a chord slot in the timeline, then double-click a chord or chord voicing to add to the timeline.`, x, y);
+        }, 3000);
+    };
+
+    const handleMouseLeave = () => {
+        if (hoverTimerRef.current) {
+            clearTimeout(hoverTimerRef.current);
+            hoverTimerRef.current = null;
+        }
+        if (onHover) {
+            onHover(null, 0, 0);
+        }
     };
 
     return (
@@ -199,9 +244,12 @@ export const WheelSegment: React.FC<WheelSegmentProps> = ({
             )}
             onClick={handleMouseClick}
             onDoubleClick={handleMouseDoubleClick}
+            onDoubleClick={handleMouseDoubleClick}
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
             onTouchCancel={handleTouchCancel}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
             style={{
                 pointerEvents: 'all',
                 WebkitTapHighlightColor: 'transparent'

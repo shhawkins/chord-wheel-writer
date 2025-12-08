@@ -69,6 +69,10 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({ zoomScale, zoomOriginY, 
     const dragStartAngle = useRef<number>(0);
     const accumulatedRotation = useRef<number>(0);
 
+    // Pan state for dragging outside the wheel (desktop only, when zoomed)
+    const [isPanning, setIsPanning] = useState(false);
+    const panStartPos = useRef<{ x: number; y: number } | null>(null);
+
     // Get angle from center of wheel to mouse position
     const getAngleFromCenter = useCallback((clientX: number, clientY: number) => {
         if (!svgRef.current) return 0;
@@ -97,25 +101,33 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({ zoomScale, zoomOriginY, 
     const hasMoved = useRef(false);
 
     const handleDragStart = useCallback((e: React.MouseEvent) => {
-        // Only start drag if clicking on the wheel rings, not center
-        if (wheelMode === 'fixed' && false) return; // Allow drag in fixed mode
+        // Only handle on desktop
+        if (isMobile) return;
 
-        if (!svgRef.current) return;
+        if (!svgRef.current || !containerRef.current) return;
         const rect = svgRef.current.getBoundingClientRect();
         const centerX = rect.width / 2;
         const centerY = rect.height / 2;
         const dx = e.clientX - rect.left - centerX;
         const dy = e.clientY - rect.top - centerY;
         const distance = Math.sqrt(dx * dx + dy * dy);
-        const minRadius = (rect.width / 600) * 70; // Scale based on actual size
+        const minRadius = (rect.width / 600) * 70; // Center radius scaled
+        const maxWheelRadius = (rect.width / 600) * 250; // Outer wheel radius scaled
 
-        if (distance > minRadius) {
+        // Click is on the wheel (between minRadius and maxWheelRadius) -> rotate
+        if (distance > minRadius && distance <= maxWheelRadius) {
             setIsDragging(true);
             dragStartAngle.current = getAngleFromCenter(e.clientX, e.clientY);
             accumulatedRotation.current = wheelRotation;
             e.preventDefault();
         }
-    }, [getAngleFromCenter, wheelRotation, wheelMode]);
+        // Click is outside the wheel and we're zoomed -> pan
+        else if (distance > maxWheelRadius && zoomScale > 1) {
+            setIsPanning(true);
+            panStartPos.current = { x: e.clientX, y: e.clientY };
+            e.preventDefault();
+        }
+    }, [getAngleFromCenter, wheelRotation, isMobile, zoomScale]);
 
     // Touch drag for mobile
     const handleTouchStartForDrag = useCallback((e: React.TouchEvent) => {
@@ -257,6 +269,34 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({ zoomScale, zoomOriginY, 
     useEffect(() => {
         setPanOffset((prev) => clampPan(prev.x, prev.y, zoomScale));
     }, [zoomScale, clampPan]);
+
+    // Pan handlers for desktop (defined after clampPan)
+    const handlePanMove = useCallback((e: MouseEvent) => {
+        if (!isPanning || !panStartPos.current) return;
+
+        const deltaX = e.clientX - panStartPos.current.x;
+        const deltaY = e.clientY - panStartPos.current.y;
+
+        setPanOffset((prev) => clampPan(prev.x + deltaX, prev.y + deltaY, zoomScale));
+        panStartPos.current = { x: e.clientX, y: e.clientY };
+    }, [isPanning, zoomScale, clampPan]);
+
+    const handlePanEnd = useCallback(() => {
+        setIsPanning(false);
+        panStartPos.current = null;
+    }, []);
+
+    // Add global mouse listeners for panning
+    useEffect(() => {
+        if (isPanning) {
+            document.addEventListener('mousemove', handlePanMove);
+            document.addEventListener('mouseup', handlePanEnd);
+            return () => {
+                document.removeEventListener('mousemove', handlePanMove);
+                document.removeEventListener('mouseup', handlePanEnd);
+            };
+        }
+    }, [isPanning, handlePanMove, handlePanEnd]);
 
     const getTouchCenter = (touches: React.TouchList) => ({
         x: (touches[0].clientX + touches[1].clientX) / 2,
@@ -552,20 +592,56 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({ zoomScale, zoomOriginY, 
         handleTouchEnd(e); // Reset pinch zoom
     }, [handleTouchEnd]);
 
+    const [tooltipState, setTooltipState] = useState<{ text: string, x: number, y: number } | null>(null);
+
+    const handleSegmentHover = useCallback((text: string | null, x: number, y: number) => {
+        if (text) {
+            setTooltipState({ text, x, y });
+        } else {
+            setTooltipState(null);
+        }
+    }, []);
+
+    // Tooltip style
+    const tooltipStyle: React.CSSProperties = tooltipState ? {
+        position: 'fixed',
+        left: tooltipState.x,
+        top: tooltipState.y,
+        transform: 'translate(-50%, -100%) translateY(-12px)',
+        backgroundColor: 'rgba(0, 0, 0, 0.9)',
+        color: 'white',
+        padding: '8px 12px',
+        borderRadius: '6px',
+        fontSize: '11px',
+        pointerEvents: 'none',
+        zIndex: 9999,
+        whiteSpace: 'normal',
+        textAlign: 'center',
+        maxWidth: '220px',
+        lineHeight: '1.4',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
+    } : {};
+
     return (
         <div
             ref={containerRef}
-            className="relative flex flex-col items-center justify-center w-full h-full max-w-full max-h-full aspect-square p-1 sm:p-2 select-none"
+            className={`relative flex flex-col items-center justify-center w-full h-full max-w-full max-h-full aspect-square p-1 sm:p-2 select-none ${isPanning ? 'cursor-grabbing' : (zoomScale > 1 && !isMobile ? 'cursor-grab' : '')}`}
             onTouchStart={handleCombinedTouchStart}
             onTouchMove={handleCombinedTouchMove}
             onTouchEnd={handleCombinedTouchEnd}
             onWheel={handleWheel}
+            onMouseDown={handleDragStart}
             style={{
                 WebkitTouchCallout: 'none',
                 WebkitUserSelect: 'none',
                 touchAction: 'none' // Prevent all default touch behaviors (we handle everything)
             }}
         >
+            {tooltipState && (
+                <div style={tooltipStyle}>
+                    {tooltipState.text}
+                </div>
+            )}
 
             <div
                 className="w-full h-full transition-transform duration-150 ease-out overflow-hidden"
@@ -715,6 +791,7 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({ zoomScale, zoomOriginY, 
                                         romanNumeral={(majorIsDiatonic || majorIsSecondary) ? getRomanNumeral(i, 'major') : undefined}
                                         voicingSuggestion={(majorIsDiatonic || majorIsSecondary) ? getVoicingSuggestion(i, 'major') : undefined}
                                         segmentId={`major-${i}`}
+                                        onHover={handleSegmentHover}
                                     />
 
                                     {/* MIDDLE RING: ii chord (left 15° slot) */}
@@ -737,6 +814,7 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({ zoomScale, zoomOriginY, 
                                         romanNumeral={iiIsDiatonic ? getRomanNumeral(i, 'ii') : undefined}
                                         voicingSuggestion={iiIsDiatonic ? getVoicingSuggestion(i, 'ii') : undefined}
                                         segmentId={`ii-${i}`}
+                                        onHover={handleSegmentHover}
                                     />
 
                                     {/* MIDDLE RING: iii chord (right 15° slot) */}
@@ -759,6 +837,7 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({ zoomScale, zoomOriginY, 
                                         romanNumeral={iiiIsDiatonic ? getRomanNumeral(i, 'iii') : undefined}
                                         voicingSuggestion={iiiIsDiatonic ? getVoicingSuggestion(i, 'iii') : undefined}
                                         segmentId={`iii-${i}`}
+                                        onHover={handleSegmentHover}
                                     />
 
                                     {/* OUTER RING: Diminished chord (narrow 15° notch, centered) */}
@@ -781,6 +860,7 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({ zoomScale, zoomOriginY, 
                                         romanNumeral={dimIsDiatonic ? getRomanNumeral(i, 'dim') : undefined}
                                         voicingSuggestion={dimIsDiatonic ? getVoicingSuggestion(i, 'dim') : undefined}
                                         segmentId={`dim-${i}`}
+                                        onHover={handleSegmentHover}
                                     />
                                 </g>
                             );
@@ -791,23 +871,23 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({ zoomScale, zoomOriginY, 
                     <circle cx={cx} cy={cy} r={centerRadius} fill="#1a1a24" stroke="#3a3a4a" strokeWidth="2" style={{ pointerEvents: 'none' }} />
 
                     {/* KEY Label */}
-                    <text x={cx} y={cy - 22} textAnchor="middle" fill="#6366f1" fontSize="9" fontWeight="bold" letterSpacing="2">
+                    <text x={cx} y={cy - 25} textAnchor="middle" fill="#6366f1" fontSize="9" fontWeight="bold" letterSpacing="2">
                         KEY
                     </text>
 
                     {/* Key Name */}
-                    <text x={cx} y={cy + 6} textAnchor="middle" fill="white" fontSize="26" fontWeight="bold">
+                    <text x={cx} y={cy + 3} textAnchor="middle" fill="white" fontSize="26" fontWeight="bold">
                         {selectedKey}
                     </text>
 
                     {/* Key Signature */}
-                    <text x={cx} y={cy + 24} textAnchor="middle" fill="#9898a6" fontSize="11">
+                    <text x={cx} y={cy + 21} textAnchor="middle" fill="#9898a6" fontSize="11">
                         {keySigDisplay || 'No ♯/♭'}
                     </text>
 
                     {/* Rotation Controls - larger on mobile */}
                     <g
-                        transform={`translate(${cx - 22}, ${cy + 38})`}
+                        transform={`translate(${cx - 22}, ${cy + 40})`}
                         onClick={() => handleRotate('ccw')}
                         onTouchEnd={(e) => {
                             e.preventDefault();
@@ -823,7 +903,7 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({ zoomScale, zoomOriginY, 
                         </g>
                     </g>
                     <g
-                        transform={`translate(${cx + 22}, ${cy + 38})`}
+                        transform={`translate(${cx + 22}, ${cy + 40})`}
                         onClick={() => handleRotate('cw')}
                         onTouchEnd={(e) => {
                             e.preventDefault();
@@ -841,7 +921,7 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({ zoomScale, zoomOriginY, 
 
                     {/* Wheel Mode Toggle - Google Maps style compass */}
                     <g
-                        transform={`translate(${cx}, ${cy + 38})`}
+                        transform={`translate(${cx}, ${cy + 40})`}
                         onClick={toggleWheelMode}
                         onTouchEnd={(e) => {
                             e.preventDefault();
@@ -854,9 +934,12 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({ zoomScale, zoomOriginY, 
                         {/* Circular background - slightly larger than rotate buttons */}
                         <circle
                             r={isMobile ? 16 : 11}
-                            fill="#282833"
-                            className="hover:fill-[#3a3a4a] transition-colors"
-                            style={{ pointerEvents: 'all' }}
+                            fill={wheelMode === 'rotating' ? '#252535' : '#3f2e2e'}
+                            className="transition-colors"
+                            style={{
+                                pointerEvents: 'all',
+                                transition: 'fill 0.3s ease'
+                            }}
                         >
                             <title>{wheelMode === 'rotating' ? 'Lock wheel (C at top)' : 'Pin current key to top'}</title>
                         </circle>

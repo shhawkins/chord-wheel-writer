@@ -354,6 +354,39 @@ export const playChord = async (notes: string[], duration: string = "1n", time?:
     }
 };
 
+/**
+ * Play a single note with the current instrument
+ * Used for interactive piano keyboard
+ */
+export const playNote = async (note: string, octave: number = 4, duration: string = "8n") => {
+    if (Tone.context.state !== 'running') {
+        await Tone.start();
+    }
+
+    if (Tone.context.state === 'suspended') {
+        await Tone.context.resume();
+    }
+
+    await initAudio();
+
+    let inst = instruments[currentInstrument];
+    if (!inst) {
+        inst = instruments.piano;
+    }
+    if (!inst) {
+        console.error('No instrument available to play!');
+        return;
+    }
+
+    const noteWithOctave = `${note}${octave}`;
+
+    try {
+        inst.triggerAttackRelease(noteWithOctave, duration);
+    } catch (err) {
+        console.error(`Failed to play note ${noteWithOctave}`, err);
+    }
+};
+
 export const stopAudio = () => {
     Object.values(instruments).forEach(inst => inst?.releaseAll());
     Tone.Transport.stop();

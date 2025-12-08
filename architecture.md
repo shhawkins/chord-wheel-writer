@@ -107,7 +107,9 @@ src/
 │   │   └── Playhead.tsx     # Animated playback position
 │   │
 │   ├── panel/
-│   │   ├── ChordDetails.tsx # Chord info sidebar/drawer
+│   │   ├── ChordDetails.tsx # Chord info sidebar/drawer with sections
+│   │   ├── GuitarChord.tsx  # Guitar chord diagram visualization
+│   │   ├── MusicStaff.tsx   # Musical staff notation display
 │   │   └── PianoKeyboard.tsx# Visual piano with highlighted notes
 │   │
 │   ├── playback/
@@ -126,6 +128,7 @@ src/
 │
 └── utils/
     ├── audioEngine.ts       # Tone.js wrapper, instruments, playback
+    ├── guitarChordData.ts   # Guitar chord fingering data
     ├── musicTheory.ts       # Scales, chords, Circle of Fifths
     ├── geometry.ts          # SVG path generation for wheel
     └── storage.ts           # LocalStorage persistence
@@ -180,6 +183,7 @@ The main interactive wheel rendered as SVG.
 **Important Logic:**
 - Rotation direction is tracked cumulatively to avoid "rewind" on wrap-around
 - Uses `requestAnimationFrame` for smooth transitions
+- **Wheel Mode Toggle**: Center compass icon switches between "rotating" (wheel spins) and "fixed" (key pinned) modes, with color coding for state visibility
 
 ### Timeline.tsx
 Horizontal arrangement of song sections.
@@ -208,6 +212,10 @@ Info panel showing selected chord details.
 **Key Features:**
 - Two variants: `sidebar` (desktop) and `drawer` (mobile)
 - Piano keyboard visualization
+- **Combined Guitar & Suggested Voicings section**:
+  - Guitar chord diagram on left (uses `GuitarChord.tsx`)
+  - Suggested chord voicings on right
+  - Musical staff notation below (uses `MusicStaff.tsx`)
 - Chord variation buttons (7, maj7, m7, etc.)
 - Theory tips based on chord function
 - Collapsible sections on mobile
@@ -504,11 +512,14 @@ npm run build
 | `App.tsx` | Root layout, header, main areas | `App` component |
 | `useSongStore.ts` | All app state | `useSongStore` hook |
 | `audioEngine.ts` | Sound playback | `playChord`, `playSong`, `initAudio` |
+| `guitarChordData.ts` | Guitar fingerings | Chord fingering data |
 | `musicTheory.ts` | Theory calculations | `getChordNotes`, `getDiatonicChords` |
 | `geometry.ts` | SVG path math | `describeSector`, `polarToCartesian` |
 | `ChordWheel.tsx` | The wheel | `ChordWheel` component |
 | `Timeline.tsx` | Song arrangement | `Timeline` component |
 | `ChordDetails.tsx` | Chord info panel | `ChordDetails` component |
+| `GuitarChord.tsx` | Guitar diagrams | `GuitarChord` component |
+| `MusicStaff.tsx` | Staff notation | `MusicStaff` component |
 | `PlaybackControls.tsx` | Transport bar | `PlaybackControls` component |
 
 ---

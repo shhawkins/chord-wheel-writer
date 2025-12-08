@@ -457,13 +457,13 @@ function App() {
 
           {/* Song Duration (Task 33) - Hide on very small screens */}
           {!isMobile && (
-            <div className="flex items-center gap-1.5 text-[10px] text-text-muted">
+            <div className="flex items-center gap-2 text-[10px] text-text-muted">
               <Clock size={11} className="shrink-0" />
               <span className="leading-none">{songDuration}</span>
             </div>
           )}
 
-          <div className={`flex items-center gap-1.5 ${isMobile ? 'text-xs' : 'text-[10px]'} text-text-muted`}>
+          <div className={`flex items-center gap-2 ${isMobile ? 'text-xs px-2' : 'text-[10px] px-3'} text-text-muted`}>
             <span className="uppercase font-bold">Key</span>
             <span className={`font-bold text-accent-primary ${isMobile ? 'text-base' : 'text-sm'}`}>{selectedKey}</span>
           </div>

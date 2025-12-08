@@ -112,7 +112,7 @@ export const PlaybackControls: React.FC = () => {
     return (
         <div className={`${isMobile ? 'h-16' : 'h-14'} bg-bg-elevated border-t border-border-subtle flex items-center ${isMobile ? 'justify-around px-2' : 'justify-between px-6'}`}>
             {/* Transport */}
-            <div className={`flex items-center ${isMobile ? 'gap-1' : 'gap-2'}`}>
+            <div className={`flex items-center ${isMobile ? 'gap-2' : 'gap-2'}`}>
                 <button
                     onClick={() => handleSkip('prev')}
                     className={`${isMobile ? 'p-2 min-w-[44px] min-h-[44px]' : 'p-1.5'} text-text-secondary hover:text-text-primary transition-colors touch-feedback flex items-center justify-center`}
