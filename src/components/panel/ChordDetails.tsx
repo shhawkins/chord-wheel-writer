@@ -2,8 +2,8 @@ import { useSongStore } from '../../store/useSongStore';
 import { PianoKeyboard } from './PianoKeyboard';
 import { GuitarChord } from './GuitarChord';
 import { MusicStaff } from './MusicStaff';
-import { getWheelColors, getChordNotes, getIntervalFromKey } from '../../utils/musicTheory';
-import { PanelRightClose, PanelRight, GripVertical, HelpCircle, ChevronUp, ChevronDown, Minus, Plus } from 'lucide-react';
+import { getWheelColors, getChordNotes, getIntervalFromKey, invertChord, getMaxInversion, getInversionName, getChordSymbolWithInversion } from '../../utils/musicTheory';
+import { PanelRightClose, PanelRight, GripVertical, HelpCircle, ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { playChord, playNote } from '../../utils/audioEngine';
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { HelpModal } from '../HelpModal';
@@ -42,7 +42,8 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
     const [showVariations, setShowVariations] = useState(false); // Collapsed by default
     const [showTheory, setShowTheory] = useState(false); // Collapsed by default
     const [showGuitar, setShowGuitar] = useState(false); // Collapsed by default to save space
-    const [pianoOctave, setPianoOctave] = useState(4); // Base octave for piano keyboard
+    const [chordInversion, setChordInversion] = useState(0); // Chord inversion (0 = root position)
+    const pianoOctave = 4; // Fixed octave for piano keyboard
 
     const handleNotePlay = useCallback((note: string, octave: number) => {
         playNote(note, octave);
@@ -174,20 +175,23 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
         }
     }, [selectedChord]);
 
-    // Clear preview when chord changes
+    // Clear preview and reset inversion when chord changes
     useEffect(() => {
         setPreviewVariant(null);
         setPreviewNotes([]);
+        setChordInversion(0); // Reset inversion for new chord
     }, [chord?.root, chord?.quality]);
 
     const chordColor = chord
         ? (colors[chord.root as keyof typeof colors] || '#6366f1')
         : '#6366f1';
 
-    // Notes to display: preview notes (if any) > selected chord notes
-    const displayNotes = previewNotes.length > 0
+    // Notes to display: preview notes (if any) > selected chord notes, then apply inversion
+    const baseNotes = previewNotes.length > 0
         ? previewNotes
         : (chord?.notes || []);
+    const displayNotes = invertChord(baseNotes, chordInversion);
+    const maxInversion = getMaxInversion(baseNotes);
 
     // Play chord variation and show notes until another is clicked
     const handleVariationClick = (variant: string) => {
@@ -201,10 +205,11 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
         if (!chord) return;
 
         const variantNotes = getChordNotes(chord.root, variant);
+        const invertedNotes = invertChord(variantNotes, chordInversion);
 
-        playChord(variantNotes);
+        playChord(invertedNotes);
         setPreviewVariant(variant);
-        setPreviewNotes(variantNotes);
+        setPreviewNotes(variantNotes); // Store un-inverted; displayNotes handles inversion
 
         // Single click: preview only (no timeline add)
     };
@@ -216,11 +221,15 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
         if (!chord || !selectedSectionId || !selectedSlotId) return;
 
         const variantNotes = getChordNotes(chord.root, variant);
+        // Generate symbol with slash notation if inverted (e.g., C/E for first inversion)
+        const chordSymbol = getChordSymbolWithInversion(chord.root, variant, variantNotes, chordInversion);
+
         const newChord = {
             ...chord,
             quality: variant as any,
-            symbol: `${chord.root}${variant}`,
-            notes: variantNotes
+            symbol: chordSymbol,
+            notes: variantNotes,
+            inversion: chordInversion // Save the current inversion with this chord
         };
 
         addChordToSlot(newChord, selectedSectionId, selectedSlotId);
@@ -376,27 +385,39 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
                         )}
                     </div>
                     <div className="flex items-center gap-3 shrink-0">
-                        {/* Octave controls */}
+                        {/* Inversion controls */}
                         {chord && (
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-0.5 bg-bg-tertiary/50 rounded px-1 py-0.5" title="Chord inversion - which note is in the bass">
                                 <button
-                                    onClick={() => setPianoOctave(prev => Math.max(1, prev - 1))}
-                                    disabled={pianoOctave <= 1}
-                                    className={`${isMobile ? 'w-8 h-8 min-w-[32px] min-h-[32px]' : 'w-6 h-6'} flex items-center justify-center hover:bg-accent-primary/20 rounded-md text-text-muted hover:text-accent-primary transition-colors touch-feedback disabled:opacity-40 disabled:cursor-not-allowed`}
-                                    title="Lower octave"
+                                    onClick={() => {
+                                        const newInversion = Math.max(0, chordInversion - 1);
+                                        setChordInversion(newInversion);
+                                        // Play the chord with new inversion
+                                        const notes = invertChord(baseNotes, newInversion);
+                                        playChord(notes);
+                                    }}
+                                    disabled={chordInversion <= 0}
+                                    className={`${isMobile ? 'w-6 h-6' : 'w-5 h-5'} flex items-center justify-center hover:bg-accent-primary/20 rounded text-text-muted hover:text-accent-primary transition-colors touch-feedback disabled:opacity-40 disabled:cursor-not-allowed`}
+                                    title="Previous inversion"
                                 >
-                                    <Minus size={isMobile ? 14 : 12} />
+                                    <ChevronLeft size={isMobile ? 12 : 10} />
                                 </button>
-                                <span className={`${isMobile ? 'text-xs px-1' : 'text-[10px] px-0.5'} font-semibold text-text-secondary min-w-[24px] text-center`}>
-                                    {pianoOctave}
+                                <span className={`${isMobile ? 'text-[10px]' : 'text-[9px]'} font-semibold text-text-secondary min-w-[28px] text-center`}>
+                                    {getInversionName(chordInversion)}
                                 </span>
                                 <button
-                                    onClick={() => setPianoOctave(prev => Math.min(6, prev + 1))}
-                                    disabled={pianoOctave >= 6}
-                                    className={`${isMobile ? 'w-8 h-8 min-w-[32px] min-h-[32px]' : 'w-6 h-6'} flex items-center justify-center hover:bg-accent-primary/20 rounded-md text-text-muted hover:text-accent-primary transition-colors touch-feedback disabled:opacity-40 disabled:cursor-not-allowed`}
-                                    title="Raise octave"
+                                    onClick={() => {
+                                        const newInversion = Math.min(maxInversion, chordInversion + 1);
+                                        setChordInversion(newInversion);
+                                        // Play the chord with new inversion
+                                        const notes = invertChord(baseNotes, newInversion);
+                                        playChord(notes);
+                                    }}
+                                    disabled={chordInversion >= maxInversion}
+                                    className={`${isMobile ? 'w-6 h-6' : 'w-5 h-5'} flex items-center justify-center hover:bg-accent-primary/20 rounded text-text-muted hover:text-accent-primary transition-colors touch-feedback disabled:opacity-40 disabled:cursor-not-allowed`}
+                                    title="Next inversion"
                                 >
-                                    <Plus size={isMobile ? 14 : 12} />
+                                    <ChevronRight size={isMobile ? 12 : 10} />
                                 </button>
                             </div>
                         )}
@@ -529,7 +550,7 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
                                                         {chord.root}{ext}
                                                         {!isMobile && voicingTooltips[ext] && (
                                                             <span
-                                                                className="pointer-events-none absolute -top-6 -translate-y-full left-1/2 -translate-x-1/2 whitespace-normal text-[10px] leading-tight bg-black text-white px-3 py-2 rounded border border-white/10 shadow-xl opacity-0 group-hover:opacity-100 group-active:opacity-0 group-focus:opacity-0 transition-opacity duration-150 group-hover:delay-500 z-50 w-44 text-left"
+                                                                className="pointer-events-none absolute -top-6 -translate-y-full left-1/2 -translate-x-1/2 whitespace-normal text-[10px] leading-tight bg-black text-white px-3 py-2 rounded border border-white/10 shadow-xl opacity-0 group-hover:opacity-100 group-active:opacity-0 group-focus:opacity-0 transition-opacity duration-150 group-hover:delay-1000 z-50 w-44 text-left"
                                                                 style={{
                                                                     backgroundColor: '#000',
                                                                     color: '#fff',
@@ -604,7 +625,7 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
                                                 {ext}
                                                 {!isMobile && voicingTooltips[ext] && (
                                                     <span
-                                                        className="pointer-events-none absolute top-1/2 -translate-y-1/2 whitespace-normal text-[10px] leading-tight bg-black text-white px-3 py-2 rounded border border-white/10 shadow-xl opacity-0 group-hover:opacity-100 group-active:opacity-0 group-focus:opacity-0 transition-opacity duration-150 group-hover:delay-500 z-50 w-44 text-left"
+                                                        className="pointer-events-none absolute top-1/2 -translate-y-1/2 whitespace-normal text-[10px] leading-tight bg-black text-white px-3 py-2 rounded border border-white/10 shadow-xl opacity-0 group-hover:opacity-100 group-active:opacity-0 group-focus:opacity-0 transition-opacity duration-150 group-hover:delay-1000 z-50 w-44 text-left"
                                                         style={{
                                                             ...tooltipPositionStyle,
                                                             backgroundColor: '#000',

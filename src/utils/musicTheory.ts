@@ -58,6 +58,7 @@ export interface Chord {
     numeral: string;
     notes: string[];
     symbol: string;
+    inversion?: number; // 0 = root position, 1 = first inversion, 2 = second, etc.
 }
 
 // CHORD_FORMULAS removed - using EXTENDED_CHORD_FORMULAS instead
@@ -203,6 +204,67 @@ export function getChordNotesWithOctaves(root: string, quality: string, baseOcta
         const octaveOffset = Math.floor(interval / 12);
         return `${NOTES[noteIndex]}${baseOctave + octaveOffset}`;
     });
+}
+
+/**
+ * Invert chord notes by rotating which note is in the bass
+ * @param notes - Array of note names (without octaves)
+ * @param inversion - 0 = root position, 1 = first inversion, 2 = second, etc.
+ * @returns Rotated notes array
+ */
+export function invertChord(notes: string[], inversion: number): string[] {
+    if (!notes || notes.length === 0) return notes;
+
+    const maxInversion = notes.length - 1;
+    const safeInversion = Math.max(0, Math.min(inversion, maxInversion));
+
+    if (safeInversion === 0) return notes;
+
+    // Rotate: move first `safeInversion` notes to the end
+    return [
+        ...notes.slice(safeInversion),
+        ...notes.slice(0, safeInversion)
+    ];
+}
+
+/**
+ * Get the maximum number of inversions for a chord
+ * @param notes - Array of chord notes
+ * @returns Maximum inversion number (0-indexed)
+ */
+export function getMaxInversion(notes: string[]): number {
+    return Math.max(0, (notes?.length || 1) - 1);
+}
+
+/**
+ * Get human-readable inversion name
+ * @param inversion - Inversion number (0 = root)
+ * @returns Display name
+ */
+export function getInversionName(inversion: number): string {
+    const names = ['Root', '1st', '2nd', '3rd', '4th', '5th', '6th'];
+    return names[inversion] || `${inversion}th`;
+}
+
+/**
+ * Get chord symbol with slash notation for inversions
+ * @param root - Root note of the chord
+ * @param quality - Chord quality
+ * @param notes - Original (non-inverted) chord notes
+ * @param inversion - Inversion number (0 = root position)
+ * @returns Symbol like "C" or "C/E" for first inversion
+ */
+export function getChordSymbolWithInversion(root: string, quality: string, notes: string[], inversion: number): string {
+    const qualitySymbol = quality === 'major' || quality === 'maj' ? '' : quality;
+    const baseSymbol = `${root}${qualitySymbol}`;
+
+    if (!inversion || inversion === 0 || !notes || notes.length === 0) {
+        return baseSymbol;
+    }
+
+    // Get the bass note (the note that becomes the bass after inversion)
+    const bassNote = notes[inversion % notes.length];
+    return `${baseSymbol}/${bassNote}`;
 }
 
 export function getMajorScale(root: string): string[] {
