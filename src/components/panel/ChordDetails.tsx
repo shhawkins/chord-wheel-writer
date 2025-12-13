@@ -369,13 +369,13 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
             <div className="flex-1 flex flex-col overflow-hidden min-w-0 relative">
                 {/* Consolidated Header - chord name, key, help, and hide button all in one row */}
                 <div className={`${isMobile && isDrawer ? 'px-5 py-3' : 'px-4 py-3'} border-b border-border-subtle flex justify-between items-center gap-4 shrink-0 ${isDrawer ? 'bg-bg-secondary/80 backdrop-blur-md' : ''}`}>
-                    <div className="flex items-center gap-12 overflow-hidden flex-1 min-w-0">
-                        <span className="flex items-center gap-2 shrink-0 mr-12">
+                    <div className="flex items-center gap-4 overflow-hidden flex-1 min-w-0">
+                        <span className="flex items-center gap-3 shrink-0">
                             <span className={`${isMobile ? 'text-lg' : 'text-base sm:text-lg'} font-bold text-text-primary leading-none`}>
                                 {chord ? `${chord.root}${(previewVariant || chord.quality) === 'maj' ? '' : (previewVariant || chord.quality)}` : 'Chord Details'}
                             </span>
                             {chord?.numeral && (
-                                <span className={`${isMobile ? 'text-xs' : 'text-[11px]'} font-serif italic text-text-secondary shrink-0`}>{chord.numeral}</span>
+                                <span className={`${isMobile ? 'text-xs' : 'text-[11px]'} font-serif italic text-text-secondary shrink-0 ml-1`}>{chord.numeral}</span>
                             )}
                         </span>
                         {chord && (
@@ -467,34 +467,34 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
                                         gridTemplateColumns: `${isMobile ? '56px' : '72px'} repeat(${displayNotes.length}, minmax(0, 1fr))`
                                     }}
                                 >
-                                    {/* Notes row */}
-                                    <div className="text-[10px] font-semibold uppercase tracking-wide text-text-muted flex items-center">Notes</div>
+                                    {/* Notes row - fixed height to prevent layout shift */}
+                                    <div className="text-[10px] font-semibold uppercase tracking-wide text-text-muted flex items-center h-7">Notes</div>
                                     {displayNotes.map((note, i) => (
                                         <div
                                             key={`note-${i}`}
-                                            className={`text-center ${isMobile ? 'text-xs' : 'text-sm'} font-bold text-text-primary py-1`}
+                                            className={`text-center ${isMobile ? 'text-xs' : 'text-sm'} font-bold text-text-primary h-7 flex items-center justify-center`}
                                         >
                                             {note}
                                         </div>
                                     ))}
 
-                                    {/* Absolute row */}
-                                    <div className="text-[10px] font-semibold uppercase tracking-wide text-text-muted flex items-center">Absolute</div>
+                                    {/* Absolute row - fixed height to prevent layout shift */}
+                                    <div className="text-[10px] font-semibold uppercase tracking-wide text-text-muted flex items-center h-7">Absolute</div>
                                     {displayNotes.map((note, i) => (
                                         <div
                                             key={`abs-${i}`}
-                                            className={`text-center ${isMobile ? 'text-[11px]' : 'text-xs'} text-text-primary font-semibold py-1`}
+                                            className={`text-center ${isMobile ? 'text-[11px]' : 'text-xs'} text-text-primary font-semibold h-7 flex items-center justify-center`}
                                         >
                                             {getAbsoluteDegree(note)}
                                         </div>
                                     ))}
 
-                                    {/* Relative to Key row */}
-                                    <div className="text-[10px] font-semibold uppercase tracking-wide text-text-muted flex items-center">Relative</div>
+                                    {/* Relative to Key row - fixed height to prevent layout shift */}
+                                    <div className="text-[10px] font-semibold uppercase tracking-wide text-text-muted flex items-center h-7">Relative</div>
                                     {displayNotes.map((note, i) => (
                                         <div
                                             key={`rel-${i}`}
-                                            className={`text-center ${isMobile ? 'text-[11px]' : 'text-xs'} text-text-secondary py-1`}
+                                            className={`text-center ${isMobile ? 'text-[11px]' : 'text-xs'} text-text-secondary h-7 flex items-center justify-center`}
                                         >
                                             {getIntervalFromKey(selectedKey, note).replace(/^1/, 'R')}
                                         </div>
@@ -573,6 +573,41 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
                                         <p className={`${isMobile ? 'text-xs' : 'text-[10px]'} text-text-muted leading-relaxed mb-3`}>
                                             {getSuggestedVoicings().description}
                                         </p>
+                                        {/* Inversion controls above staff */}
+                                        <div className="flex flex-col items-center mt-3 mb-2">
+                                            <span className="text-[9px] font-semibold uppercase tracking-wide text-text-muted mb-1.5">Inversion</span>
+                                            <div className="flex items-center gap-0.5 bg-bg-tertiary/50 rounded px-1 py-0.5" title="Chord inversion - which note is in the bass">
+                                                <button
+                                                    onClick={() => {
+                                                        const newInversion = Math.max(0, chordInversion - 1);
+                                                        setChordInversion(newInversion);
+                                                        const notes = invertChord(baseNotes, newInversion);
+                                                        playChord(notes);
+                                                    }}
+                                                    disabled={chordInversion <= 0}
+                                                    className={`${isMobile ? 'w-6 h-6' : 'w-5 h-5'} flex items-center justify-center hover:bg-accent-primary/20 rounded text-text-muted hover:text-accent-primary transition-colors touch-feedback disabled:opacity-40 disabled:cursor-not-allowed`}
+                                                    title="Previous inversion"
+                                                >
+                                                    <ChevronLeft size={isMobile ? 12 : 10} />
+                                                </button>
+                                                <span className={`${isMobile ? 'text-[10px]' : 'text-[9px]'} font-semibold text-text-secondary min-w-[28px] text-center`}>
+                                                    {getInversionName(chordInversion)}
+                                                </span>
+                                                <button
+                                                    onClick={() => {
+                                                        const newInversion = Math.min(maxInversion, chordInversion + 1);
+                                                        setChordInversion(newInversion);
+                                                        const notes = invertChord(baseNotes, newInversion);
+                                                        playChord(notes);
+                                                    }}
+                                                    disabled={chordInversion >= maxInversion}
+                                                    className={`${isMobile ? 'w-6 h-6' : 'w-5 h-5'} flex items-center justify-center hover:bg-accent-primary/20 rounded text-text-muted hover:text-accent-primary transition-colors touch-feedback disabled:opacity-40 disabled:cursor-not-allowed`}
+                                                    title="Next inversion"
+                                                >
+                                                    <ChevronRight size={isMobile ? 12 : 10} />
+                                                </button>
+                                            </div>
+                                        </div>
                                         {/* Musical Staff Notation */}
                                         <div className="mt-2">
                                             <MusicStaff

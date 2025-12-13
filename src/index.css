@@ -1,7 +1,31 @@
+@import "tailwindcss";
+
+/* Load custom theme configuration */
 @config "../tailwind.config.js";
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+
+/* Theme customizations for Tailwind v4 */
+@theme {
+  /* Custom colors */
+  --color-bg-primary: #0d0d12;
+  --color-bg-secondary: #16161d;
+  --color-bg-tertiary: #1e1e28;
+  --color-bg-elevated: #282833;
+
+  --color-text-primary: #f0f0f5;
+  --color-text-secondary: #9898a6;
+  --color-text-muted: #5c5c6e;
+
+  --color-accent-primary: #6366f1;
+  --color-accent-glow: rgba(99, 102, 241, 0.4);
+
+  --color-border-subtle: rgba(255, 255, 255, 0.08);
+  --color-border-medium: rgba(255, 255, 255, 0.15);
+
+  /* Custom fonts */
+  --font-sans: 'Inter', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --font-display: 'Space Grotesk', sans-serif;
+}
 
 :root {
   --bg-primary: #0d0d12;
@@ -60,7 +84,11 @@ body {
 }
 
 body {
-  @apply bg-bg-primary text-text-primary font-sans antialiased;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Inter', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 
   /* Disable tap highlight on iOS */
   -webkit-tap-highlight-color: transparent;
@@ -120,15 +148,16 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  @apply bg-bg-secondary;
+  background-color: var(--bg-secondary);
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-bg-elevated rounded-full;
+  background-color: var(--bg-elevated);
+  border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  @apply bg-text-muted;
+  background-color: var(--text-muted);
 }
 
 /* iOS-specific optimizations */
