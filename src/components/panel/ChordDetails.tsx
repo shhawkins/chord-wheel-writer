@@ -369,13 +369,13 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
             <div className="flex-1 flex flex-col overflow-hidden min-w-0 relative">
                 {/* Consolidated Header - chord name, key, help, and hide button all in one row */}
                 <div className={`${isMobile && isDrawer ? 'px-5 py-3' : 'px-4 py-3'} border-b border-border-subtle flex justify-between items-center gap-4 shrink-0 ${isDrawer ? 'bg-bg-secondary/80 backdrop-blur-md' : ''}`}>
-                    <div className="flex items-center gap-4 overflow-hidden flex-1 min-w-0">
-                        <span className="flex items-center gap-3 shrink-0">
+                    <div className="flex items-center overflow-hidden flex-1 min-w-0" style={{ gap: '16px' }}>
+                        <span className="flex items-center shrink-0" style={{ gap: '12px' }}>
                             <span className={`${isMobile ? 'text-lg' : 'text-base sm:text-lg'} font-bold text-text-primary leading-none`}>
                                 {chord ? `${chord.root}${(previewVariant || chord.quality) === 'maj' ? '' : (previewVariant || chord.quality)}` : 'Chord Details'}
                             </span>
                             {chord?.numeral && (
-                                <span className={`${isMobile ? 'text-xs' : 'text-[11px]'} font-serif italic text-text-secondary shrink-0 ml-1`}>{chord.numeral}</span>
+                                <span className={`${isMobile ? 'text-xs' : 'text-[11px]'} font-serif italic text-text-secondary shrink-0`} style={{ marginLeft: '4px' }}>{chord.numeral}</span>
                             )}
                         </span>
                         {chord && (
@@ -468,33 +468,36 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
                                     }}
                                 >
                                     {/* Notes row - fixed height to prevent layout shift */}
-                                    <div className="text-[10px] font-semibold uppercase tracking-wide text-text-muted flex items-center h-7">Notes</div>
+                                    <div className="text-[10px] font-semibold uppercase tracking-wide text-text-muted flex items-center" style={{ height: '28px' }}>Notes</div>
                                     {displayNotes.map((note, i) => (
                                         <div
                                             key={`note-${i}`}
-                                            className={`text-center ${isMobile ? 'text-xs' : 'text-sm'} font-bold text-text-primary h-7 flex items-center justify-center`}
+                                            className={`text-center ${isMobile ? 'text-xs' : 'text-sm'} font-bold text-text-primary flex items-center justify-center`}
+                                            style={{ height: '28px' }}
                                         >
                                             {note}
                                         </div>
                                     ))}
 
                                     {/* Absolute row - fixed height to prevent layout shift */}
-                                    <div className="text-[10px] font-semibold uppercase tracking-wide text-text-muted flex items-center h-7">Absolute</div>
+                                    <div className="text-[10px] font-semibold uppercase tracking-wide text-text-muted flex items-center" style={{ height: '28px' }}>Absolute</div>
                                     {displayNotes.map((note, i) => (
                                         <div
                                             key={`abs-${i}`}
-                                            className={`text-center ${isMobile ? 'text-[11px]' : 'text-xs'} text-text-primary font-semibold h-7 flex items-center justify-center`}
+                                            className={`text-center ${isMobile ? 'text-[11px]' : 'text-xs'} text-text-primary font-semibold flex items-center justify-center`}
+                                            style={{ height: '28px' }}
                                         >
                                             {getAbsoluteDegree(note)}
                                         </div>
                                     ))}
 
                                     {/* Relative to Key row - fixed height to prevent layout shift */}
-                                    <div className="text-[10px] font-semibold uppercase tracking-wide text-text-muted flex items-center h-7">Relative</div>
+                                    <div className="text-[10px] font-semibold uppercase tracking-wide text-text-muted flex items-center" style={{ height: '28px' }}>Relative</div>
                                     {displayNotes.map((note, i) => (
                                         <div
                                             key={`rel-${i}`}
-                                            className={`text-center ${isMobile ? 'text-[11px]' : 'text-xs'} text-text-secondary h-7 flex items-center justify-center`}
+                                            className={`text-center ${isMobile ? 'text-[11px]' : 'text-xs'} text-text-secondary flex items-center justify-center`}
+                                            style={{ height: '28px' }}
                                         >
                                             {getIntervalFromKey(selectedKey, note).replace(/^1/, 'R')}
                                         </div>
