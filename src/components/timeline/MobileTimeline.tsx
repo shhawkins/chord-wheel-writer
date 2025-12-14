@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { useSongStore } from '../../store/useSongStore';
-import { getWheelColors, normalizeNote, getContrastingTextColor, formatChordForDisplay } from '../../utils/musicTheory';
+import { getWheelColors, normalizeNote, formatChordForDisplay } from '../../utils/musicTheory';
 import { playChord } from '../../utils/audioEngine';
 import { Plus, Play, ChevronLeft, ChevronRight, PanelRightClose, Map } from 'lucide-react';
 import { SectionOptionsPopup } from './SectionOptionsPopup';
@@ -283,13 +283,14 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
                                                         !beat.chord && "border-2 border-dashed border-border-medium bg-bg-elevated hover:border-text-muted"
                                                     )}
                                                     style={beat.chord ? {
-                                                        backgroundColor: chordColor,
+                                                        backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                                                        border: `2px solid ${chordColor}`,
                                                     } : undefined}
                                                 >
                                                     {beat.chord ? (
                                                         <span
                                                             className={`font-bold px-1 truncate ${isCompact ? 'text-[10px]' : 'text-[11px]'}`}
-                                                            style={{ color: getContrastingTextColor(chordColor || '') }}
+                                                            style={{ color: chordColor }}
                                                         >
                                                             {formatChordForDisplay(beat.chord.symbol)}
                                                         </span>

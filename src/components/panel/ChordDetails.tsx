@@ -2,7 +2,7 @@ import { useSongStore } from '../../store/useSongStore';
 import { PianoKeyboard } from './PianoKeyboard';
 import { GuitarChord } from './GuitarChord';
 import { MusicStaff } from './MusicStaff';
-import { getWheelColors, getChordNotes, getIntervalFromKey, invertChord, getMaxInversion, getInversionName, getChordSymbolWithInversion, formatChordForDisplay, getContrastingTextColor } from '../../utils/musicTheory';
+import { getWheelColors, getChordNotes, getIntervalFromKey, invertChord, getMaxInversion, getInversionName, getChordSymbolWithInversion, formatChordForDisplay } from '../../utils/musicTheory';
 import { PanelRightClose, PanelRight, GripVertical, HelpCircle, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { playChord, playNote } from '../../utils/audioEngine';
 import { useState, useCallback, useEffect, useRef } from 'react';
@@ -598,10 +598,11 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
                                     <span
                                         className="text-xs font-bold cursor-pointer touch-feedback hover:opacity-80 active:scale-95 transition-all"
                                         style={{
-                                            backgroundColor: chordColor,
-                                            color: getContrastingTextColor(chordColor),
+                                            backgroundColor: 'transparent',
+                                            color: chordColor,
                                             padding: '4px 10px',
-                                            borderRadius: '8px'
+                                            borderRadius: '8px',
+                                            border: `2px solid ${chordColor}`
                                         }}
                                         onClick={handleDiagramClick}
                                         onDoubleClick={handleDiagramDoubleClick}

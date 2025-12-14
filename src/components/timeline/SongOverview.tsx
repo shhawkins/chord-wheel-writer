@@ -127,7 +127,7 @@ export const SongOverview: React.FC<SongOverviewProps> = ({ isOpen, onClose, onS
         setDragOverIndex(null);
     };
 
-    const handleSingleTap = (index: number) => {
+    const handleSingleTap = (_index: number) => {
         // Single tap just selects (visual feedback), double tap opens
         // The double tap detection is in handleTouchStart
     };

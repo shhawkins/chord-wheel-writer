@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { getGuitarChord, type GuitarChordShape } from '../../utils/guitarChordData';
-import { getContrastingTextColor, formatChordForDisplay } from '../../utils/musicTheory';
+import { formatChordForDisplay } from '../../utils/musicTheory';
 import { useIsMobile } from '../../hooks/useIsMobile';
 
 interface GuitarChordProps {
@@ -25,9 +25,6 @@ export const GuitarChord: React.FC<GuitarChordProps> = ({
 
     // Format chord name with proper flat symbols
     const chordName = formatChordForDisplay(`${root}${quality === 'maj' ? '' : quality}`);
-
-    // Get contrasting text color for the chord badge
-    const textColor = getContrastingTextColor(color);
 
     // Handle click with double-click detection
     const handleClick = () => {
@@ -109,10 +106,11 @@ export const GuitarChord: React.FC<GuitarChordProps> = ({
             <span
                 className={`${isMobile ? 'text-xs' : 'text-[11px]'} font-bold mb-1 text-center`}
                 style={{
-                    backgroundColor: color,
-                    color: textColor,
+                    backgroundColor: 'transparent',
+                    color: color,
                     padding: '4px 12px',
-                    borderRadius: '10px'
+                    borderRadius: '10px',
+                    border: `2px solid ${color}`
                 }}
             >
                 {chordName}
