@@ -62,26 +62,26 @@ export const MusicStaff: React.FC<MusicStaffProps> = ({
         return { line: position, accidental };
     };
 
-    // SVG dimensions - compact but readable
-    const defaultWidth = isMobile ? 260 : 300;
+    // SVG dimensions - larger for better readability
+    const defaultWidth = isMobile ? 280 : 340;
     const width = propWidth || defaultWidth;
-    const height = isMobile ? 80 : 85;
+    const height = isMobile ? 110 : 120;
 
     // Adjust staff rendering based on available width
-    // Reduced margins for compact layout
-    const margin = 10;
+    const margin = 12;
     const staffX = margin;
-    const staffY = height / 2;
-    const lineSpacing = 6;
+    // Position staff higher to leave room for lower notes (like C) and their labels
+    const staffY = height * 0.38;
+    const lineSpacing = 10; // Increased from 6 for better spacing
     const staffWidth = Math.max(100, width - (margin * 2));
 
     // Calculate note positions
     const noteData = notes.map((note, index) => {
         const { line, accidental } = getNotePosition(note);
         // Distribute notes evenly across the staff width, leaving some padding relative to staff start/end
-        // Start notes after the clef (approx 30px offset)
-        const clefOffset = 30;
-        const availableNoteWidth = staffWidth - clefOffset - 20; // 20px padding at end
+        // Start notes after the clef (approx 45px offset for larger clef)
+        const clefOffset = 45;
+        const availableNoteWidth = staffWidth - clefOffset - 25; // 25px padding at end
 
         const x = staffX + clefOffset + (index * availableNoteWidth / Math.max(notes.length - 1, 1));
         const y = staffY - (line * lineSpacing / 2);
@@ -99,7 +99,7 @@ export const MusicStaff: React.FC<MusicStaffProps> = ({
     // Generate ledger lines for notes outside the staff
     const getLedgerLines = (noteInfo: typeof noteData[0]) => {
         const lines = [];
-        const ledgerWidth = 20;
+        const ledgerWidth = 28; // Increased from 20 for better visibility
 
         if (noteInfo.line < -4) {
             // Below staff
@@ -112,8 +112,8 @@ export const MusicStaff: React.FC<MusicStaffProps> = ({
                             y1={staffY - (i * lineSpacing / 2)}
                             x2={noteInfo.x + ledgerWidth / 2}
                             y2={staffY - (i * lineSpacing / 2)}
-                            stroke="#555"
-                            strokeWidth="1"
+                            stroke="#888"
+                            strokeWidth="1.5"
                         />
                     );
                 }
@@ -129,8 +129,8 @@ export const MusicStaff: React.FC<MusicStaffProps> = ({
                             y1={staffY - (i * lineSpacing / 2)}
                             x2={noteInfo.x + ledgerWidth / 2}
                             y2={staffY - (i * lineSpacing / 2)}
-                            stroke="#555"
-                            strokeWidth="1"
+                            stroke="#888"
+                            strokeWidth="1.5"
                         />
                     );
                 }
@@ -145,7 +145,7 @@ export const MusicStaff: React.FC<MusicStaffProps> = ({
             <svg
                 viewBox={`0 0 ${width} ${height}`}
                 className="w-full"
-                style={{ minHeight: isMobile ? 60 : 65 }}
+                style={{ minHeight: isMobile ? 90 : 100 }}
             >
                 {/* Staff lines (5 lines of treble clef) */}
                 {[-2, -1, 0, 1, 2].map((lineIndex) => (
@@ -155,16 +155,16 @@ export const MusicStaff: React.FC<MusicStaffProps> = ({
                         y1={staffY - (lineIndex * lineSpacing)}
                         x2={staffX + staffWidth}
                         y2={staffY - (lineIndex * lineSpacing)}
-                        stroke="#555"
-                        strokeWidth="1.5"
+                        stroke="#777"
+                        strokeWidth="2"
                     />
                 ))}
 
                 {/* Treble clef symbol (using Unicode) */}
                 <text
-                    x={staffX - 8}
-                    y={staffY + 10}
-                    fontSize={isMobile ? "36" : "40"}
+                    x={staffX - 5}
+                    y={staffY + 16}
+                    fontSize={isMobile ? "50" : "54"}
                     fill={color}
                     fontFamily="serif"
                     fontWeight="bold"
@@ -181,10 +181,10 @@ export const MusicStaff: React.FC<MusicStaffProps> = ({
                         {/* Accidental */}
                         {noteInfo.accidental && (
                             <text
-                                x={noteInfo.x - 12}
-                                y={noteInfo.y + 4}
-                                fontSize={isMobile ? "14" : "16"}
-                                fill="#333"
+                                x={noteInfo.x - 16}
+                                y={noteInfo.y + 6}
+                                fontSize={isMobile ? "22" : "24"}
+                                fill="#ccc"
                                 fontFamily="serif"
                                 fontWeight="bold"
                             >
@@ -196,28 +196,28 @@ export const MusicStaff: React.FC<MusicStaffProps> = ({
                         <ellipse
                             cx={noteInfo.x}
                             cy={noteInfo.y}
-                            rx={6}
-                            ry={4.5}
+                            rx={9}
+                            ry={7}
                             fill="none"
-                            stroke={index === 0 ? color : '#333'}
-                            strokeWidth={index === 0 ? 2.5 : 2}
+                            stroke={index === 0 ? color : '#ddd'}
+                            strokeWidth={index === 0 ? 3 : 2.5}
                         />
 
                         {/* Inner ellipse for whole note */}
                         <ellipse
                             cx={noteInfo.x}
                             cy={noteInfo.y}
-                            rx={3.5}
-                            ry={2.5}
-                            fill="white"
+                            rx={5}
+                            ry={4}
+                            fill="#1e1e28"
                         />
 
                         {/* Note name below (small label) */}
                         <text
                             x={noteInfo.x}
-                            y={staffY + 20}
-                            fontSize={isMobile ? "7" : "8"}
-                            fill="#666"
+                            y={staffY + 35}
+                            fontSize={isMobile ? "11" : "12"}
+                            fill="#999"
                             textAnchor="middle"
                             fontWeight="600"
                         >

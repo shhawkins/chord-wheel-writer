@@ -110,7 +110,10 @@ export const PlaybackControls: React.FC = () => {
     };
 
     return (
-        <div className={`${isMobile ? 'h-11' : 'h-12'} bg-bg-elevated border-t border-border-subtle flex items-center justify-between ${isMobile ? 'px-3 gap-2' : 'px-6'}`}>
+        <div
+            data-playback-controls
+            className={`${isMobile ? 'h-11' : 'h-12'} bg-bg-elevated border-t border-border-subtle flex items-center justify-between ${isMobile ? 'px-3 gap-2' : 'px-6'}`}
+        >
             {/* Transport Controls - Compact */}
             <div className="flex items-center gap-1">
                 <button

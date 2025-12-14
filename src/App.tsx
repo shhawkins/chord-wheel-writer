@@ -54,7 +54,7 @@ function App() {
 
   // Mobile immersive mode - hide header/footer to maximize wheel visibility
   const [mobileImmersive, setMobileImmersive] = useState(true); // Start in immersive mode
-  const immersiveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const immersiveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Auto-enter immersive mode after inactivity on mobile
   useEffect(() => {
@@ -72,10 +72,18 @@ function App() {
       immersiveTimeoutRef.current = setTimeout(enterImmersive, 3000);
     };
 
-    // Exit immersive on any touch start, re-enter on timeout
-    const handleTouchStart = () => {
-      setMobileImmersive(false);
-      resetImmersiveTimer();
+    // Only exit immersive on touch in the wheel background area, not chord details
+    const handleTouchStart = (e: TouchEvent) => {
+      // Check if touch is in the wheel container area (not chord details panel)
+      const target = e.target as HTMLElement;
+      const isInChordDetails = target.closest('[data-chord-details]');
+      const isInPlaybackControls = target.closest('[data-playback-controls]');
+
+      // Only reveal header/footer when touching the wheel area background
+      if (!isInChordDetails && !isInPlaybackControls) {
+        setMobileImmersive(false);
+        resetImmersiveTimer();
+      }
     };
 
     document.addEventListener('touchstart', handleTouchStart);
@@ -115,9 +123,6 @@ function App() {
         } else {
           // Portrait: wheel takes up top half of screen (priority on wheel visibility)
           const padding = 8; // Minimal margin for edge-to-edge feel
-          // In immersive mode, we have more vertical space
-          const headerHeight = 0; // Header can be hidden
-          const footerHeight = 0; // Footer can be hidden  
           // Target: wheel should fill ~50% of viewport height minimum
           const targetWheelHeight = height * 0.5;
 
@@ -981,22 +986,27 @@ function App() {
         ) : null}
       </div>
 
-      {/* Mobile Portrait: Bottom area for chord details - always visible, not affected by immersive mode */}
+      {/* Mobile Portrait: Bottom area for chord details */}
       {isMobile && !isLandscape && (
-        <div className="shrink-0 px-4 pb-2 bg-bg-primary border-t border-border-subtle max-h-[45vh] overflow-y-auto">
+        <div
+          data-chord-details
+          className="shrink-0 px-4 pb-2 bg-bg-primary border-t border-border-subtle overflow-y-auto max-h-[55vh]"
+        >
           <ChordDetails variant="drawer" />
         </div>
       )}
 
-      {/* Footer: Playback - slides down when in mobile immersive mode */}
-      <div className={`shrink-0 z-30 relative transition-all duration-300 ease-out ${isMobile && !isLandscape && mobileImmersive
-        ? 'opacity-0 translate-y-full pointer-events-none absolute bottom-0 left-0 right-0'
-        : ''
-        }`} style={{
-          paddingBottom: isMobile ? 'env(safe-area-inset-bottom)' : undefined
-        }}>
-        <PlaybackControls />
-      </div>
+      {/* Footer: Playback - completely hidden in mobile immersive mode */}
+      {!(isMobile && !isLandscape && mobileImmersive) && (
+        <div
+          className="shrink-0 z-30 relative"
+          style={{
+            paddingBottom: isMobile ? 'env(safe-area-inset-bottom)' : undefined
+          }}
+        >
+          <PlaybackControls />
+        </div>
+      )}
       {/* Confirmation Dialog */}
       <ConfirmDialog
         isOpen={confirmDialog.isOpen}

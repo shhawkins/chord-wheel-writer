@@ -39,36 +39,93 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
     const isMobile = useIsMobile();
 
 
-    // Collapsible sections state - collapse to save space, Guitar shown by default
+    // Collapsible sections state - all collapsed by default on mobile for compact view
     const [showVariations, setShowVariations] = useState(false); // Collapsed by default
     const [showTheory, setShowTheory] = useState(false); // Collapsed by default
-    const [showGuitar, setShowGuitar] = useState(true); // Expanded by default (main feature)
+    const [showGuitar, setShowGuitar] = useState(!isMobile); // Collapsed on mobile, expanded on desktop
     const [chordInversion, setChordInversion] = useState(0); // Chord inversion (0 = root position)
     const pianoOctave = 4; // Fixed octave for piano keyboard
+
+    // Swipe-to-close gesture handling for drawer mode
+    const touchStartY = useRef<number>(0);
+    const touchCurrentY = useRef<number>(0);
+    const [swipeOffset, setSwipeOffset] = useState(0);
+
+    const handleTouchStart = useCallback((e: React.TouchEvent) => {
+        if (!isDrawer || !isMobile) return;
+        touchStartY.current = e.touches[0].clientY;
+        touchCurrentY.current = e.touches[0].clientY;
+    }, [isDrawer, isMobile]);
+
+    const handleTouchMove = useCallback((e: React.TouchEvent) => {
+        if (!isDrawer || !isMobile) return;
+        touchCurrentY.current = e.touches[0].clientY;
+        const deltaY = touchCurrentY.current - touchStartY.current;
+        // Only allow swiping down (positive delta)
+        if (deltaY > 0) {
+            setSwipeOffset(Math.min(deltaY, 150)); // Cap at 150px
+        }
+    }, [isDrawer, isMobile]);
+
+    const handleTouchEnd = useCallback(() => {
+        if (!isDrawer || !isMobile) return;
+        // If swiped more than 80px, close the panel
+        if (swipeOffset > 80) {
+            toggleChordPanel();
+        }
+        setSwipeOffset(0);
+    }, [isDrawer, isMobile, swipeOffset, toggleChordPanel]);
+
+    // Get shortened chord name for mobile display
+    const getShortChordName = (): string => {
+        if (!chord) return 'Chord Details';
+        const quality = previewVariant || chord.quality;
+        // Shorten quality names for mobile
+        if (quality === 'major' || quality === 'maj') {
+            return chord.root; // Just 'C' instead of 'C major'
+        } else if (quality === 'minor' || quality === 'm') {
+            return `${chord.root}m`; // 'Cm' instead of 'C minor'
+        } else if (quality === 'diminished' || quality === 'dim') {
+            return `${chord.root}dim`;
+        }
+        return `${chord.root}${quality}`;
+    };
 
     const handleNotePlay = useCallback((note: string, octave: number) => {
         playNote(note, octave);
     }, []);
 
     const voicingTooltips: Record<string, string> = {
-        'maj': 'Bright, stable major triad — home base sound.',
-        '7': 'Dominant 7: bluesy tension that wants to resolve.',
-        'maj7': 'Dreamy, smooth major color — great on I or IV.',
-        'maj9': 'Airy, modern major flavor; adds sparkle without tension.',
-        'maj13': 'Lush, extended major pad; orchestral/jazz sheen.',
-        '6': 'Warm vintage major; softer than maj7 for tonic use.',
-        '13': 'Dominant with a soulful top; funky/jazz turnaround vibe.',
-        'm7': 'Soulful, laid-back minor — default jazz ii sound.',
-        'm9': 'Lush, cinematic minor color with extra depth.',
-        'm11': 'Spacious, modal minor; great for grooves and vamps.',
-        'm6': 'Bittersweet/film-noir minor; nice tonic minor option.',
-        'sus2': 'Open and airy with no third; neutral pop/ambient feel.',
-        'sus4': 'Suspended tension that likes to resolve to major.',
-        'dim': 'Tense and unstable; classic passing/leading chord.',
-        'm7b5': 'Half-diminished; dark ii chord in minor keys.',
-        'add9': 'Sparkly major with no 7th; modern pop shimmer.',
-        '9': 'Dominant 9: rich funk/jazz tension with color.',
-        '11': 'Dominant 11: suspended, modal flavor over V.',
+        // Major voicings
+        'maj': 'The classic major triad: bright, stable, and universally resolved. The foundation of Western harmony and the sound of "home."',
+        'major': 'The classic major triad: bright, stable, and universally resolved. The foundation of Western harmony and the sound of "home."',
+        'maj7': 'Smooth and sophisticated, the major 7th adds a dreamy, floating quality. Think Burt Bacharach, neo-soul, and late-night jazz.',
+        'maj9': 'Builds on maj7 with a crystalline 9th. Modern, airy, and introspective — perfect for R&B ballads and ambient textures.',
+        'maj13': 'The full major palette: lush, orchestral, and complex. Great for endings or when you want maximum harmonic richness.',
+        '6': 'Warm and vintage — the major 6th has an old-Hollywood or country sweetness. Softer resolution than maj7.',
+        'add9': 'A major triad with added sparkle from the 9th, but no 7th. Clean, modern, and ubiquitous in pop and worship music.',
+
+        // Dominant voicings
+        '7': 'The dominant 7th creates bluesy tension begging for resolution. The engine behind the ii-V-I and the soul of rock & blues.',
+        '9': 'Dominant 7 with a colorful 9th. Funky, jazzy, and sophisticated — think Stevie Wonder, Earth Wind & Fire, and neo-soul.',
+        '11': 'Suspended, modal quality over dominant function. Creates an open, unresolved tension that floats before landing.',
+        '13': 'The dominant chord at its richest: soulful 13th on top of bluesy 7th. Perfect for jazz turnarounds and R&B grooves.',
+
+        // Minor voicings
+        'm7': 'The workhorse minor chord: soulful, laid-back, and endlessly versatile. The default for jazz ii chords and R&B grooves.',
+        'minor': 'The basic minor triad: melancholic, introspective, and emotionally direct. Minor keys are built on this sound.',
+        'm9': 'Lush and cinematic — adds depth and width to the minor sound. Evokes late-night cityscapes and emotional introspection.',
+        'm11': 'Spacious and modal, with an open 11th suspension. Great for grooves, vamps, and creating atmospheric tension.',
+        'm6': 'Bittersweet with a film-noir quality. The 6th adds sophistication to minor — a nice alternative to m7 for tonic chords.',
+
+        // Suspended voicings
+        'sus2': 'Neither major nor minor — the open 2nd creates an ambient, neutral quality. Ubiquitous in pop, rock, and modern worship.',
+        'sus4': 'Suspended tension from the 4th wants to fall to the 3rd. Creates expectation and movement — classic resolution technique.',
+
+        // Diminished voicings
+        'dim': 'Highly unstable and tense — every note pushes somewhere else. Perfect as a passing chord or chromatic approach.',
+        'diminished': 'Highly unstable and tense — every note pushes somewhere else. Perfect as a passing chord or chromatic approach.',
+        'm7b5': 'Half-diminished: dark and sophisticated. The natural ii chord in minor keys, essential for minor ii-V-i progressions.',
     };
     const voicingOptions = [
         'maj',
@@ -354,7 +411,11 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
                 ? `${isMobile ? 'relative w-full' : 'fixed inset-x-3 bottom-[88px]'} ${isMobile ? 'max-h-[60vh]' : 'max-h-[70vh]'} bg-bg-secondary border-2 border-border-subtle ${isMobile ? 'rounded-2xl' : 'rounded-2xl'} shadow-2xl overflow-hidden ${isMobile ? '' : 'z-40'} flex`
                 : "h-full flex bg-bg-secondary border-l border-border-subtle shrink-0"
             }
-            style={!isDrawer ? { width: panelWidth, minWidth: panelWidth } : undefined}
+            style={!isDrawer ? { width: panelWidth, minWidth: panelWidth } : {
+                transform: swipeOffset > 0 ? `translateY(${swipeOffset}px)` : undefined,
+                opacity: swipeOffset > 0 ? 1 - (swipeOffset / 200) : 1,
+                transition: swipeOffset > 0 ? 'none' : 'all 0.3s ease-out'
+            }}
         >
             {/* Resize handle (sidebar only) */}
             {!isDrawer && (
@@ -368,15 +429,29 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
 
             {/* Panel content */}
             <div className="flex-1 flex flex-col overflow-hidden min-w-0 relative">
+                {/* Swipe handle area - only this part responds to swipe gestures */}
+                {isDrawer && isMobile && (
+                    <div
+                        className="flex flex-col items-center shrink-0 cursor-grab active:cursor-grabbing"
+                        onTouchStart={handleTouchStart}
+                        onTouchMove={handleTouchMove}
+                        onTouchEnd={handleTouchEnd}
+                    >
+                        {/* Drag handle indicator */}
+                        <div className="pt-2 pb-1">
+                            <div className="w-10 h-1 rounded-full bg-text-muted/40" />
+                        </div>
+                    </div>
+                )}
                 {/* Consolidated Header - chord name, key, help, and hide button all in one row */}
-                <div className={`${isMobile && isDrawer ? 'px-5 py-3' : 'px-4 py-3'} border-b border-border-subtle flex justify-between items-center gap-4 shrink-0 ${isDrawer ? 'bg-bg-secondary/80 backdrop-blur-md' : ''}`}>
+                <div className={`${isMobile && isDrawer ? 'px-5 py-2' : 'px-4 py-3'} border-b border-border-subtle flex justify-between items-center gap-4 shrink-0 ${isDrawer ? 'bg-bg-secondary/80 backdrop-blur-md' : ''}`}>
                     <div className="flex items-center overflow-hidden flex-1 min-w-0" style={{ gap: '12px' }}>
-                        <span className="flex items-center shrink-0" style={{ gap: '8px' }}>
-                            <span className={`${isMobile ? 'text-lg' : 'text-base sm:text-lg'} font-bold text-text-primary leading-none`}>
-                                {chord ? `${chord.root}${(previewVariant || chord.quality) === 'maj' ? '' : ' ' + (previewVariant || chord.quality)}` : 'Chord Details'}
+                        <span className="flex items-center shrink-0 min-w-0" style={{ gap: '8px' }}>
+                            <span className={`${isMobile ? 'text-base' : 'text-base sm:text-lg'} font-bold text-text-primary leading-none truncate max-w-[120px] sm:max-w-none`}>
+                                {isMobile && isDrawer ? getShortChordName() : (chord ? `${chord.root}${(previewVariant || chord.quality) === 'maj' ? '' : ' ' + (previewVariant || chord.quality)}` : 'Chord Details')}
                             </span>
                             {chord?.numeral && (
-                                <span className={`${isMobile ? 'text-sm' : 'text-xs'} font-serif italic text-text-muted shrink-0`}>{chord.numeral}</span>
+                                <span className={`${isMobile ? 'text-xs' : 'text-xs'} font-serif italic text-text-muted shrink-0`}>{chord.numeral}</span>
                             )}
                         </span>
                     </div>
@@ -432,7 +507,11 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
                             className={`${isMobile ? 'p-2 min-w-[40px] min-h-[40px]' : 'p-1'} hover:bg-bg-tertiary rounded transition-colors touch-feedback flex items-center justify-center`}
                             title="Hide panel"
                         >
-                            <PanelRightClose size={isMobile ? 18 : 16} className="text-text-muted" />
+                            {/* Rotate icon to point down on mobile drawer mode */}
+                            <PanelRightClose
+                                size={isMobile ? 18 : 16}
+                                className={`text-text-muted ${isMobile && isDrawer ? 'rotate-90' : ''}`}
+                            />
                         </button>
                     </div>
                 </div>
@@ -568,8 +647,9 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
                                                     ))}
                                                 </div>
                                             ) : null}
+                                            {/* Display selected voicing description */}
                                             <p className={`${isMobile ? 'text-xs' : 'text-[10px]'} text-text-muted leading-relaxed`}>
-                                                {getSuggestedVoicings().description}
+                                                {voicingTooltips[previewVariant || chord.quality] || 'Select a voicing to see its description.'}
                                             </p>
                                         </div>
                                     </div>
@@ -619,6 +699,10 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
                                             />
                                         </div>
                                     </div>
+                                    {/* Chord role description - below the staff */}
+                                    <p className={`${isMobile ? 'text-xs' : 'text-[10px]'} text-text-secondary leading-relaxed mt-2 italic`}>
+                                        {getSuggestedVoicings().description}
+                                    </p>
                                 </>
                             )}
                         </div>
