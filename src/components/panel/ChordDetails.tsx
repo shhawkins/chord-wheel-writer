@@ -51,6 +51,27 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
     const touchCurrentY = useRef<number>(0);
     const [swipeOffset, setSwipeOffset] = useState(0);
 
+    // Refs for auto-scrolling sections into view
+    const guitarSectionRef = useRef<HTMLDivElement>(null);
+    const voicingsSectionRef = useRef<HTMLDivElement>(null);
+    const theorySectionRef = useRef<HTMLDivElement>(null);
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+    // Helper function to scroll a section into view within the scroll container
+    const scrollSectionIntoView = (sectionRef: React.RefObject<HTMLDivElement | null>) => {
+        if (sectionRef.current && scrollContainerRef.current) {
+            const container = scrollContainerRef.current;
+            const section = sectionRef.current;
+            // Calculate the offset of the section relative to the container
+            const sectionTop = section.offsetTop - container.offsetTop;
+            // Scroll to position the section at the top of the container
+            container.scrollTo({
+                top: sectionTop,
+                behavior: 'smooth'
+            });
+        }
+    };
+
     const handleTouchStart = useCallback((e: React.TouchEvent) => {
         if (!isDrawer || !isMobile) return;
         touchStartY.current = e.touches[0].clientY;
@@ -344,39 +365,39 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
         const suggestions: Record<string, { extensions: string[], description: string }> = {
             'I': {
                 extensions: ['maj7', 'maj9', 'maj13', '6'],
-                description: 'Major 7th or 6th voicings sound rich and resolved'
+                description: 'The tonic — your home base and resting point. This is where phrases resolve and songs often begin and end. Its stability makes it perfect for choruses and moments of arrival.'
             },
             'IV': {
                 extensions: ['maj7', 'maj9', 'maj13', '6'],
-                description: 'Same as I — warm major extensions work beautifully'
+                description: 'The subdominant — warm, hopeful, and slightly floating. It gently pulls away from home without creating urgency. Great for pre-choruses and that "lifting" feeling before a chorus.'
             },
             'V': {
                 extensions: ['7', '9', '11', 'sus4', '13'],
-                description: 'Dominant 7th adds tension that pulls to I'
+                description: 'The dominant — maximum tension wanting to resolve back to I. This chord creates expectation and forward motion. It\'s the "question" that begs for an "answer."'
             },
             'ii': {
                 extensions: ['m7', 'm9', 'm11', 'm6'],
-                description: 'Minor 7th extensions for a smooth jazz sound'
+                description: 'The supertonic — a natural setup chord that leads smoothly to V or IV. It\'s the workhorse of the ii-V-I progression and adds sophistication to any verse.'
             },
             'iii': {
                 extensions: ['m7'],
-                description: 'Keep it simple — m7 is most common for iii'
+                description: 'The mediant — mysterious and chameleon-like. It can substitute for I (they share two notes) or lead to vi. Use it for unexpected color and emotional complexity.'
             },
             'vi': {
                 extensions: ['m7', 'm9', 'm11'],
-                description: 'Minor extensions add depth and emotion'
+                description: 'The relative minor — emotional depth and melancholy without leaving the key. This is the "sad" chord in major keys and the foundation of countless pop progressions (vi-IV-I-V).'
             },
             'vii°': {
                 extensions: ['m7♭5'],
-                description: 'Half-diminished (ø7) is the standard voicing'
+                description: 'The leading tone chord — highly unstable and restless. Every note wants to move somewhere, making it a powerful passing chord that pulls strongly toward I.'
             },
             'II': {
                 extensions: ['7', 'sus4'],
-                description: 'Dominant voicing as V/V — leads strongly to V'
+                description: 'A secondary dominant (V of V) — borrowed tension that points toward V. Use it to create a dramatic runway before landing on V.'
             },
             'III': {
                 extensions: ['7', 'sus4'],
-                description: 'Dominant voicing as V/vi — leads strongly to vi'
+                description: 'A secondary dominant (V of vi) — creates an unexpected dramatic pull toward vi. Perfect for adding tension before a minor chord moment.'
             },
         };
 
@@ -433,7 +454,7 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
     return (
         <div
             className={isDrawer
-                ? `${isMobile ? 'relative w-full' : 'fixed inset-x-3 bottom-[88px]'} ${isMobile ? 'max-h-[60vh]' : 'max-h-[70vh]'} bg-bg-secondary border-2 border-border-subtle ${isMobile ? 'rounded-2xl' : 'rounded-2xl'} shadow-2xl overflow-hidden ${isMobile ? '' : 'z-40'} flex`
+                ? `${isMobile ? 'relative w-full' : 'fixed inset-x-3 bottom-[88px]'} ${isMobile ? 'max-h-[60vh]' : 'max-h-[70vh]'} bg-bg-secondary ${isMobile ? 'border-x-2 border-t-2' : 'border-2'} border-border-subtle rounded-2xl shadow-2xl overflow-hidden ${isMobile ? '' : 'z-40'} flex`
                 : "h-full flex bg-bg-secondary border-l border-border-subtle shrink-0"
             }
             style={!isDrawer ? { width: panelWidth, minWidth: panelWidth } : {
@@ -550,7 +571,7 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
                         </p>
                     </div>
                 ) : (
-                    <div className="flex-1 overflow-y-auto min-h-0 overscroll-contain">
+                    <div ref={scrollContainerRef} className="flex-1 overflow-y-auto min-h-0 overscroll-contain">
                         {/* Piano & Voicing Section */}
                         <div className={`${isMobile ? 'px-5 pt-4 pb-4' : 'px-5 py-4'} border-b border-border-subtle`}>
                             <PianoKeyboard
@@ -608,9 +629,19 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
                         </div>
 
                         {/* Combined Guitar / Suggested section */}
-                        <div className={`${isMobile ? 'px-5 py-2' : 'px-5 py-2'} rounded-none`} style={{ backgroundColor: '#1e1e28', borderBottom: '1px solid #3a3a4a' }}>
+                        <div
+                            ref={guitarSectionRef}
+                            className={`${isMobile ? 'px-5 py-1' : 'px-5 py-1'} rounded-none`}
+                            style={{ backgroundColor: '#1e1e28', borderBottom: '1px solid #3a3a4a', scrollMarginTop: '60px' }}
+                        >
                             <button
-                                onClick={() => setShowGuitar(!showGuitar)}
+                                onClick={() => {
+                                    const newState = !showGuitar;
+                                    setShowGuitar(newState);
+                                    if (newState) {
+                                        setTimeout(() => scrollSectionIntoView(guitarSectionRef), 50);
+                                    }
+                                }}
                                 className={`w-full flex items-center justify-between ${showGuitar ? 'mb-2' : 'mb-0'} cursor-pointer rounded-none`}
                                 style={{ backgroundColor: 'transparent' }}
                             >
@@ -726,7 +757,7 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
                                         </div>
                                     </div>
                                     {/* Chord role description - below the staff */}
-                                    <p className={`${isMobile ? 'text-xs' : 'text-[10px]'} text-text-secondary leading-relaxed mt-2 italic`}>
+                                    <p className={`${isMobile ? 'text-xs' : 'text-[10px]'} text-text-secondary leading-relaxed italic`}>
                                         {getSuggestedVoicings().description}
                                     </p>
                                 </>
@@ -734,9 +765,19 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
                         </div>
 
                         {/* Variations */}
-                        <div className={`${isMobile ? 'px-5 py-3 mt-2' : 'px-5 py-4'} rounded-none`} style={{ backgroundColor: '#1e1e28', borderBottom: '1px solid #3a3a4a' }}>
+                        <div
+                            ref={voicingsSectionRef}
+                            className={`${isMobile ? 'px-5 py-1 mt-2' : 'px-5 py-1'} rounded-none`}
+                            style={{ backgroundColor: '#1e1e28', borderBottom: '1px solid #3a3a4a', scrollMarginTop: '60px' }}
+                        >
                             <button
-                                onClick={() => setShowVariations(!showVariations)}
+                                onClick={() => {
+                                    const newState = !showVariations;
+                                    setShowVariations(newState);
+                                    if (newState) {
+                                        setTimeout(() => scrollSectionIntoView(voicingsSectionRef), 50);
+                                    }
+                                }}
                                 className={`w-full flex items-center justify-between ${showVariations ? 'mb-3' : 'mb-0'} cursor-pointer rounded-none`}
                                 style={{ backgroundColor: 'transparent' }}
                             >
@@ -795,9 +836,19 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
                         </div>
 
                         {/* Theory Note - with proper text wrapping */}
-                        <div className={`${isMobile ? 'px-5 py-3 mt-2 pb-4' : 'px-5 py-4'} rounded-none`} style={{ backgroundColor: '#1e1e28', borderBottom: '1px solid #3a3a4a' }}>
+                        <div
+                            ref={theorySectionRef}
+                            className={`${isMobile ? 'px-5 py-1 mt-2' : 'px-5 py-1'} rounded-none`}
+                            style={{ backgroundColor: '#1e1e28', borderBottom: '1px solid #3a3a4a', scrollMarginTop: '60px' }}
+                        >
                             <button
-                                onClick={() => setShowTheory(!showTheory)}
+                                onClick={() => {
+                                    const newState = !showTheory;
+                                    setShowTheory(newState);
+                                    if (newState) {
+                                        setTimeout(() => scrollSectionIntoView(theorySectionRef), 50);
+                                    }
+                                }}
                                 className={`w-full flex items-center justify-between cursor-pointer ${showTheory ? 'mb-3' : 'mb-0'} rounded-none`}
                                 style={{ backgroundColor: 'transparent' }}
                             >
@@ -817,6 +868,9 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
                                 </div>
                             )}
                         </div>
+
+                        {/* Safe area spacer for Safari bottom toolbar */}
+                        {isMobile && <div className="h-12 shrink-0" />}
                     </div>
                 )}
             </div>

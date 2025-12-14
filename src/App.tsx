@@ -991,7 +991,7 @@ function App() {
       {isMobile && !isLandscape && (
         <div
           data-chord-details
-          className={`shrink-0 bg-bg-primary ${chordPanelVisible ? 'px-4 pb-2 border-t border-border-subtle' : ''} overflow-y-auto max-h-[55vh]`}
+          className={`shrink-0 bg-bg-primary ${chordPanelVisible ? 'px-3 pb-2' : ''} overflow-hidden max-h-[55vh]`}
         >
           <ChordDetails variant="drawer" />
         </div>
