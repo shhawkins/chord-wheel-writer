@@ -196,10 +196,10 @@ export const Timeline: React.FC<TimelineProps> = ({ height = 180, scale = 1 }) =
     }, []);
 
     return (
-        <div className="w-full h-full flex flex-col">
+        <div className="w-full h-full flex flex-col overflow-hidden">
             {/* Content area - no header, just the sections */}
             <div
-                className="flex-1 overflow-x-auto px-3 py-1.5 overflow-y-hidden"
+                className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden px-3 py-1.5"
                 ref={(el) => {
                     if (el) {
                         el.addEventListener('wheel', (e) => {
@@ -211,7 +211,7 @@ export const Timeline: React.FC<TimelineProps> = ({ height = 180, scale = 1 }) =
                     }
                 }}
             >
-                <div className="relative flex gap-3 min-w-max h-full items-stretch">
+                <div className="relative flex gap-3 min-w-max" style={{ height: '100%' }}>
                     <Playhead scale={horizontalScale} chordSize={chordSize} />
                     <DndContext
                         sensors={sensors}

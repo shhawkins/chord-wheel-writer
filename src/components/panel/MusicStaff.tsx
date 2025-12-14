@@ -62,14 +62,14 @@ export const MusicStaff: React.FC<MusicStaffProps> = ({
         return { line: position, accidental };
     };
 
-    // SVG dimensions - compact for better space efficiency
+    // SVG dimensions - compact but readable
     const defaultWidth = isMobile ? 260 : 300;
     const width = propWidth || defaultWidth;
-    const height = isMobile ? 85 : 95;
+    const height = isMobile ? 80 : 85;
 
     // Adjust staff rendering based on available width
-    // Keep a small 20px margin on each side (40px total)
-    const margin = 20;
+    // Reduced margins for compact layout
+    const margin = 10;
     const staffX = margin;
     const staffY = height / 2;
     const lineSpacing = 6;
@@ -145,7 +145,7 @@ export const MusicStaff: React.FC<MusicStaffProps> = ({
             <svg
                 viewBox={`0 0 ${width} ${height}`}
                 className="w-full"
-                style={{ minHeight: isMobile ? 60 : 70 }}
+                style={{ minHeight: isMobile ? 60 : 65 }}
             >
                 {/* Staff lines (5 lines of treble clef) */}
                 {[-2, -1, 0, 1, 2].map((lineIndex) => (
@@ -215,7 +215,7 @@ export const MusicStaff: React.FC<MusicStaffProps> = ({
                         {/* Note name below (small label) */}
                         <text
                             x={noteInfo.x}
-                            y={staffY + 22}
+                            y={staffY + 20}
                             fontSize={isMobile ? "7" : "8"}
                             fill="#666"
                             textAnchor="middle"

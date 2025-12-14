@@ -8,6 +8,7 @@ import { Download, Save, GripHorizontal, ChevronDown, ChevronUp, Plus, Minus, Cl
 import { Logo } from './components/Logo';
 import * as Tone from 'tone';
 import jsPDF from 'jspdf';
+import { saveAs } from 'file-saver';
 import { saveSong, getSavedSongs, deleteSong } from './utils/storage';
 import { getGuitarChord, type GuitarChordShape } from './utils/guitarChordData';
 import type { Song } from './types';
@@ -40,8 +41,8 @@ function App() {
   const [isResizing, setIsResizing] = useState(false);
   const [timelineScale, setTimelineScale] = useState(0.6);
 
-  // Wheel zoom state
-  const [wheelZoom, setWheelZoom] = useState(1);
+  // Wheel zoom state - start slightly zoomed out on mobile to show all chords
+  const [wheelZoom, setWheelZoom] = useState(0.85);
   const [wheelZoomOrigin, setWheelZoomOrigin] = useState(50);
   const [wheelBaseSize, setWheelBaseSize] = useState(720);
 
@@ -50,6 +51,45 @@ function App() {
   const [isLandscape, setIsLandscape] = useState(() => typeof window !== 'undefined' ? window.innerHeight < window.innerWidth && window.innerWidth < 1024 : false);
   const autoCollapsedPanelRef = useRef(false);
   const hasInitializedMobile = useRef(false);
+
+  // Mobile immersive mode - hide header/footer to maximize wheel visibility
+  const [mobileImmersive, setMobileImmersive] = useState(true); // Start in immersive mode
+  const immersiveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Auto-enter immersive mode after inactivity on mobile
+  useEffect(() => {
+    if (!isMobile || isLandscape) return;
+
+    const enterImmersive = () => {
+      setMobileImmersive(true);
+    };
+
+    const resetImmersiveTimer = () => {
+      if (immersiveTimeoutRef.current) {
+        clearTimeout(immersiveTimeoutRef.current);
+      }
+      // Re-enter immersive after 3 seconds of inactivity
+      immersiveTimeoutRef.current = setTimeout(enterImmersive, 3000);
+    };
+
+    // Exit immersive on any touch start, re-enter on timeout
+    const handleTouchStart = () => {
+      setMobileImmersive(false);
+      resetImmersiveTimer();
+    };
+
+    document.addEventListener('touchstart', handleTouchStart);
+
+    // Start the initial timer
+    resetImmersiveTimer();
+
+    return () => {
+      document.removeEventListener('touchstart', handleTouchStart);
+      if (immersiveTimeoutRef.current) {
+        clearTimeout(immersiveTimeoutRef.current);
+      }
+    };
+  }, [isMobile, isLandscape]);
 
 
   useEffect(() => {
@@ -73,20 +113,19 @@ function App() {
           const boosted = Math.min(rawSize * boost, availableWidth - padding + 12, height - 120 + 12, 560);
           setWheelBaseSize(boosted);
         } else {
-          // Portrait: wheel in upper portion
-          const padding = 12; // Keep margin but allow more usable width
-          const headerHeight = 56;
-          const footerHeight = 64;
-          const chordDetailsReserve = 80; // Space for collapsed chord details button
-          const availableHeight = height - headerHeight - footerHeight - chordDetailsReserve;
-          const maxWheelHeight = availableHeight * 0.8; // Give more height budget for larger wheel
+          // Portrait: wheel takes up top half of screen (priority on wheel visibility)
+          const padding = 8; // Minimal margin for edge-to-edge feel
+          // In immersive mode, we have more vertical space
+          const headerHeight = 0; // Header can be hidden
+          const footerHeight = 0; // Footer can be hidden  
+          // Target: wheel should fill ~50% of viewport height minimum
+          const targetWheelHeight = height * 0.5;
 
-          const rawSize = Math.min(
-            Math.min(width - padding, maxWheelHeight),
-            560 // Allow a bit more headroom for boosted size
-          );
-          const boosted = Math.min(rawSize * boost, width - padding + 12, maxWheelHeight + 24, 560);
-          setWheelBaseSize(Math.max(260, boosted));
+          // Calculate size based on viewport, prioritizing the half-screen height target
+          const maxDimension = Math.min(width - padding, targetWheelHeight);
+          const rawSize = Math.min(maxDimension, 600); // Allow larger wheels
+          const boosted = Math.min(rawSize * boost, width - padding, 600);
+          setWheelBaseSize(Math.max(280, boosted));
         }
 
         // Auto-boost logic removed to ensure 100% zoom on load
@@ -521,23 +560,12 @@ function App() {
       });
     }
 
-    // Generate PDF blob
-    const pdfBlob = doc.output('blob');
+    // Generate filename
     const fileName = `${currentSong.title.replace(/\s+/g, '-').toLowerCase()}.pdf`;
 
-    // Create download link
-    const url = URL.createObjectURL(pdfBlob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = fileName;
-
-    // Append to body and click (required for some browsers)
-    document.body.appendChild(link);
-    link.click();
-
-    // Cleanup
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    // Use file-saver library for reliable cross-browser downloads
+    const pdfBlob = doc.output('blob');
+    saveAs(pdfBlob, fileName);
   };
 
   // Helper function to draw a chord diagram using jsPDF primitives (black & white, compact)
@@ -639,8 +667,13 @@ function App() {
 
   return (
     <div className="h-full w-full flex flex-col bg-bg-primary text-text-primary overflow-hidden">
-      {/* Header */}
-      <header className={`${isMobile ? 'h-14' : 'h-12'} border-b border-border-subtle grid grid-cols-[1fr_auto_1fr] items-center ${isMobile ? 'px-4' : 'px-3'} bg-bg-secondary shrink-0 z-20 sticky top-0`}>
+      {/* Header - slides up when in mobile immersive mode */}
+      <header
+        className={`${isMobile ? 'h-14' : 'h-12'} border-b border-border-subtle grid grid-cols-[1fr_auto_1fr] items-center ${isMobile ? 'px-4' : 'px-3'} bg-bg-secondary shrink-0 z-20 transition-all duration-300 ease-out ${isMobile && !isLandscape && mobileImmersive
+          ? 'opacity-0 -translate-y-full pointer-events-none absolute top-0 left-0 right-0'
+          : 'relative'
+          }`}
+      >
         <div className="flex items-center gap-2 shrink-0">
           <div className="flex items-center gap-2">
             <div className="relative">
@@ -774,7 +807,7 @@ function App() {
           <div className={`${isMobile && !isLandscape ? 'flex-1' : 'flex-1'} flex flex-col ${isMobile && !isLandscape ? 'justify-center' : ''} overflow-hidden`}>
             {/* Zoom toolbar - always show on desktop, hide on mobile portrait to save space */}
             {!isMobile || isLandscape ? (
-              <div className={`flex justify-end ${isMobile ? 'px-4 py-2' : 'px-3 py-2 md:py-1.5'} shrink-0 w-full`}>
+              <div className={`flex justify-end ${isMobile ? 'px-4 py-1' : 'px-3 py-1 md:py-0.5'} shrink-0 w-full`}>
                 <div className={`flex items-center ${isMobile ? 'gap-2' : 'gap-1'} bg-bg-secondary/80 backdrop-blur-sm rounded-full ${isMobile ? 'px-3 py-2' : 'px-2 py-1'} border border-border-subtle shadow-lg`}>
                   <button
                     onClick={handleZoomOut}
@@ -796,15 +829,25 @@ function App() {
                 </div>
               </div>
             ) : null}
-            {/* Wheel container */}
-            <div className={`flex-1 flex items-center justify-center overflow-hidden ${isMobile && !isLandscape ? 'px-2 py-0' : 'px-3 pb-3'}`}>
+            {/* Wheel container - expands on mobile immersive mode (header/footer hidden) */}
+            <div className={`flex-1 flex items-center justify-center overflow-hidden ${isMobile && !isLandscape ? 'px-0 py-0' : 'px-3 pb-3'}`}
+              style={{
+                minHeight: isMobile && !isLandscape ? '45dvh' : undefined,
+                height: isMobile && !isLandscape && mobileImmersive ? '55dvh' : undefined
+              }}
+            >
               <div
                 className="relative flex items-center justify-center"
                 style={{
-                  width: `${wheelBaseSize}px`,
-                  height: `${wheelBaseSize}px`,
+                  width: isMobile && !isLandscape && mobileImmersive
+                    ? `min(100vw - 8px, 55dvh)`
+                    : `${wheelBaseSize}px`,
+                  height: isMobile && !isLandscape && mobileImmersive
+                    ? `min(100vw - 8px, 55dvh)`
+                    : `${wheelBaseSize}px`,
                   maxWidth: '100%',
-                  maxHeight: isMobile && !isLandscape ? '100%' : undefined
+                  maxHeight: isMobile && !isLandscape ? '100%' : undefined,
+                  transition: 'all 0.3s ease-out'
                 }}
               >
                 <ChordWheel
@@ -835,10 +878,10 @@ function App() {
 
                 {/* Timeline - resizable height */}
                 <div
-                  className="shrink-0 bg-bg-secondary overflow-hidden"
+                  className="shrink-0 bg-bg-secondary overflow-hidden flex flex-col"
                   style={{ height: timelineHeight }}
                 >
-                  <div className="flex items-center justify-between px-3 border-b border-border-subtle bg-bg-secondary/90 backdrop-blur-sm" style={{ paddingTop: '4px', paddingBottom: '4px' }}>
+                  <div className="shrink-0 flex items-center justify-between px-3 border-b border-border-subtle bg-bg-secondary/90 backdrop-blur-sm" style={{ paddingTop: '4px', paddingBottom: '4px' }}>
                     <div className="flex items-center gap-4">
                       <div className="flex items-center gap-2 text-[10px] text-text-muted">
                         <span className="uppercase font-bold tracking-wider text-[9px]">Scale</span>
@@ -905,7 +948,9 @@ function App() {
                       </button>
                     </div>
                   </div>
-                  <Timeline height={timelineContentHeight} scale={timelineScale} />
+                  <div className="flex-1 min-h-0 overflow-hidden">
+                    <Timeline height={timelineContentHeight} scale={timelineScale} />
+                  </div>
                 </div>
               </>
             ) : (
@@ -936,17 +981,20 @@ function App() {
         ) : null}
       </div>
 
-      {/* Mobile Portrait: Bottom area for chord details (always visible in portrait) */}
+      {/* Mobile Portrait: Bottom area for chord details - always visible, not affected by immersive mode */}
       {isMobile && !isLandscape && (
-        <div className="shrink-0 px-4 pb-3 bg-bg-primary border-t border-border-subtle">
+        <div className="shrink-0 px-4 pb-2 bg-bg-primary border-t border-border-subtle max-h-[45vh] overflow-y-auto">
           <ChordDetails variant="drawer" />
         </div>
       )}
 
-      {/* Footer: Playback - always visible now for voice selection on mobile */}
-      <div className="shrink-0 z-30 relative" style={{
-        paddingBottom: isMobile ? 'env(safe-area-inset-bottom)' : undefined
-      }}>
+      {/* Footer: Playback - slides down when in mobile immersive mode */}
+      <div className={`shrink-0 z-30 relative transition-all duration-300 ease-out ${isMobile && !isLandscape && mobileImmersive
+        ? 'opacity-0 translate-y-full pointer-events-none absolute bottom-0 left-0 right-0'
+        : ''
+        }`} style={{
+          paddingBottom: isMobile ? 'env(safe-area-inset-bottom)' : undefined
+        }}>
         <PlaybackControls />
       </div>
       {/* Confirmation Dialog */}

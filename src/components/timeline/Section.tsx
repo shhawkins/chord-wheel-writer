@@ -139,7 +139,7 @@ export const Section: React.FC<SectionProps> = ({ section, chordSize = 48, scale
             ref={setNodeRef}
             style={style}
             className={clsx(
-                "flex flex-col bg-bg-secondary rounded-lg overflow-hidden border-2 shadow-[0_0_0_2px_rgba(255,255,255,0.12)] transition-all h-full",
+                "flex flex-col bg-bg-secondary rounded-lg overflow-hidden border-2 shadow-[0_0_0_2px_rgba(255,255,255,0.12)] transition-all h-full max-h-full",
                 selectedSectionId === section.id ? "border-accent-primary shadow-[0_0_0_2px_rgba(99,102,241,0.35)]" : "border-border-medium",
                 isDragging ? "opacity-50" : "opacity-100"
             )}
