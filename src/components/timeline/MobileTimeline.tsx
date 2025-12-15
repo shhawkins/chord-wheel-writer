@@ -821,6 +821,14 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
                         hasNext={hasNext}
                         sectionIndex={currentEditIndex}
                         totalSections={currentSong.sections.length}
+                        onSlotClick={(beatId) => {
+                            // Close the modal
+                            setEditingSectionId(null);
+                            // Ensure we're viewing the correct section
+                            setActiveSectionIndex(currentEditIndex);
+                            // Select the clicked slot (this triggers auto-scroll via useEffect)
+                            selectSlotOnly(editingSectionId, beatId);
+                        }}
                     />
                 );
             })()}

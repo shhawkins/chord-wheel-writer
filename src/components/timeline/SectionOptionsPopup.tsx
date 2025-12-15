@@ -26,6 +26,8 @@ interface SectionOptionsPopupProps {
     // Section position in song
     sectionIndex?: number;
     totalSections?: number;
+    /** Callback when a chord slot is clicked in the preview */
+    onSlotClick?: (beatId: string) => void;
 }
 
 const TIME_SIGNATURE_OPTIONS: [number, number][] = [
@@ -67,6 +69,7 @@ export const SectionOptionsPopup: React.FC<SectionOptionsPopupProps> = ({
     hasNext = false,
     sectionIndex,
     totalSections,
+    onSlotClick,
 }) => {
     const popupRef = useRef<HTMLDivElement>(null);
     const customInputRef = useRef<HTMLInputElement>(null);
@@ -194,11 +197,13 @@ export const SectionOptionsPopup: React.FC<SectionOptionsPopupProps> = ({
                         {/* Section number badge */}
                         {sectionIndex !== undefined && totalSections !== undefined && (
                             <div
-                                className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0"
+                                className="h-5 px-2 rounded-full flex items-center justify-center gap-0.5 font-bold text-white shrink-0"
                                 style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', boxShadow: '0 0 8px rgba(99,102,241,0.4)' }}
                                 title={`Section ${sectionIndex + 1} of ${totalSections}`}
                             >
-                                {sectionIndex + 1}
+                                <span className="text-[10px]">{sectionIndex + 1}</span>
+                                <span className="text-[6px] opacity-60 font-medium">of</span>
+                                <span className="text-[10px]">{totalSections}</span>
                             </div>
                         )}
                         {/* Accent dot - only show if no section index */}
@@ -395,6 +400,7 @@ export const SectionOptionsPopup: React.FC<SectionOptionsPopupProps> = ({
                         section={section}
                         songTimeSignature={songTimeSignature}
                         className="pt-1"
+                        onSlotClick={onSlotClick}
                     />
 
                     {/* Action Buttons */}

@@ -19,6 +19,8 @@ interface SectionPreviewProps {
     section: Section;
     songTimeSignature: [number, number];
     className?: string;
+    /** Optional callback when a chord slot is clicked - passes the beat ID */
+    onSlotClick?: (beatId: string) => void;
 }
 
 // Get section theme colors (matching SongOverview themes)
@@ -35,7 +37,8 @@ const SECTION_THEMES: Record<string, { bg: string; border: string; accent: strin
 export const SectionPreview: React.FC<SectionPreviewProps> = ({
     section,
     songTimeSignature,
-    className
+    className,
+    onSlotClick
 }) => {
     const { tempo } = useSongStore();
     const chordColors = getWheelColors();
@@ -233,9 +236,11 @@ export const SectionPreview: React.FC<SectionPreviewProps> = ({
                                                 return (
                                                     <div
                                                         key={beat.id}
+                                                        onClick={() => onSlotClick?.(beat.id)}
                                                         className={clsx(
                                                             "flex-1 min-w-0 rounded-sm flex items-center justify-center font-bold truncate transition-all duration-150",
-                                                            isCurrentlyPlaying && "scale-105 z-10"
+                                                            isCurrentlyPlaying && "scale-105 z-10",
+                                                            onSlotClick && "cursor-pointer hover:scale-105 hover:brightness-110 active:scale-95"
                                                         )}
                                                         style={{
                                                             backgroundColor: isCurrentlyPlaying
@@ -319,10 +324,6 @@ export const SectionPreview: React.FC<SectionPreviewProps> = ({
                         <span className="w-0.5 h-0.5 rounded-full bg-white/20" />
                         <span className="text-[9px] font-mono text-white/40">
                             {measureCount} bar{measureCount !== 1 ? 's' : ''}
-                        </span>
-                        <span className="w-0.5 h-0.5 rounded-full bg-white/20" />
-                        <span className="text-[9px] font-mono text-white/40">
-                            {section.measures[0]?.beats.length || beatsPerBar} step{(section.measures[0]?.beats.length || beatsPerBar) !== 1 ? 's' : ''}/bar
                         </span>
                     </div>
                 </div>
