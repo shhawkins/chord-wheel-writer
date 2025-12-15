@@ -24,7 +24,9 @@ export const ChordSlot: React.FC<ChordSlotProps> = ({ slot, sectionId, size = 48
         selectRangeTo,
         setSelectedSlots,
         playingSectionId,
-        playingSlotId
+        playingSlotId,
+        selectedChord,
+        addChordToSlot
     } = useSongStore();
     const colors = getWheelColors();
     const resolvedWidth = width ?? size;
@@ -112,6 +114,16 @@ export const ChordSlot: React.FC<ChordSlotProps> = ({ slot, sectionId, size = 48
         }
     };
 
+    // Handle double-click on any slot - add currently selected chord
+    const handleSlotDoubleClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!selectedChord) return; // Need a chord selected to add
+
+        // Add the selected chord to this slot (overwrites existing chord if any)
+        addChordToSlot(selectedChord, sectionId, slot.id);
+        selectSlotOnly(sectionId, slot.id);
+    };
+
     // Get color for this chord based on its root
     const getChordColor = () => {
         if (!slot.chord) return undefined;
@@ -142,7 +154,7 @@ export const ChordSlot: React.FC<ChordSlotProps> = ({ slot, sectionId, size = 48
             ref={setDroppableRef}
             onMouseDown={handleMouseDown}
             onClick={(e) => e.stopPropagation()}
-            onDoubleClick={(e) => e.stopPropagation()}
+            onDoubleClick={handleSlotDoubleClick}
             style={{ width: resolvedWidth, height: size }}
             className={clsx(
                 "rounded border-2 flex items-center justify-center transition-all relative flex-shrink-0",

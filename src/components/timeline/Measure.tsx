@@ -25,24 +25,19 @@ export const Measure: React.FC<MeasureProps> = ({ measure, sectionId, index, cho
     const baseUnitWidth = chordSize * 0.9;
     const beatUnitWidth = Math.max(8, baseUnitWidth * horizontalScale);
     // Calculate logical step options based on time signature numerator
-    // Offers: 1 chord per measure, 1 per beat (quarter), 1 per eighth, optionally 1 per sixteenth
+    // Max 8 steps per measure for usability
     const [numerator] = timeSignature;
     const getStepsOptions = (num: number): number[] => {
         // Always include: 1 (single chord for whole measure), natural beat count, and subdivisions
         const options: number[] = [1, num];
 
-        // Add eighths (2x the beat count)
-        if (num * 2 <= 16) {
+        // Add eighths (2x the beat count) if within limit
+        if (num * 2 <= 8) {
             options.push(num * 2);
         }
 
-        // For common meters, add sixteenths if reasonable
-        if (num * 4 <= 16) {
-            options.push(num * 4);
-        }
-
-        // Remove duplicates and sort
-        return [...new Set(options)].sort((a, b) => a - b);
+        // Remove duplicates, sort, and cap at 8
+        return [...new Set(options)].filter(n => n <= 8).sort((a, b) => a - b);
     };
     const stepsOptions = getStepsOptions(numerator);
 
@@ -56,29 +51,16 @@ export const Measure: React.FC<MeasureProps> = ({ measure, sectionId, index, cho
             className="flex flex-col border-r-2 border-border-medium last:border-r-0 px-1 min-w-[64px]"
             style={{ minWidth: beatUnitWidth * Math.max(1, totalBeats) + 8 }}
         >
-            <div className="text-[8px] text-text-muted mb-0.5 font-mono uppercase tracking-wider text-center">
-                {index + 1}
-            </div>
-            <div className="flex gap-0.5">
-                {measure.beats.map((beat) => {
-                    const slotWidth = Math.max(beatUnitWidth * (beat.duration || 1), beatUnitWidth);
-                    return (
-                        <ChordSlot
-                            key={beat.id}
-                            slot={beat}
-                            sectionId={sectionId}
-                            size={chordSize}
-                            width={slotWidth}
-                        />
-                    );
-                })}
-            </div>
-            <div className="flex flex-col items-center justify-center gap-0.5 mt-1">
-                <span className="text-[8px] uppercase tracking-wider text-text-muted leading-tight">Steps</span>
+            {/* Bar number + Step selector - compact inline */}
+            <div className="flex items-center justify-center gap-1 mb-0.5">
+                <span className="text-[8px] text-text-muted font-mono">
+                    {index + 1}
+                </span>
                 <select
                     value={stepCount}
                     onChange={(e) => handleStepsChange(parseInt(e.target.value, 10))}
-                    className="bg-bg-tertiary text-text-primary text-[10px] rounded px-1 py-0.5 border border-border-subtle focus:outline-none"
+                    className="bg-bg-tertiary/50 text-text-muted text-[8px] rounded px-0.5 border border-border-subtle/50 focus:outline-none cursor-pointer hover:text-text-primary"
+                    title="Steps per measure"
                 >
                     {stepsOptions.map((option) => (
                         <option key={option} value={option} className="bg-bg-secondary text-text-primary">
@@ -91,6 +73,21 @@ export const Measure: React.FC<MeasureProps> = ({ measure, sectionId, index, cho
                         </option>
                     )}
                 </select>
+            </div>
+            {/* Chord slots */}
+            <div className="flex gap-0.5 flex-1">
+                {measure.beats.map((beat) => {
+                    const slotWidth = Math.max(beatUnitWidth * (beat.duration || 1), beatUnitWidth);
+                    return (
+                        <ChordSlot
+                            key={beat.id}
+                            slot={beat}
+                            sectionId={sectionId}
+                            size={chordSize}
+                            width={slotWidth}
+                        />
+                    );
+                })}
             </div>
         </div>
     );

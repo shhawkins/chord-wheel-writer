@@ -586,12 +586,13 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
                         </div>
                     </div>
                 )}
-                {/* Consolidated Header - chord name, key, help, and hide button all in one row */}
-                <div className={`${isLandscapeVariant ? 'px-3 py-2' : isMobile && isDrawer ? 'px-2 py-2' : 'px-4 py-3'} border-b border-border-subtle flex justify-between items-center gap-2 shrink-0 ${isDrawer ? 'bg-bg-secondary/80 backdrop-blur-md' : ''}`}>
-                    <div className="flex items-center overflow-hidden flex-1 min-w-0" style={{ gap: '8px' }}>
+                {/* Consolidated Header - 3-column grid: title left, inversion center, buttons right */}
+                <div className={`${isLandscapeVariant ? 'px-3 py-2' : isMobile && isDrawer ? 'px-2 py-2' : 'px-4 py-3'} border-b border-border-subtle grid grid-cols-[1fr_auto_1fr] items-center gap-2 shrink-0 ${isDrawer ? 'bg-bg-secondary/80 backdrop-blur-md' : ''}`}>
+                    {/* Left column: Chord title */}
+                    <div className="flex items-center min-w-0" style={{ gap: '8px' }}>
                         {isCompactLandscape && chord ? (
                             <>
-                                {/* Landscape view: show chord badge and numeral */}
+                                {/* Landscape view: show chord badge, numeral, and inversion controls */}
                                 <div className="flex items-center gap-2">
                                     <span
                                         className="text-xs font-bold cursor-pointer touch-feedback hover:opacity-80 active:scale-95 transition-all"
@@ -610,6 +611,36 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
                                     {chord.numeral && (
                                         <span className="text-sm font-serif italic text-text-muted shrink-0">{formatChordForDisplay(chord.numeral)}</span>
                                     )}
+                                    {/* Compact inversion controls for landscape - ultra tiny */}
+                                    <div className="flex items-center shrink-0" title="Chord inversion">
+                                        <button
+                                            onClick={() => {
+                                                const newInversion = Math.max(0, chordInversion - 1);
+                                                setChordInversion(newInversion);
+                                                const notes = invertChord(baseNotes, newInversion);
+                                                playChord(notes);
+                                            }}
+                                            disabled={chordInversion <= 0}
+                                            className="w-3 h-3 flex items-center justify-center text-text-muted hover:text-accent-primary transition-colors disabled:opacity-20"
+                                        >
+                                            <ChevronLeft size={10} />
+                                        </button>
+                                        <span className="text-[9px] font-bold text-text-secondary w-3 text-center">
+                                            {chordInversion}
+                                        </span>
+                                        <button
+                                            onClick={() => {
+                                                const newInversion = Math.min(maxInversion, chordInversion + 1);
+                                                setChordInversion(newInversion);
+                                                const notes = invertChord(baseNotes, newInversion);
+                                                playChord(notes);
+                                            }}
+                                            disabled={chordInversion >= maxInversion}
+                                            className="w-3 h-3 flex items-center justify-center text-text-muted hover:text-accent-primary transition-colors disabled:opacity-20"
+                                        >
+                                            <ChevronRight size={10} />
+                                        </button>
+                                    </div>
                                 </div>
                             </>
                         ) : (
@@ -640,8 +671,9 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
                             </>
                         )}
                     </div>
-                    <div className="flex items-center gap-3 shrink-0">
-                        {/* Inversion controls */}
+
+                    {/* Center column: Inversion controls */}
+                    <div className="flex items-center justify-center">
                         {chord && !isLandscapeVariant && (
                             <div className="flex items-center gap-0.5 bg-bg-tertiary/50 rounded px-1 py-0.5" title="Chord inversion - which note is in the bass">
                                 <button
@@ -677,6 +709,10 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
                                 </button>
                             </div>
                         )}
+                    </div>
+
+                    {/* Right column: Help and close buttons */}
+                    <div className="flex items-center justify-end gap-3 shrink-0">
                         {/* Help button moved to header - hide in landscape view */}
                         {chord && !isLandscapeVariant && (
                             <button
@@ -862,7 +898,7 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
                                             </div>
                                         </div>
                                         {/* Inline horizontal inversion control above staff */}
-                                        <div className="flex items-center justify-center gap-1" style={{ marginTop: '0px' }}>
+                                        <div className="w-full flex items-center justify-center gap-1" style={{ marginTop: '0px' }}>
                                             <button
                                                 onClick={() => {
                                                     const newInversion = Math.max(0, chordInversion - 1);

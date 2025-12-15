@@ -162,7 +162,7 @@ export const Section: React.FC<SectionProps> = ({ section, chordSize = 48, scale
                         <GripVertical size={compactHeader ? 10 : 12} />
                     </div>
 
-                    {/* Editable section name - visible in all views */}
+                    {/* Editable section name - styled as elongated pill */}
                     {isEditingName ? (
                         <input
                             ref={inputRef}
@@ -173,17 +173,21 @@ export const Section: React.FC<SectionProps> = ({ section, chordSize = 48, scale
                             onKeyDown={handleNameKeyDown}
                             onClick={(e) => e.stopPropagation()}
                             className={clsx(
-                                "font-medium text-text-primary bg-bg-tertiary border border-border-medium rounded focus:outline-none focus:border-accent-primary",
-                                compactHeader ? "text-[8px] px-1 py-0 w-16" : "text-xs px-1.5 py-0.5 w-24"
+                                "font-semibold text-white bg-accent-primary border border-accent-primary/50 rounded-full focus:outline-none focus:ring-2 focus:ring-accent-primary/50 text-center",
+                                compactHeader ? "text-[9px] px-3 py-0.5 min-w-[60px]" : "text-[11px] px-4 py-0.5 min-w-[80px]"
                             )}
                             maxLength={30}
                         />
                     ) : (
                         <span
                             className={clsx(
-                                "font-medium text-text-primary cursor-pointer hover:text-accent-primary transition-colors truncate",
-                                compactHeader ? "text-[8px] max-w-[60px]" : "text-xs max-w-[120px]"
+                                "font-semibold text-white cursor-pointer transition-all truncate text-center rounded-full",
+                                compactHeader ? "text-[9px] px-3 py-0.5 min-w-[50px] max-w-[80px]" : "text-[11px] px-4 py-1 min-w-[70px] max-w-[120px]"
                             )}
+                            style={{
+                                background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                                boxShadow: '0 2px 8px rgba(99, 102, 241, 0.3)',
+                            }}
                             onDoubleClick={handleNameDoubleClick}
                             title="Double-click to rename"
                         >

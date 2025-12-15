@@ -152,21 +152,28 @@ export const PlaybackControls: React.FC = () => {
                 )}
             </div>
 
-            {/* Tempo & Info - Desktop only, hide entirely on mobile landscape */}
-            {!isMobile && (
-                <div className="flex items-center gap-4 text-[11px] text-text-muted">
-                    <div className="flex items-center gap-2">
-                        <span className="text-text-secondary font-medium">Tempo</span>
-                        <input
-                            type="number"
-                            value={tempo}
-                            onChange={(e) => setTempo(Number(e.target.value))}
-                            className="w-14 bg-bg-tertiary border border-border-subtle rounded px-2 py-1 text-center text-text-primary text-[11px] font-medium"
-                            min={40}
-                            max={240}
-                        />
-                        <span className="text-text-muted">BPM</span>
-                    </div>
+            {/* Tempo & Info - Show on desktop and mobile landscape */}
+            {(!isMobile || (isMobile && isLandscape)) && (
+                <div className={`flex items-center ${isMobile && isLandscape ? 'gap-2' : 'gap-4'} text-[11px] text-text-muted`}>
+                    {isMobile && isLandscape ? (
+                        // Compact BPM display for mobile landscape
+                        <span className="text-[10px] font-medium text-text-secondary whitespace-nowrap">
+                            {tempo} <span className="text-text-muted">BPM</span>
+                        </span>
+                    ) : (
+                        <div className="flex items-center gap-2">
+                            <span className="text-text-secondary font-medium">Tempo</span>
+                            <input
+                                type="number"
+                                value={tempo}
+                                onChange={(e) => setTempo(Number(e.target.value))}
+                                className="w-14 bg-bg-tertiary border border-border-subtle rounded px-2 py-1 text-center text-text-primary text-[11px] font-medium"
+                                min={40}
+                                max={240}
+                            />
+                            <span className="text-text-muted">BPM</span>
+                        </div>
+                    )}
 
                 </div>
             )}
@@ -194,18 +201,21 @@ export const PlaybackControls: React.FC = () => {
                         </div>
                     )}
                     {isMobile && !isLandscape && <Music size={14} className="text-text-muted" />}
-                    {/* Hide instrument selector in landscape to save space */}
-                    {!(isMobile && isLandscape) && (
-                        <select
-                            value={instrument}
-                            onChange={(e) => setInstrument(e.target.value as InstrumentType)}
-                            className={`bg-bg-tertiary border border-border-subtle rounded ${isMobile ? 'px-1.5 h-7 text-[11px] min-w-[70px]' : 'px-2 h-7 text-[10px] min-w-[130px]'} text-text-secondary focus:outline-none focus:border-accent-primary cursor-pointer`}
-                        >
-                            {instrumentOptions.map((opt) => (
-                                <option key={opt.value} value={opt.value}>{opt.label}</option>
-                            ))}
-                        </select>
-                    )}
+                    {/* Show instrument selector on all views (including landscape for voice selection) */}
+                    <select
+                        value={instrument}
+                        onChange={(e) => setInstrument(e.target.value as InstrumentType)}
+                        className={`bg-bg-tertiary border border-border-subtle rounded ${isMobile && isLandscape
+                            ? 'px-3 py-1 h-6 text-[7px] min-w-[60px]'
+                            : isMobile
+                                ? 'px-1.5 h-7 text-[11px] min-w-[70px]'
+                                : 'px-2 h-7 text-[10px] min-w-[130px]'
+                            } text-text-secondary focus:outline-none focus:border-accent-primary cursor-pointer`}
+                    >
+                        {instrumentOptions.map((opt) => (
+                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
+                    </select>
                 </div>
 
                 {/* Volume/Mute Toggle */}

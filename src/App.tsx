@@ -1122,7 +1122,7 @@ function App() {
               {/* Timeline Content - always use mobile view in landscape */}
               {mobileTimelineOpen && (
                 <div className="flex-1 h-full bg-bg-secondary overflow-hidden border-l border-border-subtle">
-                  <MobileTimeline isOpen={true} onToggle={() => setMobileTimelineOpen(false)} hideCloseButton={true} isCompact={chordPanelVisible} />
+                  <MobileTimeline isOpen={true} onToggle={() => setMobileTimelineOpen(false)} hideCloseButton={true} isCompact={chordPanelVisible} isLandscape={true} />
                 </div>
               )}
               {/* Timeline Handle */}
