@@ -3,17 +3,18 @@ import { PianoKeyboard } from './PianoKeyboard';
 import { GuitarChord } from './GuitarChord';
 import { MusicStaff } from './MusicStaff';
 import { getWheelColors, getChordNotes, getIntervalFromKey, invertChord, getMaxInversion, getInversionName, getChordSymbolWithInversion, formatChordForDisplay } from '../../utils/musicTheory';
-import { PanelRightClose, PanelRight, GripVertical, HelpCircle, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { PanelRightClose, PanelRight, GripVertical, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { playChord, playNote } from '../../utils/audioEngine';
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { HelpModal } from '../HelpModal';
+
 import { useMobileLayout } from '../../hooks/useIsMobile';
 
 interface ChordDetailsProps {
     variant?: 'sidebar' | 'drawer' | 'landscape-panel' | 'landscape-expanded';
+    onScrollChange?: (scrolledToBottom: boolean) => void;
 }
 
-export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' }) => {
+export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar', onScrollChange }) => {
     const {
         selectedChord,
         selectedKey,
@@ -24,14 +25,16 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
         addChordToSlot,
         setSelectedChord,
         selectNextSlotAfter,
-        setSelectedSlot
+        setSelectedSlot,
+        timelineVisible,
+        openTimeline
     } = useSongStore();
     const colors = getWheelColors();
     const [previewVariant, setPreviewVariant] = useState<string | null>(null);
     const [previewNotes, setPreviewNotes] = useState<string[]>([]);
     const [panelWidth, setPanelWidth] = useState(320);
     const [isResizing, setIsResizing] = useState(false);
-    const [showHelp, setShowHelp] = useState(false);
+
     const lastVariationClickTime = useRef<number>(0);
     const isDrawer = variant === 'drawer';
     const [persistedChord, setPersistedChord] = useState(selectedChord);
@@ -291,6 +294,26 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
         }
     }, [isLandscapeVariant, showGuitar]); // Only run when switching to landscape or when section opens
 
+    // Detect scroll to bottom for footer visibility
+    useEffect(() => {
+        if (!isDrawer || !onScrollChange) return;
+
+        const container = scrollContainerRef.current;
+        if (!container) return;
+
+        const handleScroll = () => {
+            // Check if scrolled to bottom (within 20px threshold)
+            const isAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 20;
+            onScrollChange(isAtBottom);
+        };
+
+        container.addEventListener('scroll', handleScroll);
+        // Check initial state
+        handleScroll();
+
+        return () => container.removeEventListener('scroll', handleScroll);
+    }, [isDrawer, onScrollChange]);
+
     const chordColor = chord
         ? (colors[chord.root as keyof typeof colors] || '#6366f1')
         : '#6366f1';
@@ -327,6 +350,12 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
         // Reset the single-click timer so the next interaction isn't blocked
         lastVariationClickTime.current = 0;
 
+        // If timeline is hidden, open it instead of silently adding the chord
+        if (!timelineVisible) {
+            openTimeline();
+            return;
+        }
+
         if (!chord || !selectedSectionId || !selectedSlotId) return;
 
         const variantNotes = getChordNotes(chord.root, variant);
@@ -361,6 +390,12 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
 
     // Handler for double-clicking on guitar chord or music staff - adds to timeline
     const handleDiagramDoubleClick = useCallback(() => {
+        // If timeline is hidden, open it instead of silently adding the chord
+        if (!timelineVisible) {
+            openTimeline();
+            return;
+        }
+
         if (!chord || !selectedSectionId || !selectedSlotId) return;
 
         const currentVariant = previewVariant || chord.quality;
@@ -382,7 +417,7 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
             setSelectedSlot(selectedSectionId, selectedSlotId);
             setSelectedChord(newChord);
         }
-    }, [chord, previewVariant, chordInversion, selectedSectionId, selectedSlotId, addChordToSlot, selectNextSlotAfter, setSelectedSlot, setSelectedChord]);
+    }, [chord, previewVariant, chordInversion, selectedSectionId, selectedSlotId, addChordToSlot, selectNextSlotAfter, setSelectedSlot, setSelectedChord, timelineVisible, openTimeline]);
 
     // Touch event handling for chord title (for proper double-tap and bounce effect)
     const titleLastTouchTime = useRef(0);
@@ -451,39 +486,39 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
 
         const suggestions: Record<string, { extensions: string[], description: string }> = {
             'I': {
-                extensions: ['maj7', 'maj9', 'maj13', '6'],
+                extensions: ['maj', 'maj7', 'maj9', 'maj13', '6'],
                 description: 'The tonic — your home base and resting point. This is where phrases resolve and songs often begin and end. Its stability makes it perfect for choruses and moments of arrival.'
             },
             'IV': {
-                extensions: ['maj7', 'maj9', 'maj13', '6'],
+                extensions: ['maj', 'maj7', 'maj9', 'maj13', '6'],
                 description: 'The subdominant — warm, hopeful, and slightly floating. It gently pulls away from home without creating urgency. Great for pre-choruses and that "lifting" feeling before a chorus.'
             },
             'V': {
-                extensions: ['7', '9', '11', 'sus4', '13'],
+                extensions: ['maj', '7', '9', '11', 'sus4', '13'],
                 description: 'The dominant — maximum tension wanting to resolve back to I. This chord creates expectation and forward motion. It\'s the "question" that begs for an "answer."'
             },
             'ii': {
-                extensions: ['m7', 'm9', 'm11', 'm6'],
+                extensions: ['m', 'm7', 'm9', 'm11', 'm6'],
                 description: 'The supertonic — a natural setup chord that leads smoothly to V or IV. It\'s the workhorse of the ii-V-I progression and adds sophistication to any verse.'
             },
             'iii': {
-                extensions: ['m7'],
+                extensions: ['m', 'm7'],
                 description: 'The mediant — mysterious and chameleon-like. It can substitute for I (they share two notes) or lead to vi. Use it for unexpected color and emotional complexity.'
             },
             'vi': {
-                extensions: ['m7', 'm9', 'm11'],
+                extensions: ['m', 'm7', 'm9', 'm11'],
                 description: 'The relative minor — emotional depth and melancholy without leaving the key. This is the "sad" chord in major keys and the foundation of countless pop progressions (vi-IV-I-V).'
             },
             'vii°': {
-                extensions: ['m7♭5'],
+                extensions: ['dim', 'm7♭5'],
                 description: 'The leading tone chord — highly unstable and restless. Every note wants to move somewhere, making it a powerful passing chord that pulls strongly toward I.'
             },
             'II': {
-                extensions: ['7', 'sus4'],
+                extensions: ['maj', '7', 'sus4'],
                 description: 'A secondary dominant (V of V) — borrowed tension that points toward V. Use it to create a dramatic runway before landing on V.'
             },
             'III': {
-                extensions: ['7', 'sus4'],
+                extensions: ['maj', '7', 'sus4'],
                 description: 'A secondary dominant (V of vi) — creates an unexpected dramatic pull toward vi. Perfect for adding tension before a minor chord moment.'
             },
         };
@@ -710,19 +745,8 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
                             </div>
                         )}
                     </div>
-
-                    {/* Right column: Help and close buttons */}
+                    {/* Right column: Close button */}
                     <div className="flex items-center justify-end gap-3 shrink-0">
-                        {/* Help button moved to header - hide in landscape view */}
-                        {chord && !isLandscapeVariant && (
-                            <button
-                                onClick={() => setShowHelp(true)}
-                                className={`${isMobile ? 'w-10 h-10 min-w-[40px] min-h-[40px]' : 'w-8 h-8'} flex items-center justify-center hover:bg-accent-primary/20 rounded-md text-text-muted hover:text-accent-primary transition-colors touch-feedback`}
-                                title="Chord Wheel Guide"
-                            >
-                                <HelpCircle size={isMobile ? 16 : 14} />
-                            </button>
-                        )}
                         {/* Hide close button in landscape variants - use handle instead */}
                         {!isLandscapeVariant && (
                             <button
@@ -1062,9 +1086,6 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar' 
                     </div>
                 )}
             </div>
-
-            {/* Help Modal */}
-            <HelpModal isOpen={showHelp} onClose={() => setShowHelp(false)} />
-        </div >
+        </div>
     );
 };

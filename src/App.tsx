@@ -6,7 +6,7 @@ import { ChordDetails } from './components/panel/ChordDetails';
 import { PlaybackControls } from './components/playback/PlaybackControls';
 import { SongOverview } from './components/timeline/SongOverview';
 import { useSongStore } from './store/useSongStore';
-import { Download, Save, GripHorizontal, ChevronDown, ChevronUp, Plus, Minus, Clock, FolderOpen, FilePlus, Trash2, RotateCcw, RotateCw } from 'lucide-react';
+import { Download, Save, GripHorizontal, ChevronDown, ChevronUp, Plus, Minus, Clock, FolderOpen, FilePlus, Trash2, RotateCcw, RotateCw, HelpCircle } from 'lucide-react';
 import { Logo } from './components/Logo';
 import * as Tone from 'tone';
 import jsPDF from 'jspdf';
@@ -21,6 +21,7 @@ import { formatChordForDisplay } from './utils/musicTheory';
 // This must be called early in the page lifecycle
 import unmuteAudio from 'unmute-ios-audio';
 import { ConfirmDialog } from './components/ui/ConfirmDialog';
+import { HelpModal } from './components/HelpModal';
 unmuteAudio();
 
 function App() {
@@ -39,10 +40,10 @@ function App() {
     setMute(isMuted);
   }, [isMuted]);
 
-  // Resizable panel state - timeline height in pixels
   const [timelineHeight, setTimelineHeight] = useState(200);
   const [isResizing, setIsResizing] = useState(false);
   const [timelineScale, setTimelineScale] = useState(0.6);
+  const [showHelp, setShowHelp] = useState(false);
 
   // Wheel zoom state - use different defaults for mobile vs desktop
   // Mobile needs higher zoom to fill screen width, desktop uses 1.0
@@ -78,6 +79,9 @@ function App() {
 
   // Mobile timeline drawer state (separate from desktop timeline)
   const [mobileTimelineOpen, setMobileTimelineOpen] = useState(false);
+
+  // Track if chord panel is scrolled to bottom (to show footer)
+  const [chordPanelScrolledToBottom, setChordPanelScrolledToBottom] = useState(false);
 
   // Auto-enter immersive mode after inactivity on mobile (both portrait and landscape)
   // In landscape, header is hidden by default (starts in immersive mode)
@@ -127,20 +131,29 @@ function App() {
       if (immersiveTimeoutRef.current) {
         clearTimeout(immersiveTimeoutRef.current);
       }
-      // Re-enter immersive after 30 seconds of inactivity (screensaver-like behavior)
-      immersiveTimeoutRef.current = setTimeout(enterImmersive, 30000);
+      // Re-enter immersive after 10 seconds of inactivity (screensaver-like behavior)
+      immersiveTimeoutRef.current = setTimeout(enterImmersive, 10000);
     };
 
-    // Only exit immersive on touch in the wheel background area, not chord details
+    // Toggle immersive on touch in the wheel background area, not chord details
     const handleTouchStart = (e: TouchEvent) => {
       // Check if touch is in the wheel container area (not chord details panel)
       const target = e.target as HTMLElement;
       const isInChordDetails = target.closest('[data-chord-details]');
       const isInPlaybackControls = target.closest('[data-playback-controls]');
+      const isInMobileTimeline = target.closest('[data-mobile-timeline]');
+      const isInHeader = target.closest('header');
+      const isInChordWheel = target.closest('[data-chord-wheel]');
 
-      // Only reveal header/footer when touching the wheel area background
-      if (!isInChordDetails && !isInPlaybackControls) {
-        setMobileImmersive(false);
+      // Toggle header/footer only when touching the black background behind the wheel
+      if (!isInChordDetails && !isInPlaybackControls && !isInMobileTimeline && !isInHeader && !isInChordWheel) {
+        setMobileImmersive(prev => !prev);
+        // Reset the auto-immersive timer
+        if (immersiveTimeoutRef.current) {
+          clearTimeout(immersiveTimeoutRef.current);
+        }
+        // Only restart timer if we're now showing the header (exiting immersive)
+        // Timer will auto-hide after 30 seconds of inactivity
         resetImmersiveTimer();
       }
     };
@@ -906,10 +919,10 @@ function App() {
 
           <button
             onClick={handleExport}
-            className={`flex items-center gap-1.5 ${isMobile ? 'text-xs px-3 py-1.5 min-w-[44px]' : 'text-[11px] px-2.5 py-1'} bg-text-primary text-bg-primary rounded font-medium hover:bg-white transition-colors touch-feedback`}
+            className={`flex items-center justify-center ${isMobile ? 'text-xs px-3 py-1.5 min-w-[44px] min-h-[44px]' : 'text-[11px] px-2.5 py-1 gap-1.5'} bg-text-primary text-bg-primary rounded font-medium hover:bg-white transition-colors touch-feedback`}
           >
             <Download size={isMobile ? 16 : 12} />
-            <span className="hidden sm:inline">Export</span>
+            <span className="hidden sm:inline sm:ml-1.5">Export</span>
           </button>
         </div>
       </header>
@@ -918,14 +931,12 @@ function App() {
       <div className={`flex-1 flex ${isMobile ? (isLandscape ? 'flex-row' : 'flex-col') : 'flex-row'} overflow-hidden min-h-0`}>
         {/* Left/Top: Wheel - in landscape, fixed width for wheel area */}
         <div
-          className={`flex flex-col min-w-0 min-h-0 bg-gradient-to-b from-bg-primary to-bg-secondary/30 ${isMobile && isLandscape ? 'shrink-0' : 'flex-1'} ${isMobile ? 'overflow-hidden' : ''}`}
+          className={`flex flex-col min-w-0 min-h-0 bg-gradient-to-b from-bg-primary to-bg-secondary/30 ${isMobile && isLandscape ? 'shrink-0' : 'flex-1'} ${isMobile ? 'overflow-hidden' : ''} relative`}
           style={isMobile && isLandscape ? {
             // Fixed width from state - ensures reactivity and proper initial render
-            // Use viewport height (dvh) instead of 100% to ensure resolved dimensions on first render
             width: `${landscapeWheelWidth}px`,
             minWidth: '200px',
-            height: '100dvh',
-            maxHeight: '100%',
+            height: '100%',
           } : undefined}
         >
           {/* Wheel Area */}
@@ -995,6 +1006,23 @@ function App() {
               </div>
             </div>
           </div>
+
+          {/* Help button - pinned to lower right of wheel panel area */}
+          {isMobile && (
+            <button
+              onClick={() => setShowHelp(true)}
+              onTouchEnd={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setShowHelp(true);
+              }}
+              className={`absolute ${isLandscape ? 'bottom-2 right-2 w-8 h-8' : 'bottom-3 right-3 w-11 h-11'} flex items-center justify-center bg-bg-secondary/90 hover:bg-bg-tertiary backdrop-blur-sm rounded-full text-text-muted hover:text-accent-primary transition-colors shadow-lg border border-border-subtle z-50`}
+              style={{ touchAction: 'auto', pointerEvents: 'auto' }}
+              title="Chord Wheel Guide"
+            >
+              <HelpCircle size={isLandscape ? 14 : 20} />
+            </button>
+          )}
 
           {/* Desktop: Timeline section (mobile landscape shows timeline on right side only) */}
           {!isMobile ? (
@@ -1112,9 +1140,9 @@ function App() {
              When ONLY one panel open: use expanded/full views
           */
           <>
-            {/* Timeline Panel + Handle - when collapsed, fills space and pushes handle to right edge */}
+            {/* Timeline Panel + Handle - when collapsed, only shows handle with no flex-grow */}
             <div
-              className={`flex h-full flex-1 ${mobileTimelineOpen ? '' : 'justify-end'} shrink-0`}
+              className={`flex h-full ${mobileTimelineOpen ? 'flex-1' : 'justify-end'} shrink-0`}
               style={{
                 minWidth: mobileTimelineOpen ? '100px' : '28px',
                 transition: 'all 0.25s ease-out'
@@ -1205,13 +1233,13 @@ function App() {
             className="shrink-0 bg-bg-primary overflow-hidden"
             style={{ maxHeight: mobileTimelineOpen ? '45vh' : '55vh' }}
           >
-            <ChordDetails variant="drawer" />
+            <ChordDetails variant="drawer" onScrollChange={setChordPanelScrolledToBottom} />
           </div>
         </div>
       )}
 
-      {/* Footer: Playback - hidden in mobile immersive mode or when chord panel is open */}
-      {!(isMobile && !isLandscape && (mobileImmersive || chordPanelVisible)) && (
+      {/* Footer: Playback - hidden in mobile immersive mode or when chord panel is open (unless scrolled to bottom) */}
+      {!(isMobile && !isLandscape && (mobileImmersive || (chordPanelVisible && !chordPanelScrolledToBottom))) && (
         <div
           className="shrink-0 z-30 relative"
           style={{
@@ -1234,6 +1262,9 @@ function App() {
 
       {/* Song Overview Modal (Map) */}
       <SongOverview />
+
+      {/* Help Modal */}
+      <HelpModal isOpen={showHelp} onClose={() => setShowHelp(false)} />
     </div>
   );
 }

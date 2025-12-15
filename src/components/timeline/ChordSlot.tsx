@@ -157,11 +157,12 @@ export const ChordSlot: React.FC<ChordSlotProps> = ({ slot, sectionId, size = 48
             onDoubleClick={handleSlotDoubleClick}
             style={{ width: resolvedWidth, height: size }}
             className={clsx(
-                "rounded border-2 flex items-center justify-center transition-all relative flex-shrink-0",
-                isOver ? "border-accent-primary bg-accent-glow scale-105" : "border-border-medium bg-bg-elevated",
+                "rounded-md flex items-center justify-center transition-all relative flex-shrink-0",
+                isOver ? "border-2 border-accent-primary bg-accent-glow scale-105" : "",
+                !isOver && !slot.chord && "border-2 border-dashed border-border-medium bg-bg-elevated hover:border-text-muted cursor-pointer",
+                !isOver && slot.chord && "border-0",
                 isSelected ? "ring-2 ring-accent-primary ring-offset-1 ring-offset-bg-primary" : "",
-                isPlaying ? "ring-2 ring-green-500 ring-offset-1 ring-offset-bg-primary shadow-[0_0_15px_rgba(34,197,94,0.5)] scale-105 z-10" : "",
-                !slot.chord && "hover:border-text-muted cursor-pointer"
+                isPlaying ? "ring-2 ring-green-500 ring-offset-1 ring-offset-bg-primary shadow-[0_0_12px_rgba(34,197,94,0.5)] scale-105 z-10" : ""
             )}
         >
             {!slot.chord && (
@@ -185,7 +186,7 @@ export const ChordSlot: React.FC<ChordSlotProps> = ({ slot, sectionId, size = 48
                         border: `2px solid ${chordColor}`,
                     }}
                     className={clsx(
-                        "w-full h-full rounded flex items-center justify-center font-bold cursor-grab active:cursor-grabbing select-none overflow-hidden",
+                        "w-full h-full rounded-md flex items-center justify-center font-bold cursor-grab active:cursor-grabbing select-none overflow-hidden",
                         isDragging ? "opacity-50" : "opacity-100"
                     )}
                 >

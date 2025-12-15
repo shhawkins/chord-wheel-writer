@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Copy, Trash2, X } from 'lucide-react';
+import { Copy, Eraser, Trash2, X } from 'lucide-react';
 import type { Section } from '../../types';
 
 interface SectionOptionsPopupProps {
@@ -11,6 +11,7 @@ interface SectionOptionsPopupProps {
     onBarsChange: (value: number) => void;
     onNameChange?: (name: string, type: Section['type']) => void;
     onCopy: () => void;
+    onClear: () => void;
     onDelete: () => void;
     songTimeSignature: [number, number];
 }
@@ -44,6 +45,7 @@ export const SectionOptionsPopup: React.FC<SectionOptionsPopupProps> = ({
     onBarsChange,
     onNameChange,
     onCopy,
+    onClear,
     onDelete,
     songTimeSignature,
 }) => {
@@ -277,14 +279,14 @@ export const SectionOptionsPopup: React.FC<SectionOptionsPopupProps> = ({
                     </div>
 
                     {/* Action Buttons */}
-                    <div className="grid grid-cols-2 gap-3 pt-2">
+                    <div className="grid grid-cols-3 gap-2 pt-2">
                         <button
                             onClick={() => {
                                 onCopy();
                                 onClose();
                             }}
-                            className="flex items-center justify-center gap-2
-                                       px-3 py-2.5 rounded-lg
+                            className="flex items-center justify-center gap-1.5
+                                       px-2 py-2.5 rounded-lg
                                        bg-accent-primary/10 border border-accent-primary/30
                                        text-accent-primary hover:bg-accent-primary/20
                                        transition-all text-xs font-bold active:scale-95"
@@ -294,11 +296,25 @@ export const SectionOptionsPopup: React.FC<SectionOptionsPopupProps> = ({
                         </button>
                         <button
                             onClick={() => {
+                                onClear();
+                                onClose();
+                            }}
+                            className="flex items-center justify-center gap-1.5
+                                       px-2 py-2.5 rounded-lg
+                                       bg-yellow-500/10 border border-yellow-500/30
+                                       text-yellow-400 hover:bg-yellow-500/20
+                                       transition-all text-xs font-bold active:scale-95"
+                        >
+                            <Eraser size={14} />
+                            Clear
+                        </button>
+                        <button
+                            onClick={() => {
                                 onDelete();
                                 onClose();
                             }}
-                            className="flex items-center justify-center gap-2
-                                       px-3 py-2.5 rounded-lg
+                            className="flex items-center justify-center gap-1.5
+                                       px-2 py-2.5 rounded-lg
                                        bg-red-500/10 border border-red-500/30
                                        text-red-400 hover:bg-red-500/20
                                        transition-all text-xs font-bold active:scale-95"

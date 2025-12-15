@@ -6,6 +6,100 @@ import { v4 as uuidv4 } from 'uuid';
 
 type SelectionSlot = { sectionId: string; slotId: string };
 
+/**
+ * Intelligent section name suggestion algorithm.
+ * Analyzes patterns in existing sections to suggest the next logical section type.
+ * 
+ * Common song structures:
+ * - ABABCB (Verse-Chorus-Verse-Chorus-Bridge-Chorus)
+ * - ABABCAB (Verse-Chorus-Verse-Chorus-Bridge-Verse-Chorus)
+ * - AABA (Verse-Verse-Bridge-Verse) - common in jazz standards
+ * 
+ * Logic:
+ * 1. If empty, start with intro or verse
+ * 2. After intro, suggest verse
+ * 3. After verse, suggest chorus (unless we just did V-C-V-C pattern, then bridge)
+ * 4. After chorus, suggest verse (to continue the pattern)
+ * 5. After bridge, suggest chorus (for the final payoff)
+ * 6. If pattern repeats 2+ times (V-C-V-C), suggest bridge to break monotony
+ * 7. After 2+ cycles and bridge, consider suggesting outro
+ */
+function suggestNextSectionType(sections: Section[]): Section['type'] {
+    if (sections.length === 0) {
+        // Start with intro or verse
+        return 'intro';
+    }
+
+    const types = sections.map(s => s.type);
+    const lastType = types[types.length - 1];
+    const lastFourTypes = types.slice(-4);
+
+    // Count occurrences of each type
+    const typeCounts = types.reduce((acc, type) => {
+        acc[type] = (acc[type] || 0) + 1;
+        return acc;
+    }, {} as Record<string, number>);
+
+    // After intro, go to verse
+    if (lastType === 'intro') {
+        return 'verse';
+    }
+
+    // Check for V-C-V-C pattern (or similar alternating pattern) - suggest bridge
+    if (lastFourTypes.length >= 4) {
+        const [a, b, c, d] = lastFourTypes;
+        // Check if it's alternating verse-chorus pattern
+        if (
+            (a === 'verse' && b === 'chorus' && c === 'verse' && d === 'chorus') ||
+            (a === 'chorus' && b === 'verse' && c === 'chorus' && d === 'verse')
+        ) {
+            return 'bridge';
+        }
+    }
+
+    // After bridge, usually go back to chorus for the payoff
+    if (lastType === 'bridge') {
+        return 'chorus';
+    }
+
+    // After verse, usually chorus (unless already have many choruses)
+    if (lastType === 'verse') {
+        return 'chorus';
+    }
+
+    // After chorus, check if we should go to verse or outro
+    if (lastType === 'chorus') {
+        // If we already have a bridge and multiple verse-chorus cycles, consider outro
+        const hasBridge = types.includes('bridge');
+        const chorusCount = typeCounts['chorus'] || 0;
+
+        // If we have 3+ choruses and a bridge, suggest outro
+        if (hasBridge && chorusCount >= 3) {
+            return 'outro';
+        }
+
+        // Otherwise, continue with verse
+        return 'verse';
+    }
+
+    // After outro, if user still adding, maybe another verse or custom
+    if (lastType === 'outro') {
+        return 'verse';
+    }
+
+    // After pre-chorus, go to chorus
+    if (lastType === 'pre-chorus') {
+        return 'chorus';
+    }
+
+    // Default: alternate between verse and chorus
+    // Handle 'custom' type by defaulting to verse
+    if (lastType === 'custom') {
+        return 'chorus';
+    }
+    return 'verse';
+}
+
 interface SongState {
     // Song data
     currentSong: Song;
@@ -46,6 +140,7 @@ interface SongState {
     toggleWheelMode: () => void;
     toggleChordPanel: () => void;
     toggleTimeline: () => void;
+    openTimeline: () => void;  // Opens timeline if not already open (for double-tap from wheel/details)
     toggleSongMap: (force?: boolean) => void;
     toggleSectionCollapsed: (sectionId: string) => void;
 
@@ -75,8 +170,11 @@ interface SongState {
     loadSong: (song: Song) => void;
     newSong: () => void;
     addSection: (type: Section['type']) => void;
+    addSuggestedSection: () => void; // Add a section with an intelligently suggested type
+    getSuggestedSectionType: () => Section['type']; // Get the suggested type for next section
     updateSection: (id: string, updates: Partial<Section>) => void;
     removeSection: (id: string) => void;
+    clearSection: (id: string) => void;
     duplicateSection: (id: string) => void;
     reorderSections: (sections: Section[]) => void;
     setSectionMeasures: (id: string, count: number) => void;
@@ -362,6 +460,7 @@ export const useSongStore = create<SongState>()(
 
             toggleChordPanel: () => set((state) => ({ chordPanelVisible: !state.chordPanelVisible })),
             toggleTimeline: () => set((state) => ({ timelineVisible: !state.timelineVisible })),
+            openTimeline: () => set({ timelineVisible: true }),
             toggleSongMap: (force?: boolean) => set((state) => ({
                 songMapVisible: force !== undefined ? force : !state.songMapVisible
             })),
@@ -779,6 +878,31 @@ export const useSongStore = create<SongState>()(
                 };
             }),
 
+            addSuggestedSection: () => set((state) => {
+                const suggestedType = suggestNextSectionType(state.currentSong.sections);
+                const newSection: Section = {
+                    id: uuidv4(),
+                    name: suggestedType.charAt(0).toUpperCase() + suggestedType.slice(1),
+                    type: suggestedType,
+                    timeSignature: state.currentSong.timeSignature || DEFAULT_TIME_SIGNATURE,
+                    measures: Array(4).fill(null).map(() => createEmptyMeasure(state.currentSong.timeSignature || DEFAULT_TIME_SIGNATURE))
+                };
+                const history = buildHistoryState(state);
+
+                return {
+                    ...history,
+                    currentSong: {
+                        ...state.currentSong,
+                        sections: [...state.currentSong.sections, newSection]
+                    }
+                };
+            }),
+
+            getSuggestedSectionType: () => {
+                const state = useSongStore.getState();
+                return suggestNextSectionType(state.currentSong.sections);
+            },
+
             updateSection: (id, updates) => set((state) => {
                 const history = buildHistoryState(state);
                 return {
@@ -800,6 +924,39 @@ export const useSongStore = create<SongState>()(
                         sections: state.currentSong.sections.filter(s => s.id !== id)
                     },
                     collapsedSections: remainingCollapsed
+                };
+            }),
+
+            clearSection: (id) => set((state) => {
+                // Check if the section has any chords to clear
+                const section = state.currentSong.sections.find(s => s.id === id);
+                if (!section) return {};
+
+                const hasAnyChords = section.measures.some(measure =>
+                    measure.beats.some(beat => beat.chord !== null)
+                );
+
+                if (!hasAnyChords) return {};
+
+                const history = buildHistoryState(state);
+
+                const newSections = state.currentSong.sections.map(s => {
+                    if (s.id !== id) return s;
+                    return {
+                        ...s,
+                        measures: s.measures.map(measure => ({
+                            ...measure,
+                            beats: measure.beats.map(beat => ({
+                                ...beat,
+                                chord: null
+                            }))
+                        }))
+                    };
+                });
+
+                return {
+                    ...history,
+                    currentSong: { ...state.currentSong, sections: newSections }
                 };
             }),
 
@@ -964,7 +1121,7 @@ export const useSongStore = create<SongState>()(
                 };
             }),
 
-            addChordToSlot: (chord, sectionId, slotId) => set((state) => {
+            addChordToSlot: (chord: Chord, sectionId: string, slotId: string) => set((state) => {
                 const history = buildHistoryState(state);
                 const newSections = state.currentSong.sections.map(section => {
                     if (section.id !== sectionId) return section;
@@ -985,7 +1142,7 @@ export const useSongStore = create<SongState>()(
                 };
             }),
 
-            clearSlot: (sectionId, slotId) => set((state) => {
+            clearSlot: (sectionId: string, slotId: string) => set((state) => {
                 const hadChord = state.currentSong.sections.some(section =>
                     section.id === sectionId &&
                     section.measures.some(measure =>
@@ -1046,7 +1203,7 @@ export const useSongStore = create<SongState>()(
                 };
             }),
 
-            moveChord: (_fromSectionId, fromSlotId, _toSectionId, toSlotId) => set((state) => {
+            moveChord: (_fromSectionId: string, fromSlotId: string, _toSectionId: string, toSlotId: string) => set((state) => {
                 // Find both chords
                 let sourceChord: Chord | null = null;
                 let targetChord: Chord | null = null;

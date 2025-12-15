@@ -208,7 +208,7 @@ export const NoteValueSelector: React.FC<NoteValueSelectorProps> = ({
                         "animate-in fade-in zoom-in-95 duration-150"
                     )}
                     style={{
-                        top: '50%',
+                        top: '60%',
                         left: '50%',
                         transform: 'translate(-50%, -50%)',
                         zIndex: 99999

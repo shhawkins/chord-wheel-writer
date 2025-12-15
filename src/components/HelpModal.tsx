@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Music, Circle, ArrowRight, Hash, Layers } from 'lucide-react';
+import { X, Music, Circle, Hash, Layers } from 'lucide-react';
 
 interface HelpModalProps {
     isOpen: boolean;
@@ -9,221 +9,257 @@ interface HelpModalProps {
 
 const HelpContent = () => (
     <>
-        {/* Quick Start */}
+        {/* 1. Quick Start */}
         <section>
             <h3 className="text-accent-primary font-bold text-sm uppercase tracking-wider mb-3 flex items-center gap-2">
                 <Circle size={12} className="fill-accent-primary" />
                 Quick Start
             </h3>
             <div className="bg-bg-elevated/50 rounded-lg p-4 space-y-3 text-sm text-gray-300">
-                <p>The Chord Wheel puts chord theory into your hands. No music reading is necessary; simply rotate the transparent disk and analyze any chord progression instantly.</p>
-                <ul className="list-disc list-inside space-y-1 text-gray-400">
-                    <li>Determine which chords belong to a given key</li>
-                    <li>Transpose a chord progression to any key</li>
-                    <li>Compose your own music</li>
-                </ul>
-            </div>
-        </section>
-
-        {/* Understanding the Rings */}
-        <section>
-            <h3 className="text-accent-primary font-bold text-sm uppercase tracking-wider mb-3 flex items-center gap-2">
-                <Layers size={12} />
-                Understanding the Rings
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div className="bg-bg-elevated/50 rounded-lg p-4">
-                    <h4 className="font-bold text-white mb-2">Inner Ring (Major)</h4>
-                    <p className="text-sm text-gray-400">Contains the 12 major chords arranged in the Circle of Fifths. Upper-case numerals (I, IV, V) denote major chords.</p>
-                </div>
-                <div className="bg-bg-elevated/50 rounded-lg p-4">
-                    <h4 className="font-bold text-white mb-2">Middle Ring (Minor)</h4>
-                    <p className="text-sm text-gray-400">Contains 24 minor chords. Lower-case numerals (ii, iii, vi) denote minor chords in a key.</p>
-                </div>
-                <div className="bg-bg-elevated/50 rounded-lg p-4">
-                    <h4 className="font-bold text-white mb-2">Outer Ring (Diminished)</h4>
-                    <p className="text-sm text-gray-400">The vii° chord for each key. The diminished chord has a harsh, dissonant quality due to the ♭5.</p>
+                <p>The Chord Wheel is your interactive map of harmony. Rotate the disk to change keys – the highlighted chords are your safe "diatonic" chords that always sound good together.</p>
+                <div className="grid grid-cols-2 gap-4 mt-2">
+                    <ul className="list-disc list-inside space-y-1 text-gray-400 text-xs">
+                        <li><strong>Outer Ring:</strong> Major Chords (I, IV, V)</li>
+                        <li><strong>Middle Ring:</strong> Minor Chords (ii, iii, vi)</li>
+                        <li><strong>Inner Ring:</strong> Diminished (vii°)</li>
+                    </ul>
+                    <div className="text-xs text-gray-400 pl-4 border-l border-white/10">
+                        <p><strong>Try this:</strong> Tap any chord to hear it. Double-tap to add it to your song timeline at the bottom.</p>
+                    </div>
                 </div>
             </div>
         </section>
 
-        {/* Roman Numerals */}
+        {/* 2. The Language of Music (Roman Numerals) */}
         <section>
             <h3 className="text-accent-primary font-bold text-sm uppercase tracking-wider mb-3 flex items-center gap-2">
                 <Hash size={12} />
-                Roman Numerals
+                The Language of Music (Roman Numerals)
             </h3>
-            <div className="bg-bg-elevated/50 rounded-lg p-4">
-                <p className="text-sm text-gray-300 mb-3">Roman numerals denote the harmonic progression. Upper-case = major, lower-case = minor.</p>
-                <div className="grid grid-cols-7 gap-2 text-center text-sm">
-                    <div className="bg-bg-tertiary rounded p-2">
-                        <span className="font-bold text-white">I</span>
-                        <span className="block text-[10px] text-gray-500">Tonic</span>
+            <div className="bg-bg-elevated/50 rounded-lg p-4 space-y-4">
+                <p className="text-sm text-gray-300">Musicians use roman numerals to talk about chords regardless of the specific key. This reveals the "DNA" of a song.</p>
+
+                <div className="grid grid-cols-7 gap-1 text-center text-sm">
+                    {['I', 'ii', 'iii', 'IV', 'V', 'vi', 'vii°'].map((num, i) => (
+                        <div key={num} className={`rounded p-2 flex flex-col items-center justify-between h-20 ${['I', 'IV', 'V'].includes(num) ? 'bg-accent-primary/20 border border-accent-primary/30' :
+                            num === 'vii°' ? 'bg-red-500/10 border border-red-500/20' : 'bg-bg-tertiary'
+                            }`}>
+                            <span className="font-bold text-white mb-1">{num}</span>
+                            <span className="text-[10px] text-gray-400 leading-tight">
+                                {i === 0 ? 'Tonic (Home)' :
+                                    i === 3 ? 'Subdom. (Away)' :
+                                        i === 4 ? 'Dominant (Tension)' :
+                                            i === 5 ? 'Rel. Minor' :
+                                                i === 6 ? 'Leading Tone' : 'Mediant'}
+                            </span>
+                        </div>
+                    ))}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs text-gray-400">
+                    <div className="p-2 rounded bg-bg-tertiary/50">
+                        <strong className="text-accent-primary block mb-1">Tonic (I, vi, iii)</strong>
+                        Stable, home base. Where songs usually start and end.
                     </div>
-                    <div className="bg-bg-tertiary rounded p-2">
-                        <span className="font-bold text-white">ii</span>
-                        <span className="block text-[10px] text-gray-500">Super</span>
+                    <div className="p-2 rounded bg-bg-tertiary/50">
+                        <strong className="text-accent-primary block mb-1">Subdominant (IV, ii)</strong>
+                        Movement, drifting away from home. Creates interest.
                     </div>
-                    <div className="bg-bg-tertiary rounded p-2">
-                        <span className="font-bold text-white">iii</span>
-                        <span className="block text-[10px] text-gray-500">Mediant</span>
-                    </div>
-                    <div className="bg-bg-tertiary rounded p-2">
-                        <span className="font-bold text-white">IV</span>
-                        <span className="block text-[10px] text-gray-500">Subdom</span>
-                    </div>
-                    <div className="bg-bg-tertiary rounded p-2">
-                        <span className="font-bold text-white">V</span>
-                        <span className="block text-[10px] text-gray-500">Dominant</span>
-                    </div>
-                    <div className="bg-bg-tertiary rounded p-2">
-                        <span className="font-bold text-white">vi</span>
-                        <span className="block text-[10px] text-gray-500">Relative</span>
-                    </div>
-                    <div className="bg-bg-tertiary rounded p-2">
-                        <span className="font-bold text-white">vii°</span>
-                        <span className="block text-[10px] text-gray-500">Leading</span>
+                    <div className="p-2 rounded bg-bg-tertiary/50">
+                        <strong className="text-accent-primary block mb-1">Dominant (V, vii°)</strong>
+                        Tension, needing resolution. Pulls strongly back to I.
                     </div>
                 </div>
             </div>
         </section>
 
-        {/* Circle of Fifths */}
+        {/* 3. Songwriting Toolkit (Cadences & Emotions) */}
         <section>
             <h3 className="text-accent-primary font-bold text-sm uppercase tracking-wider mb-3 flex items-center gap-2">
-                <ArrowRight size={12} />
-                The Circle of Fifths
+                <Layers size={12} />
+                Songwriting Toolkit
             </h3>
-            <div className="bg-bg-elevated/50 rounded-lg p-4 text-sm text-gray-300 space-y-3">
-                <p>Starting with C and moving clockwise (C → G → D → A → E → B → F# → Db → Ab → Eb → Bb → F), each step is a "dominant" (fifth) progression. This cyclical nature is one of the most fundamental principles in music theory.</p>
-                <ul className="list-disc list-inside space-y-1 text-gray-400">
-                    <li>Modulations often move one "key" clockwise or counter-clockwise</li>
-                    <li>Neighboring keys share many chords in common</li>
-                    <li>The strong pull of V → I is why songs resolve satisfyingly</li>
-                </ul>
+            <div className="space-y-4">
+                {/* Cadences */}
+                <div className="bg-bg-elevated/50 rounded-lg p-4">
+                    <h4 className="font-bold text-white mb-3 text-sm">Emotional Cadences (How Phrases End)</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                        <div className="group p-3 rounded bg-bg-tertiary hover:bg-bg-tertiary/80 transition-colors border-l-2 border-green-500">
+                            <div className="flex justify-between items-center mb-1">
+                                <span className="font-bold text-white">Perfect Cadence</span>
+                                <span className="text-xs bg-black/30 px-1.5 py-0.5 rounded text-green-400">V → I</span>
+                            </div>
+                            <p className="text-gray-400 text-xs">The "Full Stop". Strongest resolution. The end of a sentence.</p>
+                        </div>
+                        <div className="group p-3 rounded bg-bg-tertiary hover:bg-bg-tertiary/80 transition-colors border-l-2 border-blue-500">
+                            <div className="flex justify-between items-center mb-1">
+                                <span className="font-bold text-white">Plagal Cadence</span>
+                                <span className="text-xs bg-black/30 px-1.5 py-0.5 rounded text-blue-400">IV → I</span>
+                            </div>
+                            <p className="text-gray-400 text-xs">The "Amen". Softer, church-like resolution. "Let It Be", "Creep".</p>
+                        </div>
+                        <div className="group p-3 rounded bg-bg-tertiary hover:bg-bg-tertiary/80 transition-colors border-l-2 border-yellow-500">
+                            <div className="flex justify-between items-center mb-1">
+                                <span className="font-bold text-white">Half Cadence</span>
+                                <span className="text-xs bg-black/30 px-1.5 py-0.5 rounded text-yellow-400">Ends on V</span>
+                            </div>
+                            <p className="text-gray-400 text-xs">The "Comma". Leaves listeners hanging, waiting for more.</p>
+                        </div>
+                        <div className="group p-3 rounded bg-bg-tertiary hover:bg-bg-tertiary/80 transition-colors border-l-2 border-purple-500">
+                            <div className="flex justify-between items-center mb-1">
+                                <span className="font-bold text-white">Deceptive Cadence</span>
+                                <span className="text-xs bg-black/30 px-1.5 py-0.5 rounded text-purple-400">V → vi</span>
+                            </div>
+                            <p className="text-gray-400 text-xs">The "Surprise". Expecting home (I), but getting drama (vi) instead.</p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Common Progressions */}
+                <div className="bg-bg-elevated/50 rounded-lg p-4">
+                    <h4 className="font-bold text-white mb-3 text-sm">Famous Progressions</h4>
+                    <div className="space-y-2">
+                        <div className="p-2.5 rounded bg-bg-tertiary flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <div>
+                                <span className="font-bold text-white text-sm">Pop/Rock Anthem</span>
+                                <span className="block text-xs text-gray-500">U2, The Beatles, Blink-182</span>
+                            </div>
+                            <div className="flex gap-1">
+                                {['I', 'V', 'vi', 'IV'].map(c => <span key={c} className="text-xs bg-black/40 px-2 py-1 rounded text-accent-primary">{c}</span>)}
+                            </div>
+                        </div>
+                        <div className="p-2.5 rounded bg-bg-tertiary flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <div>
+                                <span className="font-bold text-white text-sm">Emotional Ballad</span>
+                                <span className="block text-xs text-gray-500">Adele, John Legend</span>
+                            </div>
+                            <div className="flex gap-1">
+                                {['vi', 'IV', 'I', 'V'].map(c => <span key={c} className="text-xs bg-black/40 px-2 py-1 rounded text-purple-400">{c}</span>)}
+                            </div>
+                        </div>
+                        <div className="p-2.5 rounded bg-bg-tertiary flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <div>
+                                <span className="font-bold text-white text-sm">Jazz / R&B</span>
+                                <span className="block text-xs text-gray-500">Maroon 5, Jazz Standards</span>
+                            </div>
+                            <div className="flex gap-1">
+                                {['ii', 'V', 'I'].map(c => <span key={c} className="text-xs bg-black/40 px-2 py-1 rounded text-blue-400">{c}</span>)}
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </section>
 
-        {/* Chord Building */}
+        {/* 4. Advanced/Spicy Concepts */}
         <section>
-            <h3 className="text-accent-primary font-bold text-sm uppercase tracking-wider mb-3">Building Chords</h3>
-            <div className="bg-bg-elevated/50 rounded-lg p-4 space-y-4">
+            <h3 className="text-accent-primary font-bold text-sm uppercase tracking-wider mb-3 flex items-center gap-2">
+                <Music size={12} />
+                Adding Spice (Advanced)
+            </h3>
+            <div className="bg-bg-elevated/50 rounded-lg p-4 space-y-6">
+
+                {/* Modal Interchange */}
                 <div>
-                    <h4 className="font-semibold text-white mb-2">Triads (3 Notes)</h4>
-                    <p className="text-sm text-gray-400 mb-2">Built using "every other note" of the scale: Root, 3rd, 5th</p>
-                    <div className="grid grid-cols-3 gap-2 text-sm">
-                        <div className="bg-bg-tertiary rounded p-2 text-center">
-                            <span className="text-white font-medium">Major</span>
-                            <span className="block text-[10px] text-gray-500">1-3-5</span>
+                    <h4 className="font-bold text-white mb-2 text-sm flex items-center gap-2">
+                        1. Modal Interchange (Borrowed Chords)
+                    </h4>
+                    <p className="text-sm text-gray-400 mb-3">
+                        Steal chords from the parallel minor key to add "cinematic" emotion.
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                        <div className="bg-bg-tertiary p-2 rounded border-l-2 border-indigo-500">
+                            <strong className="text-white block">Minor IV (iv)</strong>
+                            <span className="text-gray-500">"The Beatles Cadence". Gives a nostalgic, bittersweet ending. (Fm in key of C).</span>
                         </div>
-                        <div className="bg-bg-tertiary rounded p-2 text-center">
-                            <span className="text-white font-medium">Minor</span>
-                            <span className="block text-[10px] text-gray-500">1-♭3-5</span>
+                        <div className="bg-bg-tertiary p-2 rounded border-l-2 border-indigo-500">
+                            <strong className="text-white block">Flat VI (♭VI)</strong>
+                            <span className="text-gray-500">Epic, heroic, fantasy feeling. "Lord of the Rings" sound. (Ab in key of C).</span>
                         </div>
-                        <div className="bg-bg-tertiary rounded p-2 text-center">
-                            <span className="text-white font-medium">Diminished</span>
-                            <span className="block text-[10px] text-gray-500">1-♭3-♭5</span>
+                        <div className="bg-bg-tertiary p-2 rounded border-l-2 border-indigo-500">
+                            <strong className="text-white block">Picardy Third</strong>
+                            <span className="text-gray-500">Ending a sad, minor song on a happy Major I chord. Pure sunshine.</span>
                         </div>
                     </div>
                 </div>
+
+                <div className="w-full h-px bg-white/5" />
+
+                {/* Secondary Dominants & Tritone Subs */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <h4 className="font-bold text-white mb-2 text-sm">2. Secondary Dominants</h4>
+                        <p className="text-xs text-gray-400 mb-2">
+                            Make a minor chord Major to create a magnetic pull to another chord.
+                        </p>
+                        <div className="bg-bg-tertiary p-3 rounded text-xs text-gray-300 italic">
+                            "In C Major, play <strong className="text-white">E Major (III)</strong>. It pulls hard to <strong className="text-white">Am</strong>. (Radiohead - Creep)"
+                        </div>
+                    </div>
+                    <div>
+                        <h4 className="font-bold text-white mb-2 text-sm">3. Tritone Substitution</h4>
+                        <p className="text-xs text-gray-400 mb-2">
+                            Jazz trick: Replace the V chord with a dominant chord exactly halfway around the circle (a tritone away).
+                        </p>
+                        <div className="bg-bg-tertiary p-3 rounded text-xs text-gray-300 italic">
+                            "Instead of G7 → C, try <strong className="text-white">Db7 → C</strong>. Smooth chromatic slide."
+                        </div>
+                    </div>
+                </div>
+
+                <div className="w-full h-px bg-white/5" />
+
+                {/* Secrets of the Pros */}
                 <div>
-                    <h4 className="font-semibold text-white mb-2">Seventh Chords (4 Notes)</h4>
-                    <p className="text-sm text-gray-400 mb-2">Add the 7th note: 1st, 3rd, 5th, 7th</p>
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                        <div className="bg-bg-tertiary rounded p-2 text-center">
-                            <span className="text-white font-medium">Major 7th (maj7)</span>
-                            <span className="block text-[10px] text-gray-500">1-3-5-7</span>
+                    <h4 className="font-bold text-white mb-3 text-sm flex items-center gap-2">
+                        4. Secrets of the Pros
+                        <span className="text-[10px] bg-purple-500/20 text-purple-400 px-1.5 py-0.5 rounded uppercase font-bold">Expert</span>
+                    </h4>
+                    <div className="space-y-3">
+                        <div className="p-3 rounded bg-bg-tertiary flex gap-3">
+                            <div className="shrink-0 w-8 h-8 rounded bg-bg-elevated flex items-center justify-center font-bold text-accent-primary">A</div>
+                            <div>
+                                <strong className="text-white text-sm block">Pedal Point</strong>
+                                <p className="text-xs text-gray-400 mt-1">Keep the bass note the same while changing chords on top. Creates massive tension and "floaty" feelings. (e.g., C/C → F/C → G/C).</p>
+                            </div>
                         </div>
-                        <div className="bg-bg-tertiary rounded p-2 text-center">
-                            <span className="text-white font-medium">Dominant 7th (7)</span>
-                            <span className="block text-[10px] text-gray-500">1-3-5-♭7</span>
+                        <div className="p-3 rounded bg-bg-tertiary flex gap-3">
+                            <div className="shrink-0 w-8 h-8 rounded bg-bg-elevated flex items-center justify-center font-bold text-accent-primary">B</div>
+                            <div>
+                                <strong className="text-white text-sm block">Line Cliché</strong>
+                                <p className="text-xs text-gray-400 mt-1">A single note moving down chromatically inside a static chord. think "Stairway to Heaven" or James Bond theme (Am → Am(maj7) → Am7 → Am6).</p>
+                            </div>
                         </div>
-                        <div className="bg-bg-tertiary rounded p-2 text-center">
-                            <span className="text-white font-medium">Minor 7th (m7)</span>
-                            <span className="block text-[10px] text-gray-500">1-♭3-5-♭7</span>
-                        </div>
-                        <div className="bg-bg-tertiary rounded p-2 text-center">
-                            <span className="text-white font-medium">Half-Dim (m7♭5)</span>
-                            <span className="block text-[10px] text-gray-500">1-♭3-♭5-♭7</span>
+                        <div className="p-3 rounded bg-bg-tertiary flex gap-3">
+                            <div className="shrink-0 w-8 h-8 rounded bg-bg-elevated flex items-center justify-center font-bold text-accent-primary">C</div>
+                            <div>
+                                <strong className="text-white text-sm block">Relative Major/Minor Modulation</strong>
+                                <p className="text-xs text-gray-400 mt-1">Switching focus between I and vi. Use the exact same notes, but center your melody around Am instead of C to instantly change the mood from happy to sad.</p>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        </section>
 
-        {/* Common Progressions */}
-        <section>
-            <h3 className="text-accent-primary font-bold text-sm uppercase tracking-wider mb-3">Common Progressions</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div className="bg-bg-elevated/50 rounded-lg p-4">
-                    <h4 className="font-semibold text-white mb-2">I-IV-V (Pop/Rock)</h4>
-                    <p className="text-sm text-gray-400">Key of C: C - F - G</p>
-                    <p className="text-xs text-gray-500 mt-1">The foundation of rock 'n' roll</p>
-                </div>
-                <div className="bg-bg-elevated/50 rounded-lg p-4">
-                    <h4 className="font-semibold text-white mb-2">ii-V-I (Jazz)</h4>
-                    <p className="text-sm text-gray-400">Key of C: Dm7 - G7 - Cmaj7</p>
-                    <p className="text-xs text-gray-500 mt-1">The most common jazz progression</p>
-                </div>
-                <div className="bg-bg-elevated/50 rounded-lg p-4">
-                    <h4 className="font-semibold text-white mb-2">I-vi-IV-V (50s/Doo-wop)</h4>
-                    <p className="text-sm text-gray-400">Key of C: C - Am - F - G</p>
-                    <p className="text-xs text-gray-500 mt-1">Also used in countless pop songs</p>
-                </div>
-                <div className="bg-bg-elevated/50 rounded-lg p-4">
-                    <h4 className="font-semibold text-white mb-2">I-V-vi-IV (Modern Pop)</h4>
-                    <p className="text-sm text-gray-400">Key of C: C - G - Am - F</p>
-                    <p className="text-xs text-gray-500 mt-1">The "4 chord song" progression</p>
-                </div>
-            </div>
-        </section>
-
-        {/* The II & III Chords */}
-        <section>
-            <h3 className="text-accent-primary font-bold text-sm uppercase tracking-wider mb-3">Secondary Dominants (II & III)</h3>
-            <div className="bg-bg-elevated/50 rounded-lg p-4 text-sm text-gray-300 space-y-3">
-                <p>The II and III chords (shown with half-highlighting) aren't diatonic but are commonly used. They're called <strong className="text-white">secondary dominants</strong> because they "act" like dominant V chords:</p>
-                <ul className="list-disc list-inside space-y-1 text-gray-400">
-                    <li><strong className="text-white">II</strong> (D in key of C) = V of V (leads strongly to G)</li>
-                    <li><strong className="text-white">III</strong> (E in key of C) = V of vi (leads strongly to Am)</li>
-                </ul>
-                <p className="text-gray-400">Study chord progressions by The Beatles, Rolling Stones, Elvis Costello, and you'll discover these two chords add tremendous variety.</p>
-            </div>
-        </section>
-
-        {/* Modes */}
-        <section>
-            <h3 className="text-accent-primary font-bold text-sm uppercase tracking-wider mb-3">Modes & Relative Minor</h3>
-            <div className="bg-bg-elevated/50 rounded-lg p-4 text-sm text-gray-300 space-y-3">
-                <p>The vi chord (Am in key of C) is special: it's the <strong className="text-white">relative minor</strong>. Songs emphasizing vi as the tonic create a minor mood using the same chords.</p>
-                <div className="grid grid-cols-7 gap-1 text-center text-[10px] mt-3">
-                    <div className="bg-bg-tertiary rounded p-1.5">
-                        <span className="font-bold text-white">I</span>
-                        <span className="block text-gray-500">Ionian</span>
-                    </div>
-                    <div className="bg-bg-tertiary rounded p-1.5">
-                        <span className="font-bold text-white">ii</span>
-                        <span className="block text-gray-500">Dorian</span>
-                    </div>
-                    <div className="bg-bg-tertiary rounded p-1.5">
-                        <span className="font-bold text-white">iii</span>
-                        <span className="block text-gray-500">Phrygian</span>
-                    </div>
-                    <div className="bg-bg-tertiary rounded p-1.5">
-                        <span className="font-bold text-white">IV</span>
-                        <span className="block text-gray-500">Lydian</span>
-                    </div>
-                    <div className="bg-bg-tertiary rounded p-1.5">
-                        <span className="font-bold text-white">V</span>
-                        <span className="block text-gray-500">Mixolyd.</span>
-                    </div>
-                    <div className="bg-bg-tertiary rounded p-1.5">
-                        <span className="font-bold text-white">vi</span>
-                        <span className="block text-gray-500">Aeolian</span>
-                    </div>
-                    <div className="bg-bg-tertiary rounded p-1.5">
-                        <span className="font-bold text-white">vii°</span>
-                        <span className="block text-gray-500">Locrian</span>
+                {/* Extensions */}
+                <div>
+                    <h4 className="font-bold text-white mb-2 text-sm">5. Building Better Chords (Extensions)</h4>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-center">
+                        <div className="bg-bg-tertiary p-2 rounded hover:bg-bg-tertiary/80 transition-colors">
+                            <strong className="text-white block">maj7</strong>
+                            <span className="text-gray-500">Dreamy, Jazz, Lo-fi</span>
+                        </div>
+                        <div className="bg-bg-tertiary p-2 rounded hover:bg-bg-tertiary/80 transition-colors">
+                            <strong className="text-white block">dom7</strong>
+                            <span className="text-gray-500">Blues, Funk, Tension</span>
+                        </div>
+                        <div className="bg-bg-tertiary p-2 rounded hover:bg-bg-tertiary/80 transition-colors">
+                            <strong className="text-white block">sus4</strong>
+                            <span className="text-gray-500">Open, airy, delayed</span>
+                        </div>
+                        <div className="bg-bg-tertiary p-2 rounded hover:bg-bg-tertiary/80 transition-colors">
+                            <strong className="text-white block">add9</strong>
+                            <span className="text-gray-500">Rich, cinematic pop</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -264,12 +300,21 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose, isEmbedde
     }
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none"
+            style={{
+                // Add safe area padding for iOS landscape (Dynamic Island + home indicator)
+                paddingTop: 'max(16px, env(safe-area-inset-top))',
+                paddingBottom: 'max(16px, env(safe-area-inset-bottom))',
+                paddingLeft: 'max(16px, env(safe-area-inset-left))',
+                paddingRight: 'max(16px, env(safe-area-inset-right))',
+            }}
+        >
             {/* Backdrop purely visual so sidebars remain interactive */}
             <div className="absolute inset-0 bg-black/70 backdrop-blur-sm pointer-events-none" />
 
             {/* Modal */}
-            <div className="relative bg-[#1a1a24] border border-border-medium rounded-xl shadow-2xl max-w-4xl w-full max-h-[85vh] overflow-hidden flex flex-col pointer-events-auto">
+            <div className="relative bg-[#1a1a24] border border-border-medium rounded-xl shadow-2xl max-w-4xl w-full max-h-full overflow-hidden flex flex-col pointer-events-auto">
                 {/* Header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-border-subtle bg-[#22222e]">
                     <div className="flex items-center gap-3">

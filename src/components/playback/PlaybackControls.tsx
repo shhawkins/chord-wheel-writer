@@ -75,7 +75,6 @@ export const PlaybackControls: React.FC = () => {
                 setIsLoading(true);
                 await playSong();
                 useSongStore.getState().setIsPlaying(true);
-                toggleSongMap(true); // Open Song Map on play
             } else {
                 pauseSong();
                 useSongStore.getState().setIsPlaying(false);

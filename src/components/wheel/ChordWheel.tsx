@@ -55,7 +55,9 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({
         setSelectedChord,
         selectedChord,
         selectNextSlotAfter,
-        setSelectedSlot
+        setSelectedSlot,
+        timelineVisible,
+        openTimeline
     } = useSongStore();
 
     // Calculate wheel rotation
@@ -454,6 +456,12 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({
     };
 
     const handleChordDoubleClick = (chord: Chord) => {
+        // If timeline is hidden, open it instead of silently adding the chord
+        if (!timelineVisible) {
+            openTimeline();
+            return;
+        }
+
         const wheelChord = chord as WheelChord;
         let targetSectionId: string | null = null;
         let targetSlotId: string | null = null;
@@ -673,6 +681,7 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({
     return (
         <div
             ref={containerRef}
+            data-chord-wheel
             className={`relative flex flex-col items-center justify-center w-full h-full max-w-full max-h-full aspect-square p-1 sm:p-2 select-none ${isPanning ? 'cursor-grabbing' : (zoomScale > 1 && !isMobile ? 'cursor-grab' : '')}`}
             onTouchStart={handleCombinedTouchStart}
             onTouchMove={handleCombinedTouchMove}
@@ -1035,6 +1044,7 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({
                     </g>
                 </svg>
             </div>
+
         </div>
     );
 };

@@ -47,7 +47,7 @@ interface TimelineProps {
 export const Timeline: React.FC<TimelineProps> = ({ height = 180, scale = 1 }) => {
     const {
         currentSong,
-        addSection,
+        addSuggestedSection,
         reorderSections,
         addChordToSlot,
         moveChord,
@@ -237,7 +237,7 @@ export const Timeline: React.FC<TimelineProps> = ({ height = 180, scale = 1 }) =
 
                             {/* Add Section Button - matches section height */}
                             <button
-                                onClick={() => addSection('chorus')}
+                                onClick={() => addSuggestedSection()}
                                 className="w-10 rounded-lg border-2 border-dashed border-border-medium hover:border-accent-primary hover:bg-bg-elevated transition-all flex flex-col items-center justify-center text-text-muted hover:text-accent-primary gap-0.5 self-stretch"
                             >
                                 <Plus size={12} />

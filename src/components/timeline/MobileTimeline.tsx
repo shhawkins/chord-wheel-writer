@@ -37,11 +37,13 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
         setSelectedChord,
         playingSectionId,
         playingSlotId,
-        addSection,
+        isPlaying,
+        addSuggestedSection,
         setSectionTimeSignature,
         setSectionMeasures,
         removeSection,
         duplicateSection,
+        clearSection,
         setMeasureSubdivision,
         selectedChord,
         addChordToSlot,
@@ -58,9 +60,14 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
     // Track the active section for navigation
     const [activeSectionIndex, setActiveSectionIndex] = React.useState(0);
 
-    // Swipe gesture handling
+    // Swipe gesture handling (for closing when open)
     const touchStartY = useRef<number>(0);
     const [swipeOffset, setSwipeOffset] = React.useState(0);
+
+    // Swipe/drag gesture handling for opening when collapsed
+    const collapsedTouchStartY = useRef<number>(0);
+    const [collapsedSwipeOffset, setCollapsedSwipeOffset] = React.useState(0);
+    const isDraggingCollapsed = useRef<boolean>(false);
 
     // Feature state
     const [editingSectionId, setEditingSectionId] = React.useState<string | null>(null);
@@ -69,15 +76,25 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
     // Double-tap tracking for empty slots
     const lastTapTimeRef = useRef<{ slotId: string; time: number } | null>(null);
 
-    // Auto-scroll to selected section when it changes
+    // Auto-scroll to selected section when it changes (only when not playing)
     useEffect(() => {
-        if (selectedSectionId && sectionTabsRef.current) {
+        if (!isPlaying && selectedSectionId && sectionTabsRef.current) {
             const idx = currentSong.sections.findIndex(s => s.id === selectedSectionId);
             if (idx !== -1) {
                 setActiveSectionIndex(idx);
             }
         }
-    }, [selectedSectionId, currentSong.sections]);
+    }, [selectedSectionId, currentSong.sections, isPlaying]);
+
+    // Auto-switch to playing section during playback
+    useEffect(() => {
+        if (isPlaying && playingSectionId) {
+            const idx = currentSong.sections.findIndex(s => s.id === playingSectionId);
+            if (idx !== -1 && idx !== activeSectionIndex) {
+                setActiveSectionIndex(idx);
+            }
+        }
+    }, [isPlaying, playingSectionId, currentSong.sections, activeSectionIndex]);
 
     // Auto-scroll chord container to show playing slot
     useEffect(() => {
@@ -107,6 +124,61 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
         }
         setSwipeOffset(0);
     };
+
+    // Collapsed handle: Swipe UP to open (touch)
+    const handleCollapsedTouchStart = (e: React.TouchEvent) => {
+        collapsedTouchStartY.current = e.touches[0].clientY;
+    };
+
+    const handleCollapsedTouchMove = (e: React.TouchEvent) => {
+        const deltaY = collapsedTouchStartY.current - e.touches[0].clientY;
+        // Only allow swiping up (positive delta means finger moved up)
+        if (deltaY > 0) {
+            setCollapsedSwipeOffset(Math.min(deltaY, 60));
+        }
+    };
+
+    const handleCollapsedTouchEnd = () => {
+        if (collapsedSwipeOffset > 30) {
+            onToggle(); // Open drawer
+        }
+        setCollapsedSwipeOffset(0);
+    };
+
+    // Collapsed handle: Click and drag UP to open (mouse - for desktop)
+    const handleCollapsedMouseDown = (e: React.MouseEvent) => {
+        isDraggingCollapsed.current = true;
+        collapsedTouchStartY.current = e.clientY;
+        e.preventDefault();
+    };
+
+    // Mouse move/up handlers need to be on document for drag to work outside element
+    useEffect(() => {
+        const handleMouseMove = (e: MouseEvent) => {
+            if (!isDraggingCollapsed.current) return;
+            const deltaY = collapsedTouchStartY.current - e.clientY;
+            if (deltaY > 0) {
+                setCollapsedSwipeOffset(Math.min(deltaY, 60));
+            }
+        };
+
+        const handleMouseUp = () => {
+            if (!isDraggingCollapsed.current) return;
+            if (collapsedSwipeOffset > 30) {
+                onToggle(); // Open drawer
+            }
+            setCollapsedSwipeOffset(0);
+            isDraggingCollapsed.current = false;
+        };
+
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+
+        return () => {
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+        };
+    }, [collapsedSwipeOffset, onToggle]);
 
     // Get color for a chord
     const getChordColor = (root: string) => {
@@ -179,12 +251,27 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
 
     const activeSection = currentSong.sections[activeSectionIndex];
 
-    // Collapsed state - just a handle bar
+    // Collapsed state - just a handle bar with swipe/drag-to-open
     if (!isOpen) {
         return (
             <div
-                className="w-full h-9 flex flex-col items-center justify-center bg-bg-secondary border-t border-border-subtle cursor-pointer touch-feedback active:bg-bg-tertiary"
-                onClick={onToggle}
+                data-mobile-timeline
+                className="w-full h-9 flex flex-col items-center justify-center bg-bg-secondary border-t border-border-subtle cursor-grab active:cursor-grabbing touch-feedback select-none"
+                onClick={() => {
+                    // Only trigger click if not dragging
+                    if (!isDraggingCollapsed.current && collapsedSwipeOffset === 0) {
+                        onToggle();
+                    }
+                }}
+                onTouchStart={handleCollapsedTouchStart}
+                onTouchMove={handleCollapsedTouchMove}
+                onTouchEnd={handleCollapsedTouchEnd}
+                onMouseDown={handleCollapsedMouseDown}
+                style={{
+                    transform: collapsedSwipeOffset > 0 ? `translateY(-${collapsedSwipeOffset}px)` : undefined,
+                    opacity: collapsedSwipeOffset > 0 ? Math.min(1, 0.7 + (collapsedSwipeOffset / 100)) : 1,
+                    transition: collapsedSwipeOffset === 0 ? 'all 0.2s ease-out' : 'none'
+                }}
             >
                 <div className="w-10 h-1 rounded-full bg-text-muted/40 mb-1.5" />
                 <span className="text-[9px] font-medium text-text-muted uppercase tracking-wider">
@@ -196,6 +283,7 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
 
     return (
         <div
+            data-mobile-timeline
             className={clsx(
                 "relative w-full bg-bg-secondary border-t-2 border-border-subtle overflow-hidden flex flex-col mobile-timeline-drawer",
                 isLandscape && "h-full" // Fill available height in landscape mode
@@ -210,7 +298,7 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
             {/* Drag handle - title hidden when open to save vertical space */}
             {!hideCloseButton && (
                 <div
-                    className="flex flex-col items-center pt-1.5 pb-0.5 cursor-grab active:cursor-grabbing shrink-0"
+                    className="flex flex-col items-center pt-1.5 pb-2 cursor-grab active:cursor-grabbing shrink-0"
                     onTouchStart={handleTouchStart}
                     onTouchMove={handleTouchMove}
                     onTouchEnd={handleTouchEnd}
@@ -221,45 +309,54 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
 
             {/* Section navigator - compact mode uses a simpler dropdown-style layout */}
             {isCompact ? (
-                // Compact: Single row with section dropdown 
-                <div className="flex items-center justify-between shrink-0 px-1 py-1 gap-1">
+                // Compact: Single row with section dropdown - centered layout
+                // Use grid to properly center the navigation group while keeping Map button on left
+                <div className="relative flex items-center justify-center shrink-0 px-1 py-1">
+                    {/* Left: Map button - absolutely positioned to not affect centering */}
                     <button
                         onClick={() => toggleSongMap(true)}
-                        className="rounded text-text-muted hover:text-accent-primary touch-feedback shrink-0 p-1"
+                        className="absolute left-1 rounded text-text-muted hover:text-accent-primary touch-feedback flex items-center justify-center w-5 h-5"
                         title="Song Overview"
                     >
                         <Map size={12} />
                     </button>
-                    <button
-                        onClick={() => navigateSection('prev')}
-                        disabled={activeSectionIndex === 0}
-                        className="rounded text-text-muted hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed touch-feedback p-1"
-                    >
-                        <ChevronLeft size={14} />
-                    </button>
 
-                    {/* Current section button - abbreviated to first letter in compact mode */}
-                    <button
-                        onClick={() => activeSection && setEditingSectionId(activeSection.id)}
-                        className="flex items-center justify-center gap-1 px-2 py-1 rounded-full text-white font-semibold text-[10px]"
-                        style={{
-                            background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #6366f1 100%)',
-                            boxShadow: '0 0 8px rgba(99, 102, 241, 0.4)',
-                            border: '1px solid rgba(255,255,255,0.2)',
-                        }}
-                        title={activeSection?.name || 'Section'}
-                    >
-                        <span>{activeSection?.name.charAt(0).toUpperCase() || 'S'}</span>
-                        <Settings2 size={10} className="opacity-70 shrink-0" />
-                    </button>
+                    {/* Center: Navigation group - arrows with section button between them */}
+                    <div className="flex items-center justify-center gap-1">
+                        <button
+                            onClick={() => navigateSection('prev')}
+                            disabled={activeSectionIndex === 0}
+                            className="rounded text-text-muted hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed touch-feedback p-1"
+                        >
+                            <ChevronLeft size={14} />
+                        </button>
 
-                    <button
-                        onClick={() => navigateSection('next')}
-                        disabled={activeSectionIndex === currentSong.sections.length - 1}
-                        className="rounded text-text-muted hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed touch-feedback p-1"
-                    >
-                        <ChevronRight size={14} />
-                    </button>
+                        {/* Current section button - abbreviated to first letter with section number in compact mode */}
+                        <button
+                            onClick={() => activeSection && setEditingSectionId(activeSection.id)}
+                            className="flex items-center justify-center gap-0.5 px-2 py-1 rounded-full text-white font-semibold text-[10px]"
+                            style={{
+                                background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #6366f1 100%)',
+                                boxShadow: '0 0 8px rgba(99, 102, 241, 0.4)',
+                                border: '1px solid rgba(255,255,255,0.2)',
+                            }}
+                            title={activeSection?.name || 'Section'}
+                        >
+                            <span className="flex items-baseline">
+                                <span>{activeSection?.name.charAt(0).toUpperCase() || 'S'}</span>
+                                <span className="text-[7px] opacity-60 ml-0.5">{activeSectionIndex + 1}</span>
+                            </span>
+                            <Settings2 size={10} className="opacity-70 shrink-0" />
+                        </button>
+
+                        <button
+                            onClick={() => navigateSection('next')}
+                            disabled={activeSectionIndex === currentSong.sections.length - 1}
+                            className="rounded text-text-muted hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed touch-feedback p-1"
+                        >
+                            <ChevronRight size={14} />
+                        </button>
+                    </div>
                 </div>
             ) : (
                 // Normal mode: full section tabs
@@ -326,7 +423,7 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
                             );
                         })}
                         <button
-                            onClick={() => addSection('verse')}
+                            onClick={() => addSuggestedSection()}
                             className="rounded-full text-text-muted hover:text-accent-primary touch-feedback shrink-0 border border-dashed border-border-medium hover:border-accent-primary/50 transition-all hover:bg-accent-primary/10 w-8 h-8 flex items-center justify-center"
                             title="Add section"
                         >
@@ -405,7 +502,7 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
                                     <div className={clsx(
                                         "flex items-center",
                                         isLandscape
-                                            ? "flex-1 gap-0.5" // Landscape: fill available width
+                                            ? `flex-1 gap-0.5 min-w-0 ${measure.beats.length > 4 ? 'overflow-x-auto scrollbar-hide' : 'overflow-hidden'}` // Landscape: only scroll for 8+ beats
                                             : "gap-0.5" // Portrait: natural sizing
                                     )}>
                                         {measure.beats.map((beat) => {
@@ -413,9 +510,23 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
                                             const isPlaying = playingSectionId === activeSection.id && playingSlotId === beat.id;
                                             const chordColor = beat.chord ? getChordColor(beat.chord.root) : undefined;
 
+                                            // Calculate proportional width based on beat count
+                                            const beatCount = measure.beats.length;
+
+                                            // For landscape: dynamic sizing based on beat count
+                                            // 1-4 beats: use flex-1 (fill available space, no horizontal scroll)
+                                            // 8+ beats: use fixed widths that scale down (may require scroll)
+                                            let landscapeWidth: number | undefined;
+                                            let landscapeMinWidth: number | undefined;
+                                            if (isLandscape && beatCount > 4) {
+                                                // Scale down as beat count increases
+                                                // 8 beats: ~25px each
+                                                landscapeWidth = Math.max(22, Math.floor(160 / beatCount));
+                                                landscapeMinWidth = Math.max(18, Math.floor(120 / beatCount));
+                                            }
+
                                             // For portrait mode: calculate proportional width
                                             const baseWidth = 36;
-                                            const beatCount = measure.beats.length;
                                             const widthMultiplier = 4 / beatCount;
                                             const slotWidth = Math.round(baseWidth * widthMultiplier);
                                             const finalWidth = Math.max(28, Math.min(144, slotWidth));
@@ -428,18 +539,23 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
                                                     className={clsx(
                                                         "relative flex items-center justify-center rounded-md transition-all touch-feedback",
                                                         isLandscape
-                                                            ? "flex-1 h-[26px] min-w-0" // Landscape: flex-grow to fill row
-                                                            : "h-[32px]", // Portrait: fixed height
+                                                            ? beatCount <= 4 ? "flex-1 h-[26px] min-w-0" : "h-[24px] shrink-0" // Landscape: flex with no min for 1-4 beats, fixed for more
+                                                            : "h-[32px] shrink-0", // Portrait: fixed height, no shrink
                                                         isPlaying && "ring-2 ring-green-500 ring-offset-1 ring-offset-bg-primary shadow-[0_0_12px_rgba(34,197,94,0.5)] scale-105 z-10",
                                                         isSelected && !isPlaying && "ring-2 ring-accent-primary ring-offset-1 ring-offset-bg-primary",
                                                         !beat.chord && "border-2 border-dashed border-border-medium bg-bg-elevated hover:border-text-muted"
                                                     )}
                                                     style={{
-                                                        // Portrait: proportional width. Landscape: flex handles it
-                                                        ...(isLandscape ? {} : {
+                                                        // Landscape with many beats: use calculated width
+                                                        ...(isLandscape && landscapeWidth ? {
+                                                            width: `${landscapeWidth}px`,
+                                                            minWidth: `${landscapeMinWidth}px`,
+                                                        } : {}),
+                                                        // Portrait: proportional width
+                                                        ...(!isLandscape ? {
                                                             width: `${finalWidth}px`,
                                                             minWidth: `${finalWidth}px`,
-                                                        }),
+                                                        } : {}),
                                                         ...(beat.chord ? {
                                                             backgroundColor: 'rgba(0, 0, 0, 0.3)',
                                                             border: `2px solid ${chordColor}`,
@@ -448,13 +564,23 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
                                                 >
                                                     {beat.chord ? (
                                                         <span
-                                                            className={`font-bold px-0.5 truncate ${isLandscape ? 'text-[9px]' : 'text-[10px]'}`}
+                                                            className={clsx(
+                                                                "font-bold px-0.5 truncate",
+                                                                isLandscape
+                                                                    ? beatCount >= 8 ? "text-[7px]" : beatCount >= 4 ? "text-[8px]" : "text-[9px]"
+                                                                    : "text-[10px]"
+                                                            )}
                                                             style={{ color: chordColor }}
                                                         >
                                                             {formatChordForDisplay(beat.chord.symbol)}
                                                         </span>
                                                     ) : (
-                                                        <span className={`text-text-muted font-light ${isLandscape ? 'text-sm' : 'text-base'}`}>+</span>
+                                                        <span className={clsx(
+                                                            "text-text-muted font-light",
+                                                            isLandscape
+                                                                ? beatCount >= 8 ? "text-xs" : "text-sm"
+                                                                : "text-base"
+                                                        )}>+</span>
                                                     )}
 
                                                     {/* Playing indicator */}
@@ -496,6 +622,9 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
                     }}
                     onCopy={() => {
                         if (editingSectionId) duplicateSection(editingSectionId);
+                    }}
+                    onClear={() => {
+                        if (editingSectionId) clearSection(editingSectionId);
                     }}
                     onDelete={() => {
                         if (editingSectionId) removeSection(editingSectionId);
