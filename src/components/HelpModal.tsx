@@ -35,15 +35,15 @@ const HelpContent: React.FC<HelpContentProps> = ({ onClose }) => {
                             </div>
                             <div className="flex items-start gap-2">
                                 <span className="shrink-0 w-5 h-5 rounded-full bg-accent-primary/20 text-accent-primary text-xs font-bold flex items-center justify-center">2</span>
-                                <p className="text-gray-300"><strong className="text-white">Double-tap</strong> a chord to add it to your timeline.</p>
+                                <p className="text-gray-300"><strong className="text-white">Double-tap</strong> a chord to add it to your timeline. (If the timeline is closed, this also opens it.)</p>
                             </div>
                             <div className="flex items-start gap-2">
                                 <span className="shrink-0 w-5 h-5 rounded-full bg-accent-primary/20 text-accent-primary text-xs font-bold flex items-center justify-center">3</span>
-                                <p className="text-gray-300"><strong className="text-white">Drag the wheel</strong> to change keys — your selected key stays at the top.</p>
+                                <p className="text-gray-300"><strong className="text-white">Drag the wheel</strong> to change keys.</p>
                             </div>
                             <div className="flex items-start gap-2">
                                 <span className="shrink-0 w-5 h-5 rounded-full bg-accent-primary/20 text-accent-primary text-xs font-bold flex items-center justify-center">4</span>
-                                <p className="text-gray-300"><strong className="text-white">Tap the compass</strong> in the center to pin/unpin the wheel (pinned = C stays at top).</p>
+                                <p className="text-gray-300"><strong className="text-white">Tap the compass</strong> to switch orientation — the wheel starts with C at top, or tap to put your selected key at top instead.</p>
                             </div>
                         </div>
                         <div className="bg-bg-tertiary/60 rounded-lg p-3 border-l-2 border-accent-primary">
@@ -303,8 +303,11 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose, isEmbedde
                 paddingRight: 'max(16px, env(safe-area-inset-right))',
             }}
         >
-            {/* Backdrop purely visual so sidebars remain interactive */}
-            <div className="absolute inset-0 bg-black/70 backdrop-blur-sm pointer-events-none" />
+            {/* Backdrop - click to close */}
+            <div
+                className="absolute inset-0 bg-black/70 backdrop-blur-sm cursor-pointer pointer-events-auto"
+                onClick={onClose}
+            />
 
             {/* Modal */}
             <div className="relative bg-[#1a1a24] border border-border-medium rounded-xl shadow-2xl max-w-4xl w-full max-h-full overflow-hidden flex flex-col pointer-events-auto">
