@@ -1,12 +1,11 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { ChordWheel } from './components/wheel/ChordWheel';
-import { Timeline } from './components/timeline/Timeline';
 import { MobileTimeline } from './components/timeline/MobileTimeline';
 import { ChordDetails } from './components/panel/ChordDetails';
 import { PlaybackControls } from './components/playback/PlaybackControls';
 import { SongOverview } from './components/timeline/SongOverview';
 import { useSongStore } from './store/useSongStore';
-import { Download, Save, GripHorizontal, ChevronDown, ChevronUp, Plus, Minus, Clock, FolderOpen, FilePlus, Trash2, RotateCcw, RotateCw, HelpCircle } from 'lucide-react';
+import { Download, Save, ChevronDown, ChevronUp, Plus, Minus, Clock, FolderOpen, FilePlus, Trash2, RotateCcw, RotateCw, HelpCircle } from 'lucide-react';
 import { Logo } from './components/Logo';
 import * as Tone from 'tone';
 import jsPDF from 'jspdf';
@@ -14,15 +13,11 @@ import { saveAs } from 'file-saver';
 import { saveSong, getSavedSongs, deleteSong } from './utils/storage';
 import { getGuitarChord, type GuitarChordShape } from './utils/guitarChordData';
 import type { Song } from './types';
-import { setInstrument, setVolume, setMute, initAudio } from './utils/audioEngine';
+import { setInstrument, setVolume, setMute, initAudio, startSilentAudioForIOS, unlockAudioForIOS } from './utils/audioEngine';
 import { formatChordForDisplay } from './utils/musicTheory';
 
-// Enable Web Audio even with iOS mute switch on
-// This must be called early in the page lifecycle
-import unmuteAudio from 'unmute-ios-audio';
 import { ConfirmDialog } from './components/ui/ConfirmDialog';
 import { HelpModal } from './components/HelpModal';
-unmuteAudio();
 
 function App() {
   const { currentSong, selectedKey, timelineVisible, toggleTimeline, selectedSectionId, selectedSlotId, clearSlot, clearTimeline, setTitle, loadSong: loadSongToStore, newSong, instrument, volume, isMuted, undo, redo, canUndo, canRedo, chordPanelVisible } = useSongStore();
@@ -40,9 +35,6 @@ function App() {
     setMute(isMuted);
   }, [isMuted]);
 
-  const [timelineHeight, setTimelineHeight] = useState(200);
-  const [isResizing, setIsResizing] = useState(false);
-  const [timelineScale, setTimelineScale] = useState(0.6);
   const [showHelp, setShowHelp] = useState(false);
 
   // Wheel zoom state - use different defaults for mobile vs desktop
@@ -64,6 +56,19 @@ function App() {
   const [landscapeWheelWidth, setLandscapeWheelWidth] = useState(() => {
     if (typeof window === 'undefined') return 200;
     return Math.max(200, Math.floor(window.innerWidth * 0.33));
+  });
+
+  // Computed wheel size for desktop/tablet - calculated via JS for reliable cross-browser support
+  // This is used when `isMobile` is false (iPad, desktop, etc.)
+  const [computedWheelSize, setComputedWheelSize] = useState(() => {
+    if (typeof window === 'undefined') return 400;
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    // For desktop/tablet: wheel size = min(viewport width - sidebar, viewport height - header/footer/timeline)
+    // Sidebar ~380px, header ~48px, timeline ~185px, footer ~56px, small padding = ~300px vertical
+    const maxFromWidth = w - 400;  // Leave room for sidebar
+    const maxFromHeight = h - 300; // Leave room for header, timeline, footer
+    return Math.max(300, Math.min(maxFromWidth, maxFromHeight));
   });
 
   // Responsive state - use height-based detection for landscape since modern phones can have width > 768 in landscape
@@ -143,10 +148,27 @@ function App() {
       const isInPlaybackControls = target.closest('[data-playback-controls]');
       const isInMobileTimeline = target.closest('[data-mobile-timeline]');
       const isInHeader = target.closest('header');
-      const isInChordWheel = target.closest('[data-chord-wheel]');
+      const isInWheelBackground = target.closest('[data-wheel-background]');
+      const isInHelpButton = target.closest('button');
 
-      // Toggle header/footer only when touching the black background behind the wheel
-      if (!isInChordDetails && !isInPlaybackControls && !isInMobileTimeline && !isInHeader && !isInChordWheel) {
+      // Check if we're touching an interactive element within the chord wheel
+      // (path elements are the wheel segments, circle elements are center/buttons, g elements with cursor-pointer are controls)
+      const isInteractiveWheelElement =
+        target.tagName === 'path' ||
+        target.tagName === 'circle' ||
+        target.tagName === 'text' ||
+        target.tagName === 'polygon' ||
+        (target.tagName === 'g' && target.style.cursor === 'pointer') ||
+        target.closest('g[style*="cursor: pointer"]') ||
+        target.closest('g[class*="cursor-pointer"]');
+
+      // In portrait mode with chord panel open, disable toggle so user can scroll the theory section
+      const isPortraitWithPanel = !isLandscape && useSongStore.getState().chordPanelVisible;
+
+      // Toggle header/footer when touching the wheel background area
+      // but NOT when touching interactive wheel elements, buttons, or other UI elements
+      // Also skip when in portrait mode with chord panel open (user needs to scroll)
+      if (isInWheelBackground && !isInChordDetails && !isInPlaybackControls && !isInMobileTimeline && !isInHeader && !isInHelpButton && !isInteractiveWheelElement && !isPortraitWithPanel) {
         setMobileImmersive(prev => !prev);
         // Reset the auto-immersive timer
         if (immersiveTimeoutRef.current) {
@@ -199,6 +221,34 @@ function App() {
     };
   }, []);
 
+  // Listen for custom event from store's openTimeline action to open mobile timeline
+  useEffect(() => {
+    if (!isMobile) return;
+
+    const handleOpenMobileTimeline = () => {
+      setMobileTimelineOpen(true);
+    };
+
+    window.addEventListener('openMobileTimeline', handleOpenMobileTimeline);
+    return () => window.removeEventListener('openMobileTimeline', handleOpenMobileTimeline);
+  }, [isMobile]);
+
+  // Keep store's timelineVisible in sync with mobileTimelineOpen
+  // This ensures components checking timelineVisible get the correct value on mobile
+  useEffect(() => {
+    if (!isMobile) return;
+
+    const store = useSongStore.getState();
+    // Sync store state to match mobile timeline open state
+    if (mobileTimelineOpen && !store.timelineVisible) {
+      // Mobile timeline just opened - mark store as visible (but don't dispatch event again)
+      useSongStore.setState({ timelineVisible: true });
+    } else if (!mobileTimelineOpen && store.timelineVisible) {
+      // Mobile timeline just closed - mark store as NOT visible
+      useSongStore.setState({ timelineVisible: false });
+    }
+  }, [isMobile, mobileTimelineOpen]);
+
 
   useEffect(() => {
     const updateLayout = () => {
@@ -206,7 +256,7 @@ function App() {
       const height = window.innerHeight;
       // Mobile: traditional width check OR landscape phone (height < 500 means phone in landscape)
       const mobile = width < 768 || (height < 500 && height < width);
-      // Landscape: height < width AND height indicates phone (< 500px)
+      // Landscape: height < width AND height indicates phone (<500px)
       const landscape = height < width && height < 500;
 
       setIsMobile(mobile);
@@ -216,6 +266,13 @@ function App() {
       if (mobile && landscape) {
         const containerWidth = Math.max(200, Math.floor(width * 0.33));
         setLandscapeWheelWidth(containerWidth);
+      }
+
+      // For desktop/tablet, compute wheel size via JS for reliable cross-browser support
+      if (!mobile) {
+        const maxFromWidth = width - 400;  // Leave room for sidebar
+        const maxFromHeight = height - 300; // Leave room for header, timeline, footer
+        setComputedWheelSize(Math.max(300, Math.min(maxFromWidth, maxFromHeight)));
       }
 
       // Initialize mobile settings on first load
@@ -303,11 +360,19 @@ function App() {
       }
 
       if (isLandscape) {
-        // Landscape view: heavy zoom to maximize highlighted chord visibility
-        setWheelZoom(1.85); // Increased ~15% from 1.6
-        setWheelZoomOrigin(42);
-        // Shift left to center the highlighted chords better
-        setWheelPanOffset({ x: -40, y: 0 });
+        // Landscape view: zoom to show all highlighted chords without cutting them off
+        // Calculate zoom based on available container height for cross-browser consistency
+        const viewportHeight = window.innerHeight;
+        // Use viewport height as the basis for zoom calculation
+        // Goal: fit all highlighted chords (right half of wheel) within the visible area
+        // At 400px height, use 1.65 zoom; scale proportionally for other heights
+        const baseZoom = 1.65;
+        const heightFactor = Math.max(0.9, Math.min(1.1, viewportHeight / 400));
+        const calculatedZoom = baseZoom * heightFactor;
+        setWheelZoom(calculatedZoom);
+        setWheelZoomOrigin(48);
+        // Shift left to center the highlighted chords
+        setWheelPanOffset({ x: -35, y: 0 });
       } else {
         // Portrait with panel: zoomed & positioned to show highlighted chords above panel
         // Reduced zoom by ~5% (from 1.5 to 1.42) and shifted up more to prevent bottom chords
@@ -357,6 +422,10 @@ function App() {
   useEffect(() => {
     const startAudio = async () => {
       try {
+        // Start the silent audio element first - critical for iOS ringer switch workaround
+        // This must happen BEFORE Tone.js starts
+        startSilentAudioForIOS();
+
         await Tone.start();
         await initAudio();
         setAudioReady(true);
@@ -365,9 +434,11 @@ function App() {
       }
     };
 
-    // Start on any user interaction
-    const handleInteraction = () => {
+    // Start on any user interaction - MUST be in the gesture handler for iOS
+    const handleInteraction = async () => {
       if (!audioReady) {
+        // Unlock iOS audio first (this also starts silent audio if not started)
+        await unlockAudioForIOS();
         startAudio();
       }
     };
@@ -529,62 +600,72 @@ function App() {
     }
   };
 
-  // Handle resize drag
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    setIsResizing(true);
-  }, []);
-
-  useEffect(() => {
-    if (!isResizing) return;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      // Calculate new height from bottom of viewport
-      const footerHeight = 56; // playback controls height (h-14 = 56px)
-      const newHeight = window.innerHeight - e.clientY - footerHeight;
-      // Clamp between min and max
-      setTimelineHeight(Math.max(100, Math.min(350, newHeight)));
-    };
-
-    const handleMouseUp = () => {
-      setIsResizing(false);
-    };
-
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [isResizing]);
+  // Fixed timeline height - compact design matching mobile aesthetic
+  // Header bar (~32px) + content area (~120px) = ~152px
+  // This ensures the timeline is fully visible above the footer
+  const timelineHeight = 152;
 
   const handleExport = () => {
     const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const leftMargin = 20;
+    const measuresPerRow = 4; // Wrap after 4 measures
 
-    doc.setFontSize(24);
+    // Calculate song stats (same as Song Map)
+    const totalBeats = currentSong.sections.reduce((acc, section) => {
+      const sectionTimeSignature = section.timeSignature || currentSong.timeSignature;
+      const beatsPerMeasure = sectionTimeSignature[0];
+      return acc + (section.measures.length * beatsPerMeasure);
+    }, 0);
+    const durationSeconds = (totalBeats / currentSong.tempo) * 60;
+    const durationMinutes = Math.floor(durationSeconds / 60);
+    const durationRemainingSeconds = Math.floor(durationSeconds % 60);
+    const formattedDuration = `${durationMinutes}:${durationRemainingSeconds.toString().padStart(2, '0')}`;
+    const totalMeasures = currentSong.sections.reduce((acc, s) => acc + s.measures.length, 0);
+    const totalSections = currentSong.sections.length;
+
+    // === HEADER ===
+    // Title
+    doc.setFontSize(22);
     doc.setFont("helvetica", "bold");
-    doc.text(currentSong.title, 20, 20);
+    doc.setTextColor(0, 0, 0);
+    doc.text(currentSong.title, leftMargin, 18);
 
-    doc.setFontSize(12);
+    // Horizontal line under title
+    doc.setDrawColor(0, 0, 0);
+    doc.setLineWidth(0.5);
+    doc.line(leftMargin, 22, pageWidth - leftMargin, 22);
+
+    // Song info row: Key | Tempo | Duration | Sections | Bars
+    doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
-    doc.text(`Key: ${formatChordForDisplay(selectedKey)} | Tempo: ${currentSong.tempo} BPM`, 20, 30);
+    const infoItems = [
+      `Key: ${formatChordForDisplay(selectedKey)}`,
+      `Tempo: ${currentSong.tempo} BPM`,
+      `Duration: ${formattedDuration}`,
+      `${totalSections} sections`,
+      `${totalMeasures} bars`
+    ];
+    doc.text(infoItems.join('   •   '), leftMargin, 30);
 
-    let y = 50;
+    let y = 42;
 
     // Collect unique chords for diagram section
     const uniqueChords: Set<string> = new Set();
 
     currentSong.sections.forEach(section => {
-      if (y > 270) {
+      // Check if we need a new page (with some buffer for wrapped measures)
+      if (y > 260) {
         doc.addPage();
         y = 20;
       }
 
-      doc.setFontSize(14);
+      // Section header
+      doc.setFontSize(12);
       doc.setFont("helvetica", "bold");
-      doc.text(`[${section.name}]`, 20, y);
-      y += 10;
+      doc.setTextColor(0, 0, 0);
+      doc.text(`[${section.name}]`, leftMargin, y);
+      y += 8;
 
       // Build rhythm notation for each measure
       const measureNotations = section.measures.map(measure => {
@@ -594,7 +675,6 @@ function App() {
         measure.beats.forEach(beat => {
           if (beat.chord) {
             const root = beat.chord.root;
-            // Map full quality names to short names used by guitarChordData
             const qualityMap: Record<string, string> = {
               'major': 'maj',
               'minor': 'm',
@@ -613,51 +693,65 @@ function App() {
         });
 
         if (beatCount === 1) {
-          // Whole note: "C — — —"
           const chord = measure.beats[0]?.chord?.symbol || '—';
-          return `${chord} — — —`;
+          return chord;
         } else if (beatCount === 2) {
-          // Half notes: "C — D —"
-          return measure.beats.map(beat => {
-            const chord = beat.chord?.symbol || '—';
-            return `${chord} —`;
-          }).join(' ');
+          return measure.beats.map(beat => beat.chord?.symbol || '—').join(' ');
         } else {
-          // Quarter notes (4 beats) or other: just chord symbols
           return measure.beats.map(beat => beat.chord?.symbol || '—').join(' ');
         }
       });
 
-      const chordLine = measureNotations.join('  |  ');
-
-      doc.setFontSize(12);
+      // Wrap measures into rows of 4
+      doc.setFontSize(11);
       doc.setFont("helvetica", "normal");
-      doc.text(chordLine || '(No chords)', 20, y);
-      y += 15;
+
+      if (measureNotations.length === 0) {
+        doc.text('(No chords)', leftMargin, y);
+        y += 10;
+      } else {
+        for (let i = 0; i < measureNotations.length; i += measuresPerRow) {
+          if (y > 275) {
+            doc.addPage();
+            y = 20;
+          }
+
+          const rowMeasures = measureNotations.slice(i, i + measuresPerRow);
+          const rowText = rowMeasures.join('  |  ');
+
+          // Add continuation indicator if not first row
+          const prefix = i > 0 ? '    ' : '';
+          doc.text(prefix + rowText, leftMargin, y);
+          y += 8;
+        }
+      }
+
+      y += 6; // Space between sections
     });
 
-    // Draw chord diagrams on right margin
+    // === CHORD DIAGRAMS ===
     if (uniqueChords.size > 0) {
       const chordArray = Array.from(uniqueChords);
-      const maxHeightAvailable = 245; // Available height on page (280 - 35 for header)
-      const diagramSpacing = 5; // Extra spacing between diagrams
+      const maxHeightAvailable = 245;
+      const diagramSpacing = 5;
 
-      // Calculate if we need two columns
-      const singleColumnHeight = 22; // Height per diagram in single column
+      const singleColumnHeight = 22;
       const totalSingleColumnHeight = chordArray.length * (singleColumnHeight + diagramSpacing);
       const needsTwoColumns = totalSingleColumnHeight > maxHeightAvailable;
 
-      // Adjust sizing based on column mode
-      const diagramHeight = needsTwoColumns ? 18 : 22; // Smaller when two columns
+      const diagramHeight = needsTwoColumns ? 18 : 22;
       const diagramWidth = needsTwoColumns ? 18 : 20;
       const columnWidth = needsTwoColumns ? 22 : 25;
-      const diagramStartX = needsTwoColumns ? 155 : 170; // Move left for two columns
+      const diagramStartX = needsTwoColumns ? 155 : 170;
 
       let currentColumn = 0;
-      let diagramY = 35; // Start below header
+      let diagramY = 35;
       const chordsPerColumn = needsTwoColumns
         ? Math.ceil(chordArray.length / 2)
         : chordArray.length;
+
+      // Go back to first page for chord diagrams
+      doc.setPage(1);
 
       chordArray.forEach((chordKey, index) => {
         const [root, quality] = chordKey.split('|');
@@ -665,7 +759,6 @@ function App() {
 
         if (!chord) return;
 
-        // Switch to second column if needed
         if (needsTwoColumns && index === chordsPerColumn) {
           currentColumn = 1;
           diagramY = 35;
@@ -673,14 +766,12 @@ function App() {
 
         const xOffset = currentColumn * columnWidth;
 
-        // Draw chord name
         const chordName = `${root}${quality === 'maj' ? '' : quality}`;
         doc.setFontSize(needsTwoColumns ? 6 : 7);
         doc.setFont("helvetica", "bold");
         doc.setTextColor(0, 0, 0);
         doc.text(chordName, diagramStartX + xOffset + diagramWidth / 2 + 2, diagramY, { align: 'center' });
 
-        // Draw chord diagram
         drawChordDiagram(doc, chord, diagramStartX + xOffset, diagramY + 3, needsTwoColumns);
 
         diagramY += diagramHeight + diagramSpacing;
@@ -690,9 +781,21 @@ function App() {
     // Generate filename
     const fileName = `${currentSong.title.replace(/\s+/g, '-').toLowerCase()}.pdf`;
 
-    // Use file-saver library for reliable cross-browser downloads
+    // On mobile, open in new tab to avoid navigating away from chord wheel
+    // On desktop, download as file
     const pdfBlob = doc.output('blob');
-    saveAs(pdfBlob, fileName);
+    const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+    if (isMobileDevice) {
+      // Open in new tab on mobile
+      const pdfUrl = URL.createObjectURL(pdfBlob);
+      window.open(pdfUrl, '_blank');
+      // Clean up the URL after a delay
+      setTimeout(() => URL.revokeObjectURL(pdfUrl), 10000);
+    } else {
+      // Download on desktop
+      saveAs(pdfBlob, fileName);
+    }
   };
 
   // Helper function to draw a chord diagram using jsPDF primitives (black & white, compact)
@@ -789,8 +892,6 @@ function App() {
       doc.circle(x, dotY, dotRadius, 'F');
     });
   };
-
-  const timelineContentHeight = Math.max(80, timelineHeight - 42);
 
   return (
     <div className="h-full w-full flex flex-col bg-bg-primary text-text-primary overflow-hidden">
@@ -931,6 +1032,7 @@ function App() {
       <div className={`flex-1 flex ${isMobile ? (isLandscape ? 'flex-row' : 'flex-col') : 'flex-row'} overflow-hidden min-h-0`}>
         {/* Left/Top: Wheel - in landscape, fixed width for wheel area */}
         <div
+          data-wheel-background
           className={`flex flex-col min-w-0 min-h-0 bg-gradient-to-b from-bg-primary to-bg-secondary/30 ${isMobile && isLandscape ? 'shrink-0' : 'flex-1'} ${isMobile ? 'overflow-hidden' : ''} relative`}
           style={isMobile && isLandscape ? {
             // Fixed width from state - ensures reactivity and proper initial render
@@ -941,26 +1043,26 @@ function App() {
         >
           {/* Wheel Area */}
           <div className={`flex-1 flex flex-col ${isMobile && !isLandscape ? 'justify-center' : isMobile && isLandscape ? 'justify-center items-center' : 'justify-start items-center pt-2'} ${isMobile ? 'overflow-hidden' : 'overflow-visible'}`}>
-            {/* Zoom toolbar - show on desktop only, hide on all mobile views */}
+            {/* Zoom toolbar - show on desktop only, ultra-compact sleek design */}
             {!isMobile ? (
-              <div className={`flex justify-end px-3 py-1 md:py-0.5 shrink-0 w-full`}>
-                <div className={`flex items-center gap-1 bg-bg-secondary/80 backdrop-blur-sm rounded-full px-2 py-1 border border-border-subtle shadow-lg`}>
+              <div className="flex justify-end px-2 shrink-0 w-full">
+                <div className="flex items-center bg-bg-secondary/60 backdrop-blur-sm rounded-full px-0.5 border border-border-subtle/40">
                   <button
                     onClick={handleZoomOut}
                     disabled={wheelZoom <= 0.2}
-                    className={`w-6 h-6 flex items-center justify-center hover:bg-bg-tertiary disabled:opacity-30 disabled:cursor-not-allowed rounded-full text-text-muted hover:text-text-primary transition-colors touch-feedback active:scale-95`}
+                    className="no-touch-enlarge w-4 h-4 flex items-center justify-center hover:bg-bg-tertiary disabled:opacity-30 disabled:cursor-not-allowed rounded-full text-text-muted hover:text-text-primary transition-colors"
                     title="Zoom out"
                   >
-                    <Minus size={12} />
+                    <Minus size={8} />
                   </button>
-                  <span className={`text-[9px] w-8 text-text-muted text-center font-medium`}>{Math.round(wheelZoom * 100)}%</span>
+                  <span className="text-[7px] w-5 text-text-muted text-center font-medium">{Math.round(wheelZoom * 100)}%</span>
                   <button
                     onClick={handleZoomIn}
                     disabled={wheelZoom >= 2.5}
-                    className={`w-6 h-6 flex items-center justify-center hover:bg-bg-tertiary disabled:opacity-30 disabled:cursor-not-allowed rounded-full text-text-muted hover:text-text-primary transition-colors touch-feedback active:scale-95`}
+                    className="no-touch-enlarge w-4 h-4 flex items-center justify-center hover:bg-bg-tertiary disabled:opacity-30 disabled:cursor-not-allowed rounded-full text-text-muted hover:text-text-primary transition-colors"
                     title="Zoom in"
                   >
-                    <Plus size={12} />
+                    <Plus size={8} />
                   </button>
                 </div>
               </div>
@@ -972,27 +1074,36 @@ function App() {
             >
               <div
                 className="relative flex items-center justify-center"
-                style={{
-                  // All modes: set explicit width/height so aspectRatio can work
-                  // Without explicit dimensions, aspectRatio has nothing to calculate from
-                  width: '100%',
-                  height: isMobile && isLandscape ? 'auto' : '100%',
-                  maxWidth: isMobile && isLandscape
-                    ? '100%'
-                    : isMobile && !isLandscape && mobileImmersive
-                      ? 'min(100vw - 8px, 55dvh)'
-                      : isMobile && !isLandscape
-                        ? 'min(100vw - 16px, 85dvh)'  // Mobile portrait non-immersive: fill width
-                        : '100%',  // Desktop: fill container width
-                  maxHeight: isMobile && isLandscape
-                    ? '100%'
-                    : isMobile && !isLandscape && mobileImmersive
-                      ? 'min(100vw - 8px, 55dvh)'
-                      : isMobile && !isLandscape
-                        ? 'min(100vw - 16px, 85dvh)'  // Mobile portrait non-immersive: fill width
-                        : '100%',  // Desktop: fill container height
-                  aspectRatio: '1 / 1',
-                }}
+                style={
+                  isMobile && isLandscape
+                    ? {
+                      // Mobile landscape: use explicit height based on viewport to avoid Safari issues
+                      // The wheel should be square and fit within the full height (minus small padding for footer)
+                      width: 'calc(100dvh - 60px)',
+                      height: 'calc(100dvh - 60px)',
+                      maxWidth: '100%',
+                      maxHeight: '100%',
+                      aspectRatio: '1 / 1',
+                    }
+                    : isMobile && !isLandscape
+                      ? {
+                        // Mobile portrait: constrain to viewport
+                        width: mobileImmersive ? 'min(calc(100vw - 8px), 55dvh)' : 'min(calc(100vw - 16px), 85dvh)',
+                        height: mobileImmersive ? 'min(calc(100vw - 8px), 55dvh)' : 'min(calc(100vw - 16px), 85dvh)',
+                        maxWidth: mobileImmersive ? 'min(calc(100vw - 8px), 55dvh)' : 'min(calc(100vw - 16px), 85dvh)',
+                        maxHeight: mobileImmersive ? 'min(calc(100vw - 8px), 55dvh)' : 'min(calc(100vw - 16px), 85dvh)',
+                        aspectRatio: '1 / 1',
+                      }
+                      : {
+                        // Desktop/tablet: use JS-computed size for reliable cross-browser support
+                        // This avoids Safari issues with CSS calc() in flex layouts
+                        width: `${computedWheelSize}px`,
+                        height: `${computedWheelSize}px`,
+                        minWidth: '300px',  // Fallback minimum
+                        minHeight: '300px',
+                        aspectRatio: '1 / 1',
+                      }
+                }
               >
                 <ChordWheel
                   zoomScale={wheelZoom}
@@ -1024,64 +1135,34 @@ function App() {
             </button>
           )}
 
-          {/* Desktop: Timeline section (mobile landscape shows timeline on right side only) */}
+          {/* Desktop: Timeline section - mobile-inspired aesthetic with horizontal section tabs */}
           {!isMobile ? (
             timelineVisible ? (
               <>
-                {/* Resize Handle with hide button */}
+                {/* Timeline - compact fixed height with mobile-inspired design */}
                 <div
-                  className={`bg-bg-secondary border-t border-border-subtle flex items-center justify-center group transition-colors ${isResizing ? 'bg-accent-primary/20' : ''}`}
-                  style={{ height: '16px' }}
-                >
-                  <div
-                    className="flex-1 h-full cursor-ns-resize flex items-center justify-center hover:bg-bg-tertiary transition-colors"
-                    onMouseDown={handleMouseDown}
-                  >
-                    <GripHorizontal size={10} className="text-text-muted group-hover:text-text-secondary" />
-                  </div>
-                </div>
-
-                {/* Timeline - resizable height */}
-                <div
-                  className="shrink-0 bg-bg-secondary overflow-hidden flex flex-col"
+                  className="shrink-0 bg-bg-secondary border-t border-border-subtle overflow-hidden flex flex-col"
                   style={{ height: timelineHeight }}
                 >
-                  <div className="shrink-0 flex items-center justify-between px-3 border-b border-border-subtle bg-bg-secondary/90 backdrop-blur-sm" style={{ paddingTop: '4px', paddingBottom: '4px' }}>
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-2 text-[10px] text-text-muted">
-                        <span className="uppercase font-bold tracking-wider text-[9px]">Scale</span>
-                        <input
-                          type="range"
-                          min={0.01}
-                          max={1.6}
-                          step={0.01}
-                          value={timelineScale}
-                          onChange={(e) => setTimelineScale(parseFloat(e.target.value))}
-                          className="w-32"
-                          style={{ accentColor: '#8b5cf6' }}
-                          aria-label="Timeline scale"
-                        />
-                        <span className="text-[10px] text-text-secondary w-12 text-right">{Math.round(timelineScale * 100)}%</span>
-                      </div>
-
-                      <div className="flex items-center gap-1">
+                  {/* Mini toolbar - ultra compact */}
+                  <div className="shrink-0 flex items-center justify-between px-2 py-0.5 border-b border-border-subtle/50 bg-bg-elevated/80">
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-0.5">
                         <button
                           onClick={undo}
                           disabled={!canUndo}
-                          className={`flex items-center gap-1 ${isMobile ? 'text-xs px-3 py-2 min-h-[44px]' : 'text-[10px] px-2 py-1'} rounded bg-bg-tertiary/60 hover:bg-bg-tertiary text-text-muted hover:text-text-primary disabled:opacity-40 disabled:cursor-not-allowed border border-border-subtle touch-feedback`}
+                          className="no-touch-enlarge flex items-center justify-center w-4 h-4 rounded bg-bg-tertiary/40 hover:bg-bg-tertiary text-text-muted hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed"
                           title="Undo (⌘Z)"
                         >
-                          <RotateCcw size={isMobile ? 14 : 12} />
-                          <span className="uppercase font-bold tracking-wider">{isMobile ? '' : 'Undo'}</span>
+                          <RotateCcw size={8} />
                         </button>
                         <button
                           onClick={redo}
                           disabled={!canRedo}
-                          className={`flex items-center gap-1 ${isMobile ? 'text-xs px-3 py-2 min-h-[44px]' : 'text-[10px] px-2 py-1'} rounded bg-bg-tertiary/60 hover:bg-bg-tertiary text-text-muted hover:text-text-primary disabled:opacity-40 disabled:cursor-not-allowed border border-border-subtle touch-feedback`}
+                          className="no-touch-enlarge flex items-center justify-center w-4 h-4 rounded bg-bg-tertiary/40 hover:bg-bg-tertiary text-text-muted hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed"
                           title="Redo (⇧⌘Z)"
                         >
-                          <RotateCw size={isMobile ? 14 : 12} />
-                          <span className="uppercase font-bold tracking-wider">{isMobile ? '' : 'Redo'}</span>
+                          <RotateCw size={8} />
                         </button>
                       </div>
                     </div>
@@ -1097,36 +1178,37 @@ function App() {
                             onConfirm: clearTimeline
                           });
                         }}
-                        className={`${isMobile ? 'text-xs min-h-[44px] px-3' : 'text-[10px] px-2 py-1'} text-text-muted hover:text-red-400 rounded hover:bg-red-400/10 transition-colors flex items-center gap-1 touch-feedback`}
+                        className="no-touch-enlarge text-[8px] px-1 py-0.5 text-text-muted hover:text-red-400 rounded hover:bg-red-400/10 transition-colors flex items-center gap-0.5"
                         title="Clear all chords from timeline"
                       >
-                        <Trash2 size={isMobile ? 14 : 12} />
+                        <Trash2 size={8} />
                         <span className="uppercase tracking-wider font-bold">Clear</span>
                       </button>
                       <button
                         onClick={toggleTimeline}
-                        className={`${isMobile ? 'text-xs min-h-[44px] px-3' : 'text-[10px] px-2 py-1'} text-text-muted hover:text-text-primary rounded hover:bg-bg-tertiary transition-colors flex items-center gap-1 touch-feedback`}
+                        className="no-touch-enlarge text-[8px] px-1 py-0.5 text-text-muted hover:text-text-primary rounded hover:bg-bg-tertiary transition-colors flex items-center gap-0.5"
                         title="Hide timeline"
                       >
-                        <ChevronDown size={isMobile ? 14 : 12} />
+                        <ChevronDown size={8} />
                         <span className="uppercase tracking-wider font-bold">Hide</span>
                       </button>
                     </div>
                   </div>
+                  {/* Timeline content - uses mobile timeline component for consistent aesthetic */}
                   <div className="flex-1 min-h-0 overflow-hidden">
-                    <Timeline height={timelineContentHeight} scale={timelineScale} />
+                    <MobileTimeline isOpen={true} onToggle={toggleTimeline} hideCloseButton={true} isCompact={false} isLandscape={false} />
                   </div>
                 </div>
               </>
             ) : (
-              /* Collapsed timeline - just a thin bar with show button */
-              <div className={`${isMobile ? 'h-12' : 'h-7'} bg-bg-secondary border-t border-border-subtle flex items-center justify-center shrink-0`}>
+              /* Collapsed timeline - thin bar with show button */
+              <div className="h-6 bg-bg-secondary border-t border-border-subtle flex items-center justify-center shrink-0">
                 <button
                   onClick={toggleTimeline}
-                  className={`${isMobile ? 'px-4 min-h-[48px]' : 'px-3 h-full'} flex items-center gap-1 ${isMobile ? 'text-xs' : 'text-[9px]'} text-text-muted hover:text-text-primary hover:bg-bg-tertiary transition-colors touch-feedback`}
+                  className="px-3 h-full flex items-center gap-1 text-[8px] text-text-muted hover:text-text-primary hover:bg-bg-tertiary transition-colors"
                   title="Show timeline"
                 >
-                  <ChevronUp size={isMobile ? 14 : 12} />
+                  <ChevronUp size={10} />
                   <span className="uppercase tracking-wider font-bold">Timeline</span>
                 </button>
               </div>

@@ -171,6 +171,7 @@ interface SongState {
     newSong: () => void;
     addSection: (type: Section['type']) => void;
     addSuggestedSection: () => void; // Add a section with an intelligently suggested type
+    addCustomSection: (name: string, type: Section['type'], chords: Chord[], options?: { beatsPerChord?: number; totalBars?: number }) => void; // Add a section with pre-filled chords
     getSuggestedSectionType: () => Section['type']; // Get the suggested type for next section
     updateSection: (id: string, updates: Partial<Section>) => void;
     removeSection: (id: string) => void;
@@ -180,6 +181,7 @@ interface SongState {
     setSectionMeasures: (id: string, count: number) => void;
     setSectionTimeSignature: (id: string, signature: [number, number]) => void;
     setMeasureSubdivision: (sectionId: string, measureId: string, steps: number) => void;
+    setSectionSubdivision: (sectionId: string, steps: number) => void;
 
     addChordToSlot: (chord: Chord, sectionId: string, slotId: string) => void;
     clearSlot: (sectionId: string, slotId: string) => void;
@@ -460,7 +462,29 @@ export const useSongStore = create<SongState>()(
 
             toggleChordPanel: () => set((state) => ({ chordPanelVisible: !state.chordPanelVisible })),
             toggleTimeline: () => set((state) => ({ timelineVisible: !state.timelineVisible })),
-            openTimeline: () => set({ timelineVisible: true }),
+            openTimeline: () => set((state) => {
+                // Dispatch custom event for mobile to open its timeline drawer
+                if (typeof window !== 'undefined') {
+                    window.dispatchEvent(new CustomEvent('openMobileTimeline'));
+                }
+
+                // Open timeline and ensure a slot is selected so it has a place to center
+                if (!state.selectedSectionId || !state.selectedSlotId) {
+                    // Select first slot of first section if nothing selected
+                    const firstSection = state.currentSong.sections[0];
+                    const firstBeat = firstSection?.measures[0]?.beats[0];
+                    if (firstSection && firstBeat) {
+                        return {
+                            timelineVisible: true,
+                            selectedSectionId: firstSection.id,
+                            selectedSlotId: firstBeat.id,
+                            selectedSlots: [{ sectionId: firstSection.id, slotId: firstBeat.id }],
+                            selectionAnchor: { sectionId: firstSection.id, slotId: firstBeat.id }
+                        };
+                    }
+                }
+                return { timelineVisible: true };
+            }),
             toggleSongMap: (force?: boolean) => set((state) => ({
                 songMapVisible: force !== undefined ? force : !state.songMapVisible
             })),
@@ -898,6 +922,79 @@ export const useSongStore = create<SongState>()(
                 };
             }),
 
+            addCustomSection: (name, type, chords, options) => set((state) => {
+                const timeSignature = state.currentSong.timeSignature || DEFAULT_TIME_SIGNATURE;
+                const beatsPerBar = beatsFromSignature(timeSignature); // Usually 4
+                const beatsPerChord = options?.beatsPerChord ?? 4; // Default to whole notes (4 beats = 1 bar)
+
+                // Calculate how many chords fit per bar
+                const chordsPerBar = beatsPerBar / beatsPerChord;
+
+                // Calculate total bars needed
+                let totalBars: number;
+                if (options?.totalBars) {
+                    totalBars = options.totalBars;
+                } else if (chordsPerBar >= 1) {
+                    // Multiple chords per bar (e.g., Pachelbel with 2 chords per bar)
+                    totalBars = Math.ceil(chords.length / chordsPerBar);
+                } else {
+                    // Each chord takes multiple bars
+                    totalBars = chords.length * Math.ceil(1 / chordsPerBar);
+                }
+
+                // Create measures based on rhythm
+                const measures: Measure[] = [];
+
+                if (chordsPerBar >= 1) {
+                    // Multiple chords per bar: create measures with multiple beats
+                    for (let barIndex = 0; barIndex < totalBars; barIndex++) {
+                        const beats = [];
+                        for (let beatIndex = 0; beatIndex < chordsPerBar; beatIndex++) {
+                            const chordIndex = Math.floor(barIndex * chordsPerBar + beatIndex);
+                            beats.push({
+                                id: uuidv4(),
+                                chord: chords[chordIndex] || null,
+                                duration: beatsPerChord
+                            });
+                        }
+                        measures.push({
+                            id: uuidv4(),
+                            beats
+                        });
+                    }
+                } else {
+                    // Each chord spans one bar (simple case)
+                    for (let i = 0; i < totalBars; i++) {
+                        measures.push({
+                            id: uuidv4(),
+                            beats: [{
+                                id: uuidv4(),
+                                chord: chords[i] || null,
+                                duration: beatsPerBar
+                            }]
+                        });
+                    }
+                }
+
+                const newSection: Section = {
+                    id: uuidv4(),
+                    name,
+                    type,
+                    timeSignature,
+                    measures
+                };
+
+                const history = buildHistoryState(state);
+
+                return {
+                    ...history,
+                    currentSong: {
+                        ...state.currentSong,
+                        sections: [...state.currentSong.sections, newSection]
+                    }
+                };
+            }),
+
             getSuggestedSectionType: () => {
                 const state = useSongStore.getState();
                 return suggestNextSectionType(state.currentSong.sections);
@@ -1090,6 +1187,49 @@ export const useSongStore = create<SongState>()(
                             if (measure.id !== measureId) return measure;
 
                             const beatDuration = totalBeats / targetSteps;
+                            const nextBeats = Array.from({ length: targetSteps }).map((_, idx) => {
+                                const existing = measure.beats[idx];
+                                return {
+                                    id: existing?.id ?? uuidv4(),
+                                    chord: existing?.chord ?? null,
+                                    duration: beatDuration,
+                                };
+                            });
+
+                            return { ...measure, beats: nextBeats };
+                        }),
+                    };
+                });
+
+                const selection = ensureSelectionStillExists(
+                    newSections,
+                    state.selectedSectionId,
+                    state.selectedSlotId,
+                    state.selectedSlots,
+                    state.selectionAnchor
+                );
+
+                const history = buildHistoryState(state);
+
+                return {
+                    ...history,
+                    currentSong: { ...state.currentSong, sections: newSections },
+                    ...selection,
+                };
+            }),
+
+            setSectionSubdivision: (sectionId, steps) => set((state) => {
+                const targetSteps = Math.max(1, Math.min(16, Math.round(steps)));
+
+                const newSections = state.currentSong.sections.map((section) => {
+                    if (section.id !== sectionId) return section;
+                    const signature = section.timeSignature || state.currentSong.timeSignature || DEFAULT_TIME_SIGNATURE;
+                    const totalBeats = beatsFromSignature(signature);
+                    const beatDuration = totalBeats / targetSteps;
+
+                    return {
+                        ...section,
+                        measures: section.measures.map((measure) => {
                             const nextBeats = Array.from({ length: targetSteps }).map((_, idx) => {
                                 const existing = measure.beats[idx];
                                 return {

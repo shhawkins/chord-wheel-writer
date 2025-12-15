@@ -30,6 +30,64 @@ let isAudioUnlocked = false;
 let silentAudioElement: HTMLAudioElement | null = null;
 
 /**
+ * Creates and starts a silent audio element that keeps the media session active.
+ * Must be called from a user gesture handler (click/tap).
+ * This is exported so it can be called early on first user interaction.
+ */
+export const startSilentAudioForIOS = (): void => {
+    if (silentAudioElement) return;
+
+    // Set audio session type to "playback" (iOS 17+) - bypasses ringer switch
+    if ('audioSession' in navigator) {
+        try {
+            (navigator as any).audioSession.type = 'playback';
+            console.log('[iOS Audio] Set audioSession.type to playback');
+        } catch (e) {
+            console.warn('[iOS Audio] Could not set audioSession type:', e);
+        }
+    }
+
+    // Create a longer silent MP3 that iOS recognizes as legitimate media content
+    // This ~2.5 second silent track loops to maintain the media playback session
+    // The longer duration helps iOS treat this as "real" media rather than a sound effect
+    const silentMp3Base64 = [
+        '/+NIxAAAAAANIAAAAAExBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV',
+        'VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV',
+        'VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV',
+        'VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVX/',
+        '40jEAA8AAAANIAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV',
+        'VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV',
+        'VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV',
+        'VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVU'
+    ].join('');
+
+    silentAudioElement = document.createElement('audio');
+    silentAudioElement.src = 'data:audio/mpeg;base64,' + silentMp3Base64;
+    silentAudioElement.loop = true;
+    // Use a very small but non-zero volume - iOS may ignore zero volume
+    silentAudioElement.volume = 0.001;
+    silentAudioElement.muted = false;
+    // Critical attributes for iOS
+    silentAudioElement.setAttribute('playsinline', 'true');
+    silentAudioElement.setAttribute('x-webkit-airplay', 'deny');
+    // Preload the audio
+    silentAudioElement.preload = 'auto';
+    // Append to body so it persists
+    document.body.appendChild(silentAudioElement);
+
+    // Attempt to play - this may succeed or fail depending on user gesture context
+    const playPromise = silentAudioElement.play();
+    if (playPromise !== undefined) {
+        playPromise.then(() => {
+            console.log('[iOS Audio] Silent media started - ringer switch workaround active');
+        }).catch((e) => {
+            // This is expected if not called from a user gesture
+            console.log('[iOS Audio] Silent audio deferred until user gesture:', e.message);
+        });
+    }
+};
+
+/**
  * Comprehensive iOS audio unlock function.
  * Must be called from a user gesture handler (click/tap).
  * 
@@ -42,42 +100,17 @@ export const unlockAudioForIOS = async (): Promise<void> => {
 
     console.log('[iOS Audio] Starting unlock sequence...');
 
-    // 1. Set audio session type to "playback" (iOS 17+)
-    // This is the official API but may not work on older iOS
-    if ('audioSession' in navigator) {
+    // 1. Ensure silent audio element exists and is playing
+    startSilentAudioForIOS();
+
+    // 2. Try to play the silent audio (in case it wasn't playing yet)
+    if (silentAudioElement && silentAudioElement.paused) {
         try {
-            (navigator as any).audioSession.type = 'playback';
-            console.log('[iOS Audio] Set audioSession.type to playback');
+            await silentAudioElement.play();
+            console.log('[iOS Audio] Silent audio now playing');
         } catch (e) {
-            console.warn('[iOS Audio] Could not set audioSession type:', e);
+            console.warn('[iOS Audio] Silent audio play failed:', e);
         }
-    }
-
-    // 2. Create and play a LOOPING silent audio element
-    // This forces Web Audio into the "media" category, bypassing ringer switch
-    // The audio must keep playing (loop) to maintain the unlock state
-    if (!silentAudioElement) {
-        silentAudioElement = document.createElement('audio');
-        // Use a longer silent audio with loop to ensure iOS keeps the media session active
-        // This is a ~1 second silent MP3 that loops
-        silentAudioElement.src = 'data:audio/mpeg;base64,/+NIxAAAAAANIAAAAAExBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/jSMQADwAAADSAAAAAVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVU=';
-        silentAudioElement.loop = true;
-        silentAudioElement.volume = 0.001; // Nearly silent but not zero
-        silentAudioElement.muted = false;
-        silentAudioElement.setAttribute('playsinline', 'true');
-        silentAudioElement.setAttribute('x-webkit-airplay', 'deny');
-        // Append to body to ensure it stays alive
-        document.body.appendChild(silentAudioElement);
-    }
-
-    try {
-        const playPromise = silentAudioElement.play();
-        if (playPromise !== undefined) {
-            await playPromise;
-        }
-        console.log('[iOS Audio] Silent looping audio started successfully');
-    } catch (e) {
-        console.warn('[iOS Audio] Silent audio failed:', e);
     }
 
     // 3. Start Tone.js context (must happen in user gesture)

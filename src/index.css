@@ -132,10 +132,15 @@ body {
   html,
   body {
     overflow: hidden;
+    /* Use svh (small viewport height) for Safari on iPad/tablets - most reliable */
+    /* svh always gives the viewport without address bar, dvh changes dynamically */
+    height: 100vh;
+    height: 100svh;
   }
 
   #root {
-    height: 100%;
+    height: 100vh;
+    height: 100svh;
     overflow: hidden;
   }
 }
@@ -163,11 +168,12 @@ body {
 @supports (-webkit-touch-callout: none) {
 
   /* Better touch target sizes for iOS (min 44x44px) */
-  button,
-  a,
-  input[type="button"],
-  input[type="submit"],
-  .touch-target {
+  /* Exclude small buttons with .no-touch-enlarge class */
+  button:not(.no-touch-enlarge),
+  a:not(.no-touch-enlarge),
+  input[type="button"]:not(.no-touch-enlarge),
+  input[type="submit"]:not(.no-touch-enlarge),
+  .touch-target:not(.no-touch-enlarge) {
     min-height: 44px;
     min-width: 44px;
   }

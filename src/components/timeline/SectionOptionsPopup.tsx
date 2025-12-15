@@ -1,7 +1,9 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Copy, Eraser, Trash2, X } from 'lucide-react';
+import clsx from 'clsx';
 import type { Section } from '../../types';
+import { NoteIcon, getNoteType, getStepOptions } from './NoteValueSelector';
 
 interface SectionOptionsPopupProps {
     section: Section;
@@ -9,6 +11,7 @@ interface SectionOptionsPopupProps {
     onClose: () => void;
     onTimeSignatureChange: (value: string) => void;
     onBarsChange: (value: number) => void;
+    onStepCountChange?: (steps: number) => void;
     onNameChange?: (name: string, type: Section['type']) => void;
     onCopy: () => void;
     onClear: () => void;
@@ -43,6 +46,7 @@ export const SectionOptionsPopup: React.FC<SectionOptionsPopupProps> = ({
     onClose,
     onTimeSignatureChange,
     onBarsChange,
+    onStepCountChange,
     onNameChange,
     onCopy,
     onClear,
@@ -54,6 +58,10 @@ export const SectionOptionsPopup: React.FC<SectionOptionsPopupProps> = ({
     const sectionTimeSignature = section.timeSignature || songTimeSignature;
     const signatureValue = `${sectionTimeSignature[0]}/${sectionTimeSignature[1]}`;
     const measureCount = section.measures.length;
+
+    // Get current step count from first measure (they should all be the same after setSectionSubdivision)
+    const currentStepCount = section.measures[0]?.beats.length ?? 1;
+    const stepOptions = getStepOptions(sectionTimeSignature);
 
     // Track if we're editing a custom name
     const [isEditingCustom, setIsEditingCustom] = useState(false);
@@ -223,8 +231,8 @@ export const SectionOptionsPopup: React.FC<SectionOptionsPopupProps> = ({
                                 <select
                                     value={signatureValue}
                                     onChange={(e) => onTimeSignatureChange(e.target.value)}
-                                    className="w-full bg-bg-tertiary text-text-primary text-xs font-bold rounded-lg 
-                                               px-3 py-2 border border-border-subtle 
+                                    className="w-full h-8 bg-bg-tertiary text-text-primary text-xs font-bold rounded-lg 
+                                               px-3 border border-border-subtle 
                                                focus:outline-none focus:ring-1 focus:ring-accent-primary/50
                                                appearance-none cursor-pointer"
                                     style={{
@@ -277,6 +285,38 @@ export const SectionOptionsPopup: React.FC<SectionOptionsPopupProps> = ({
                             </div>
                         </div>
                     </div>
+
+                    {/* Step Count (Note Values) */}
+                    {onStepCountChange && (
+                        <div className="space-y-1.5">
+                            <label className="block text-center text-[10px] font-bold text-text-muted uppercase tracking-wider">
+                                Steps Per Bar
+                            </label>
+                            <div className="flex items-center gap-1.5 justify-center">
+                                {stepOptions.map(steps => {
+                                    const noteType = getNoteType(steps, sectionTimeSignature);
+                                    const isSelected = steps === currentStepCount;
+
+                                    return (
+                                        <button
+                                            key={steps}
+                                            onClick={() => onStepCountChange(steps)}
+                                            className={clsx(
+                                                "flex items-center justify-center rounded-lg transition-all",
+                                                "w-11 h-11 active:scale-95",
+                                                isSelected
+                                                    ? "bg-accent-primary text-white shadow-lg border-2 border-accent-primary"
+                                                    : "bg-bg-tertiary border border-border-subtle text-text-muted hover:text-text-primary hover:bg-bg-secondary"
+                                            )}
+                                            title={`${steps} step${steps > 1 ? 's' : ''} per measure`}
+                                        >
+                                            <NoteIcon type={noteType} size={24} />
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
 
                     {/* Action Buttons */}
                     <div className="grid grid-cols-3 gap-2 pt-2">

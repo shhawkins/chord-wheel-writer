@@ -4,7 +4,7 @@ import { getWheelColors, normalizeNote, formatChordForDisplay } from '../../util
 import { playChord } from '../../utils/audioEngine';
 import { Plus, Play, ChevronLeft, ChevronRight, PanelRightClose, Map, Settings2 } from 'lucide-react';
 import { SectionOptionsPopup } from './SectionOptionsPopup';
-
+import { useMobileLayout } from '../../hooks/useIsMobile';
 import { NoteValueSelector } from './NoteValueSelector';
 import clsx from 'clsx';
 
@@ -41,6 +41,7 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
         addSuggestedSection,
         setSectionTimeSignature,
         setSectionMeasures,
+        setSectionSubdivision,
         removeSection,
         duplicateSection,
         clearSection,
@@ -56,6 +57,10 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
     const colors = getWheelColors();
     const scrollRef = useRef<HTMLDivElement>(null);
     const sectionTabsRef = useRef<HTMLDivElement>(null);
+
+    // Detect if we're on desktop vs mobile for styling adjustments
+    const { isMobile } = useMobileLayout();
+    const isDesktop = !isMobile;
 
     // Track the active section for navigation
     const [activeSectionIndex, setActiveSectionIndex] = React.useState(0);
@@ -105,6 +110,24 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
             }
         }
     }, [playingSlotId]);
+
+    // Auto-scroll chord container to show selected slot when:
+    // 1. Timeline opens (isOpen becomes true)
+    // 2. Selected slot changes
+    useEffect(() => {
+        if (!isOpen || !selectedSlotId || isPlaying) return;
+
+        // Delay to ensure the drawer animation completes and DOM is fully rendered
+        const timeoutId = setTimeout(() => {
+            if (scrollRef.current) {
+                const selectedElement = scrollRef.current.querySelector(`[data-slot-id="${selectedSlotId}"]`);
+                if (selectedElement) {
+                    selectedElement.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                }
+            }
+        }, 250);
+        return () => clearTimeout(timeoutId);
+    }, [selectedSlotId, isPlaying, isOpen]);
 
     const handleTouchStart = (e: React.TouchEvent) => {
         touchStartY.current = e.touches[0].clientY;
@@ -286,10 +309,12 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
             data-mobile-timeline
             className={clsx(
                 "relative w-full bg-bg-secondary border-t-2 border-border-subtle overflow-hidden flex flex-col mobile-timeline-drawer",
-                isLandscape && "h-full" // Fill available height in landscape mode
+                isLandscape && "h-full", // Fill available height in landscape mode
+                hideCloseButton && "h-full border-t-0" // Embedded mode: fill parent height, no border (parent has it)
             )}
             style={{
-                maxHeight: isLandscape ? undefined : '140px', // No max height in landscape - let it fill space
+                // No max height in landscape, embedded mode (hideCloseButton), or when parent manages height
+                maxHeight: isLandscape || hideCloseButton ? undefined : '140px',
                 transform: swipeOffset > 0 ? `translateY(${swipeOffset}px)` : undefined,
                 opacity: swipeOffset > 0 ? Math.max(0.5, 1 - (swipeOffset / 150)) : 1,
                 transition: swipeOffset === 0 ? 'all 0.2s ease-out' : 'none'
@@ -360,26 +385,38 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
                 </div>
             ) : (
                 // Normal mode: full section tabs
-                <div className="flex items-center justify-between shrink-0 px-2 pb-1.5">
+                <div className={clsx(
+                    "flex items-center justify-between shrink-0",
+                    isDesktop ? "px-3 py-1" : "px-2 pb-1.5"
+                )}>
                     <button
                         onClick={() => toggleSongMap(true)}
-                        className="rounded text-text-muted hover:text-accent-primary touch-feedback shrink-0 p-1.5 mr-0.5"
+                        className={clsx(
+                            "no-touch-enlarge rounded text-text-muted hover:text-accent-primary touch-feedback shrink-0 mr-0.5",
+                            isDesktop ? "p-2" : "p-1.5"
+                        )}
                         title="Song Overview"
                     >
-                        <Map size={16} />
+                        <Map size={isDesktop ? 18 : 16} />
                     </button>
                     <button
                         onClick={() => navigateSection('prev')}
                         disabled={activeSectionIndex === 0}
-                        className="rounded text-text-muted hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed touch-feedback p-1.5"
+                        className={clsx(
+                            "no-touch-enlarge rounded text-text-muted hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed touch-feedback",
+                            isDesktop ? "p-2" : "p-1.5"
+                        )}
                     >
-                        <ChevronLeft size={16} />
+                        <ChevronLeft size={isDesktop ? 18 : 16} />
                     </button>
 
                     {/* Section tabs - horizontal scroll */}
                     <div
                         ref={sectionTabsRef}
-                        className="flex-1 flex items-center overflow-x-auto scrollbar-hide gap-1.5 px-1 mx-1"
+                        className={clsx(
+                            "flex-1 flex items-center overflow-x-auto scrollbar-hide px-1 mx-1",
+                            isDesktop ? "gap-2" : "gap-1.5"
+                        )}
                     >
                         {currentSong.sections.map((section, idx) => {
                             const isActive = idx === activeSectionIndex;
@@ -398,11 +435,17 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
                                         }
                                     }}
                                     className={clsx(
-                                        "relative font-semibold transition-all touch-feedback shrink-0",
+                                        "no-touch-enlarge relative font-semibold transition-all touch-feedback shrink-0",
                                         "flex items-center justify-center",
                                         isActive
-                                            ? "rounded-full text-white shadow-lg whitespace-nowrap overflow-hidden w-24 h-8 text-[11px]"
-                                            : "rounded-full text-text-secondary hover:text-text-primary border border-border-medium hover:border-border-subtle hover:bg-bg-tertiary w-8 h-8 text-xs"
+                                            ? clsx(
+                                                "rounded-full text-white shadow-lg whitespace-nowrap overflow-hidden",
+                                                isDesktop ? "w-32 h-9 text-xs" : "w-24 h-8 text-[11px]"
+                                            )
+                                            : clsx(
+                                                "rounded-full text-text-secondary hover:text-text-primary border border-border-medium hover:border-border-subtle hover:bg-bg-tertiary",
+                                                isDesktop ? "w-9 h-9 text-sm" : "w-8 h-8 text-xs"
+                                            )
                                     )}
                                     style={isActive ? {
                                         background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #6366f1 100%)',
@@ -414,7 +457,7 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
                                     {isActive ? (
                                         <span className="flex items-center gap-1 px-2 truncate">
                                             <span className="truncate">{section.name}</span>
-                                            <Settings2 size={12} className="opacity-70 shrink-0" />
+                                            <Settings2 size={isDesktop ? 14 : 12} className="opacity-70 shrink-0" />
                                         </span>
                                     ) : (
                                         firstLetter
@@ -424,22 +467,28 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
                         })}
                         <button
                             onClick={() => addSuggestedSection()}
-                            className="rounded-full text-text-muted hover:text-accent-primary touch-feedback shrink-0 border border-dashed border-border-medium hover:border-accent-primary/50 transition-all hover:bg-accent-primary/10 w-8 h-8 flex items-center justify-center"
+                            className={clsx(
+                                "no-touch-enlarge rounded-full text-text-muted hover:text-accent-primary touch-feedback shrink-0 border border-dashed border-border-medium hover:border-accent-primary/50 transition-all hover:bg-accent-primary/10 flex items-center justify-center",
+                                isDesktop ? "w-9 h-9" : "w-8 h-8"
+                            )}
                             title="Add section"
                         >
-                            <Plus size={12} />
+                            <Plus size={isDesktop ? 14 : 12} />
                         </button>
                     </div>
 
                     <button
                         onClick={() => navigateSection('next')}
                         disabled={activeSectionIndex === currentSong.sections.length - 1}
-                        className="rounded text-text-muted hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed touch-feedback p-1.5"
+                        className={clsx(
+                            "no-touch-enlarge rounded text-text-muted hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed touch-feedback",
+                            isDesktop ? "p-2" : "p-1.5"
+                        )}
                     >
-                        <ChevronRight size={16} />
+                        <ChevronRight size={isDesktop ? 18 : 16} />
                     </button>
 
-                    {/* Close button - alternative to swiping */}
+                    {/* Close button - alternative to swiping (hidden on desktop when embedded) */}
                     {!hideCloseButton && (
                         <button
                             onClick={onToggle}
@@ -457,7 +506,8 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
             <div
                 ref={scrollRef}
                 className={clsx(
-                    "flex-1 px-1 pb-1 pt-1",
+                    "flex-1",
+                    isDesktop ? "px-3 pb-2 pt-1" : "px-1 pb-1 pt-1",
                     isLandscape
                         ? "overflow-y-auto overflow-x-hidden" // Landscape: vertical scroll, bars stacked
                         : "overflow-x-auto overflow-y-hidden" // Portrait: horizontal scroll
@@ -467,7 +517,10 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
                     <div className={clsx(
                         isLandscape
                             ? "flex flex-col gap-0" // Landscape: stack bars vertically with no extra spacing (matches compact)
-                            : "flex flex-row gap-0.5 items-center" // Portrait: horizontal row
+                            : clsx(
+                                "flex flex-row items-center",
+                                isDesktop ? "gap-1.5" : "gap-0.5" // Desktop: larger gap between measures
+                            )
                     )}>
                         {activeSection.measures.map((measure, measureIdx) => (
                             <React.Fragment key={measure.id}>
@@ -476,17 +529,17 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
                                     "flex items-center",
                                     isLandscape
                                         ? "gap-0.5 w-full min-w-0" // Landscape: full width row, can shrink
-                                        : "gap-0.5 shrink-0" // Portrait: compact, don't shrink
+                                        : isDesktop ? "gap-1 shrink-0" : "gap-0.5 shrink-0" // Portrait: compact, don't shrink (larger gap on desktop)
                                 )}>
                                     {/* Bar number + Note Value Selector - stacked vertically */}
                                     <div className={clsx(
                                         "flex flex-col items-center justify-center shrink-0",
-                                        isLandscape ? "gap-0 w-4" : "gap-0 w-5"
+                                        isLandscape ? "gap-0 w-4" : isDesktop ? "gap-0 w-6" : "gap-0 w-5"
                                     )}>
                                         {/* Bar number */}
                                         <span className={clsx(
                                             "font-mono text-text-muted text-center leading-none",
-                                            isLandscape ? "text-[7px]" : "text-[8px]"
+                                            isDesktop ? "text-[9px]" : (isLandscape ? "text-[7px]" : "text-[8px]")
                                         )}>
                                             {measureIdx + 1}
                                         </span>
@@ -526,10 +579,14 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
                                             }
 
                                             // For portrait mode: calculate proportional width
-                                            const baseWidth = 36;
+                                            // Desktop gets larger base width for better visibility
+                                            const baseWidth = isDesktop ? 48 : 36;
                                             const widthMultiplier = 4 / beatCount;
                                             const slotWidth = Math.round(baseWidth * widthMultiplier);
-                                            const finalWidth = Math.max(28, Math.min(144, slotWidth));
+                                            const finalWidth = Math.max(isDesktop ? 36 : 28, Math.min(isDesktop ? 192 : 144, slotWidth));
+
+                                            // Determine height based on device mode
+                                            const slotHeight = isDesktop ? 40 : (isLandscape ? (beatCount <= 4 ? 26 : 24) : 32);
 
                                             return (
                                                 <button
@@ -537,21 +594,22 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
                                                     data-slot-id={beat.id}
                                                     onClick={() => handleSlotClick(activeSection.id, beat.id, beat.chord)}
                                                     className={clsx(
-                                                        "relative flex items-center justify-center rounded-md transition-all touch-feedback",
+                                                        "no-touch-enlarge relative flex items-center justify-center rounded-md transition-all touch-feedback",
                                                         isLandscape
-                                                            ? beatCount <= 4 ? "flex-1 h-[26px] min-w-0" : "h-[24px] shrink-0" // Landscape: flex with no min for 1-4 beats, fixed for more
-                                                            : "h-[32px] shrink-0", // Portrait: fixed height, no shrink
+                                                            ? beatCount <= 4 ? "flex-1 min-w-0" : "shrink-0" // Landscape: flex with no min for 1-4 beats, fixed for more
+                                                            : "shrink-0", // Portrait/Desktop: no shrink
                                                         isPlaying && "ring-2 ring-green-500 ring-offset-1 ring-offset-bg-primary shadow-[0_0_12px_rgba(34,197,94,0.5)] scale-105 z-10",
                                                         isSelected && !isPlaying && "ring-2 ring-accent-primary ring-offset-1 ring-offset-bg-primary",
                                                         !beat.chord && "border-2 border-dashed border-border-medium bg-bg-elevated hover:border-text-muted"
                                                     )}
                                                     style={{
+                                                        height: `${slotHeight}px`,
                                                         // Landscape with many beats: use calculated width
                                                         ...(isLandscape && landscapeWidth ? {
                                                             width: `${landscapeWidth}px`,
                                                             minWidth: `${landscapeMinWidth}px`,
                                                         } : {}),
-                                                        // Portrait: proportional width
+                                                        // Portrait/Desktop: proportional width
                                                         ...(!isLandscape ? {
                                                             width: `${finalWidth}px`,
                                                             minWidth: `${finalWidth}px`,
@@ -566,9 +624,11 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
                                                         <span
                                                             className={clsx(
                                                                 "font-bold px-0.5 truncate",
-                                                                isLandscape
-                                                                    ? beatCount >= 8 ? "text-[7px]" : beatCount >= 4 ? "text-[8px]" : "text-[9px]"
-                                                                    : "text-[10px]"
+                                                                isDesktop
+                                                                    ? "text-xs" // Desktop: larger text
+                                                                    : isLandscape
+                                                                        ? beatCount >= 8 ? "text-[7px]" : beatCount >= 4 ? "text-[8px]" : "text-[9px]"
+                                                                        : "text-[10px]"
                                                             )}
                                                             style={{ color: chordColor }}
                                                         >
@@ -616,6 +676,9 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
                     }}
                     onBarsChange={(val) => {
                         if (editingSectionId) setSectionMeasures(editingSectionId, val);
+                    }}
+                    onStepCountChange={(steps) => {
+                        if (editingSectionId) setSectionSubdivision(editingSectionId, steps);
                     }}
                     onNameChange={(name, type) => {
                         if (editingSectionId) updateSection(editingSectionId, { name, type });

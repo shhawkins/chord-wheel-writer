@@ -456,7 +456,8 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({
     };
 
     const handleChordDoubleClick = (chord: Chord) => {
-        // If timeline is hidden, open it instead of silently adding the chord
+        // If timeline is hidden, just open it so user can see where chord would go
+        // User must double-tap again to actually add the chord
         if (!timelineVisible) {
             openTimeline();
             return;
@@ -682,7 +683,7 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({
         <div
             ref={containerRef}
             data-chord-wheel
-            className={`relative flex flex-col items-center justify-center w-full h-full max-w-full max-h-full aspect-square p-1 sm:p-2 select-none ${isPanning ? 'cursor-grabbing' : (zoomScale > 1 && !isMobile ? 'cursor-grab' : '')}`}
+            className={`relative flex flex-col items-center justify-center w-full h-full p-1 sm:p-2 select-none ${isPanning ? 'cursor-grabbing' : (zoomScale > 1 && !isMobile ? 'cursor-grab' : '')}`}
             onTouchStart={handleCombinedTouchStart}
             onTouchMove={handleCombinedTouchMove}
             onTouchEnd={handleCombinedTouchEnd}

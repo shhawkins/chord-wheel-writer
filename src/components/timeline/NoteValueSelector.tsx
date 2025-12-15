@@ -14,7 +14,7 @@ interface NoteValueSelectorProps {
  * In 4/4: 1=whole, 2=half, 4=quarter, 8=eighth, 16=sixteenth
  * In 3/4: 1=dotted half, 3=quarter, 6=eighth, 12=sixteenth
  */
-const NoteIcon: React.FC<{ type: 'whole' | 'half' | 'quarter' | 'eighth' | 'sixteenth' | 'dotted-half' | 'dotted-quarter'; size?: number; className?: string }> = ({
+export const NoteIcon: React.FC<{ type: 'whole' | 'half' | 'quarter' | 'eighth' | 'sixteenth' | 'dotted-half' | 'dotted-quarter'; size?: number; className?: string }> = ({
     type,
     size = 20,
     className
@@ -88,7 +88,7 @@ const NoteIcon: React.FC<{ type: 'whole' | 'half' | 'quarter' | 'eighth' | 'sixt
 /**
  * Get the note type based on steps per measure and time signature
  */
-function getNoteType(steps: number, timeSignature: [number, number]): 'whole' | 'half' | 'quarter' | 'eighth' | 'sixteenth' | 'dotted-half' | 'dotted-quarter' {
+export function getNoteType(steps: number, timeSignature: [number, number]): 'whole' | 'half' | 'quarter' | 'eighth' | 'sixteenth' | 'dotted-half' | 'dotted-quarter' {
     const [numerator] = timeSignature;
 
     // For compound meters (like 6/8, 9/8, 12/8)
@@ -128,7 +128,7 @@ function getNoteType(steps: number, timeSignature: [number, number]): 'whole' | 
  * Get available step options based on time signature
  * Maximum 8 steps per measure for usability
  */
-function getStepOptions(timeSignature: [number, number]): number[] {
+export function getStepOptions(timeSignature: [number, number]): number[] {
     const [numerator] = timeSignature;
 
     if (numerator % 3 === 0) {

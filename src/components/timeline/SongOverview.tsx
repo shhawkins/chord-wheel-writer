@@ -199,31 +199,48 @@ const SortableSection = ({ section, onSelect, isActive, chordColors, measureWidt
                             </div>
                         </div>
 
-                        {/* Chords */}
-                        <div className="flex flex-col gap-1 flex-1">
-                            {measure.beats.filter((b: any) => b.chord).map((beat: any) => {
-                                const chordColor = chordColors[beat.chord.root as keyof typeof chordColors] || '#666';
+                        {/* Chords - Horizontal timeline layout */}
+                        {(() => {
+                            const chordsInMeasure = measure.beats.filter((b: any) => b.chord);
+                            const chordCount = chordsInMeasure.length;
+
+                            if (chordCount === 0) {
                                 return (
-                                    <div
-                                        key={beat.id}
-                                        className="h-6 rounded flex items-center justify-center text-[10px] font-bold shadow-sm truncate px-1 transition-all"
-                                        style={{
-                                            backgroundColor: 'rgba(0, 0, 0, 0.3)',
-                                            border: `2px solid ${chordColor}`,
-                                            color: chordColor
-                                        }}
-                                        title={beat.chord.symbol}
-                                    >
-                                        {formatChordForDisplay(beat.chord.symbol)}
+                                    <div className="flex-1 rounded bg-white/5 border border-dashed border-white/10 flex items-center justify-center">
+                                        <span className="text-[10px] text-white/10">-</span>
                                     </div>
                                 );
-                            })}
-                            {!measure.beats.some((b: any) => b.chord) && (
-                                <div className="h-full rounded bg-white/5 border border-dashed border-white/10 flex items-center justify-center">
-                                    <span className="text-[10px] text-white/10">-</span>
+                            }
+
+                            return (
+                                <div className="flex gap-0.5 flex-1 items-stretch">
+                                    {chordsInMeasure.map((beat: any) => {
+                                        const chordColor = chordColors[beat.chord.root as keyof typeof chordColors] || '#666';
+                                        // Scale font size based on chord count for readability
+                                        const fontSize = chordCount <= 2 ? '10px' : chordCount <= 4 ? '8px' : '7px';
+                                        const padding = chordCount <= 2 ? '0 4px' : '0 2px';
+
+                                        return (
+                                            <div
+                                                key={beat.id}
+                                                className="flex-1 min-w-0 rounded flex items-center justify-center font-bold shadow-sm truncate transition-all"
+                                                style={{
+                                                    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                                                    border: `2px solid ${chordColor}`,
+                                                    color: chordColor,
+                                                    fontSize,
+                                                    padding,
+                                                    minHeight: '24px'
+                                                }}
+                                                title={beat.chord.symbol}
+                                            >
+                                                {formatChordForDisplay(beat.chord.symbol)}
+                                            </div>
+                                        );
+                                    })}
                                 </div>
-                            )}
-                        </div>
+                            );
+                        })()}
                     </div>
                 ))}
             </div>
@@ -416,12 +433,12 @@ export const SongOverview: React.FC = () => {
             {/* Header */}
             <div className={clsx(
                 "shrink-0 bg-transparent text-white transition-all",
-                isLandscape ? "px-4 py-2" : "px-4 py-3"
+                isLandscape ? "px-4 py-1.5" : "px-4 py-2"
             )}>
                 {/* Top Row - Title and Close */}
-                <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center justify-between mb-1.5">
                     <div className="flex items-center gap-3">
-                        <h2 className={clsx("font-bold tracking-tight", isLandscape ? "text-base" : "text-xl")}>
+                        <h2 className={clsx("font-bold tracking-tight", isLandscape ? "text-base" : "text-lg")}>
                             Song Map
                         </h2>
                         <span className="text-white/40">·</span>
@@ -433,18 +450,18 @@ export const SongOverview: React.FC = () => {
                         onClick={() => toggleSongMap(false)}
                         className={clsx(
                             "bg-white/10 hover:bg-white/20 active:bg-white/30 rounded-full transition-all flex items-center justify-center active:scale-95",
-                            isLandscape ? "w-8 h-8" : "w-10 h-10"
+                            isLandscape ? "w-7 h-7" : "w-8 h-8"
                         )}
                     >
-                        <X size={isLandscape ? 16 : 20} />
+                        <X size={isLandscape ? 14 : 16} />
                     </button>
                 </div>
 
                 {/* Middle Row - Song Stats */}
-                <div className="flex justify-center mb-3">
+                <div className="flex justify-center mb-2">
                     <div className={clsx(
-                        "flex items-center gap-2 text-white/50 bg-white/5 rounded-full px-4 py-1.5",
-                        isLandscape ? "text-[10px]" : "text-xs"
+                        "flex items-center gap-2 text-white/50 bg-white/5 rounded-full px-3 py-1",
+                        isLandscape ? "text-[9px]" : "text-[10px]"
                     )}>
                         <span className="font-mono">{formattedDuration}</span>
                         <span className="w-1 h-1 rounded-full bg-white/30" />
@@ -456,19 +473,19 @@ export const SongOverview: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Bottom Row - Zoom Controls */}
+                {/* Bottom Row - Zoom Controls - compact and sleek */}
                 <div className="flex justify-center">
-                    <div className="flex items-center gap-3 bg-white/5 rounded-full px-3 py-2">
+                    <div className="flex items-center gap-2 bg-white/5 rounded-full px-2 py-1">
                         <button
                             onClick={() => setZoomLevel(Math.max(0.15, zoomLevel - 0.1))}
                             className={clsx(
                                 "flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 active:bg-white/30 text-white/70 hover:text-white transition-all active:scale-95",
-                                isLandscape ? "w-8 h-8" : "w-10 h-10"
+                                isLandscape ? "w-5 h-5" : "w-6 h-6"
                             )}
                         >
-                            <Minus size={isLandscape ? 16 : 18} />
+                            <Minus size={isLandscape ? 10 : 12} />
                         </button>
-                        <div className={clsx("relative flex items-center", isLandscape ? "w-40 h-10" : "w-48 h-12")}>
+                        <div className={clsx("relative flex items-center", isLandscape ? "w-28 h-5" : "w-32 h-6")}>
                             <input
                                 type="range"
                                 min="0.15"
@@ -477,13 +494,12 @@ export const SongOverview: React.FC = () => {
                                 value={zoomLevel}
                                 onChange={handleZoomChange}
                                 className={clsx(
-                                    "w-full bg-white/20 rounded-full appearance-none cursor-pointer",
-                                    isLandscape ? "h-2" : "h-3",
+                                    "w-full bg-white/20 rounded-full appearance-none cursor-pointer h-1.5",
                                     `[&::-webkit-slider-thumb]:appearance-none
                                     [&::-webkit-slider-thumb]:bg-white
                                     [&::-webkit-slider-thumb]:rounded-full
-                                    [&::-webkit-slider-thumb]:shadow-lg
-                                    [&::-webkit-slider-thumb]:shadow-black/40
+                                    [&::-webkit-slider-thumb]:shadow-md
+                                    [&::-webkit-slider-thumb]:shadow-black/30
                                     [&::-webkit-slider-thumb]:cursor-grab
                                     [&::-webkit-slider-thumb]:active:cursor-grabbing
                                     [&::-webkit-slider-thumb]:active:scale-110
@@ -493,12 +509,12 @@ export const SongOverview: React.FC = () => {
                                     [&::-moz-range-thumb]:bg-white
                                     [&::-moz-range-thumb]:rounded-full
                                     [&::-moz-range-thumb]:border-none
-                                    [&::-moz-range-thumb]:shadow-lg
+                                    [&::-moz-range-thumb]:shadow-md
                                     [&::-moz-range-thumb]:cursor-grab
                                     focus:outline-none`,
                                     isLandscape
-                                        ? "[&::-webkit-slider-thumb]:w-6 [&::-webkit-slider-thumb]:h-6 [&::-moz-range-thumb]:w-6 [&::-moz-range-thumb]:h-6"
-                                        : "[&::-webkit-slider-thumb]:w-8 [&::-webkit-slider-thumb]:h-8 [&::-moz-range-thumb]:w-8 [&::-moz-range-thumb]:h-8"
+                                        ? "[&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4"
+                                        : "[&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:h-5"
                                 )}
                                 style={{ touchAction: 'manipulation' }}
                             />
@@ -507,11 +523,14 @@ export const SongOverview: React.FC = () => {
                             onClick={() => setZoomLevel(Math.min(2, zoomLevel + 0.1))}
                             className={clsx(
                                 "flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 active:bg-white/30 text-white/70 hover:text-white transition-all active:scale-95",
-                                isLandscape ? "w-8 h-8" : "w-10 h-10"
+                                isLandscape ? "w-5 h-5" : "w-6 h-6"
                             )}
                         >
-                            <Plus size={isLandscape ? 16 : 18} />
+                            <Plus size={isLandscape ? 10 : 12} />
                         </button>
+                        <span className={clsx("text-white/50 font-mono ml-1", isLandscape ? "text-[9px]" : "text-[10px]")}>
+                            {Math.round(zoomLevel * 100)}%
+                        </span>
                     </div>
                 </div>
             </div>
