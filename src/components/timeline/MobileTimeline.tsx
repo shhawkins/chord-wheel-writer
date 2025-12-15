@@ -234,13 +234,14 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
         const isCurrentlySelected = selectedSectionId === sectionId && selectedSlotId === slotId;
         const now = Date.now();
 
-        // Check for double-tap on any slot (empty or filled)
+        // Check for double-tap on FILLED slots (to replace chord)
         if (
+            chord && // Only for filled slots
             lastTapTimeRef.current &&
             lastTapTimeRef.current.slotId === slotId &&
             now - lastTapTimeRef.current.time < 400
         ) {
-            // Double-tap detected! Add selected chord if available
+            // Double-tap detected on filled slot! Replace with selected chord if available
             if (selectedChord) {
                 addChordToSlot(selectedChord, sectionId, slotId);
                 selectSlotOnly(sectionId, slotId);
@@ -251,7 +252,7 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
 
         // Single tap behavior
         if (chord) {
-            // Play chord preview
+            // Filled slot: play chord preview
             if (chord.notes && chord.notes.length > 0) {
                 playChord(chord.notes);
             }
@@ -263,13 +264,23 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
                 // First tap: select slot only (don't change global chord)
                 selectSlotOnly(sectionId, slotId);
             }
-        } else {
-            // Empty slot - just select it
-            selectSlotOnly(sectionId, slotId);
-        }
 
-        // Record tap time for double-tap detection
-        lastTapTimeRef.current = { slotId, time: now };
+            // Record tap time for double-tap detection (only for filled slots)
+            lastTapTimeRef.current = { slotId, time: now };
+        } else {
+            // Empty slot behavior:
+            // - First tap: select the slot (highlight it)
+            // - Second tap (when already selected): add the selected chord
+            if (isCurrentlySelected && selectedChord) {
+                // Second tap on already-selected empty slot: add chord
+                addChordToSlot(selectedChord, sectionId, slotId);
+            } else {
+                // First tap: just select the empty slot
+                selectSlotOnly(sectionId, slotId);
+            }
+            // No double-tap tracking needed for empty slots
+            lastTapTimeRef.current = null;
+        }
     };
 
     const navigateSection = (direction: 'prev' | 'next') => {

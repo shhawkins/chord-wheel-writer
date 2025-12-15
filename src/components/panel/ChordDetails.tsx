@@ -3,7 +3,7 @@ import { PianoKeyboard } from './PianoKeyboard';
 import { GuitarChord } from './GuitarChord';
 import { MusicStaff } from './MusicStaff';
 import { getWheelColors, getChordNotes, getIntervalFromKey, invertChord, getMaxInversion, getInversionName, getChordSymbolWithInversion, formatChordForDisplay } from '../../utils/musicTheory';
-import { PanelRightClose, PanelRight, GripVertical, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { PanelRightClose, PanelRight, GripVertical, ChevronDown, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { playChord, playNote } from '../../utils/audioEngine';
 import { useState, useCallback, useEffect, useRef } from 'react';
 
@@ -57,6 +57,20 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar',
     const touchStartY = useRef<number>(0);
     const touchCurrentY = useRef<number>(0);
     const [swipeOffset, setSwipeOffset] = useState(0);
+
+    // Toast message state for "no slot selected" feedback
+    const [toastMessage, setToastMessage] = useState<string | null>(null);
+    const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const showToast = useCallback((message: string) => {
+        if (toastTimeoutRef.current) {
+            clearTimeout(toastTimeoutRef.current);
+        }
+        setToastMessage(message);
+        toastTimeoutRef.current = setTimeout(() => {
+            setToastMessage(null);
+        }, 3000);
+    }, []);
 
     // Refs for auto-scrolling sections into view
     const guitarSectionRef = useRef<HTMLDivElement>(null);
@@ -369,7 +383,12 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar',
             return;
         }
 
-        if (!chord || !selectedSectionId || !selectedSlotId) return;
+        if (!chord || !selectedSectionId || !selectedSlotId) {
+            if (chord && (!selectedSectionId || !selectedSlotId)) {
+                showToast('Select a slot on the timeline first');
+            }
+            return;
+        }
 
         const variantNotes = getChordNotes(chord.root, variant);
         // Generate symbol with slash notation if inverted (e.g., C/E for first inversion)
@@ -410,7 +429,13 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar',
             return;
         }
 
-        if (!chord || !selectedSectionId || !selectedSlotId) return;
+        if (!chord || !selectedSectionId || !selectedSlotId) {
+            // Show helpful message if no slot is selected
+            if (chord && (!selectedSectionId || !selectedSlotId)) {
+                showToast('Select a slot on the timeline first');
+            }
+            return;
+        }
 
         const currentVariant = previewVariant || chord.quality;
         const variantNotes = getChordNotes(chord.root, currentVariant);
@@ -738,8 +763,19 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar',
                             </div>
                         )}
                     </div>
-                    {/* Right column: Close button */}
-                    <div className="flex items-center justify-end gap-3 shrink-0">
+                    {/* Right column: Add button + Close button */}
+                    <div className="flex items-center justify-end gap-2 shrink-0">
+                        {/* Add to Timeline button */}
+                        {chord && (
+                            <button
+                                onClick={handleDiagramDoubleClick}
+                                className={`${isMobile ? 'px-3 py-1.5' : 'px-2.5 py-1'} bg-gradient-to-r from-accent-primary to-purple-600 hover:opacity-90 rounded-lg transition-all touch-feedback flex items-center gap-1.5 shadow-md shadow-accent-primary/20 active:scale-95`}
+                                title="Add chord to timeline"
+                            >
+                                <Plus size={isMobile ? 14 : 12} className="text-white" />
+                                <span className={`${isMobile ? 'text-xs' : 'text-[11px]'} font-semibold text-white`}>Add</span>
+                            </button>
+                        )}
                         {/* Hide close button in landscape variants - use handle instead */}
                         {!isLandscapeVariant && (
                             <button
@@ -757,6 +793,12 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar',
                     </div>
                 </div>
 
+                {/* Toast notification */}
+                {toastMessage && (
+                    <div className="absolute top-16 left-1/2 -translate-x-1/2 z-50 px-4 py-2 bg-amber-500/90 text-white text-xs font-medium rounded-lg shadow-lg animate-pulse">
+                        {toastMessage}
+                    </div>
+                )}
                 {/* Content */}
                 {!chord ? (
                     <div className="flex-1 flex items-center justify-center p-6">

@@ -65,6 +65,22 @@ export const ChordSlot: React.FC<ChordSlotProps> = ({ slot, sectionId, size = 48
         } else if (e.metaKey || e.ctrlKey) {
             toggleSlotSelection(sectionId, slot.id);
         } else {
+            // Empty slot behavior:
+            // - First click: select the slot (highlight it)  
+            // - Second click (when already selected): add the selected chord
+            if (!slot.chord) {
+                const isCurrentlySelected = selectedSectionId === sectionId && selectedSlotId === slot.id;
+                if (isCurrentlySelected && selectedChord) {
+                    // Second click on already-selected empty slot: add chord
+                    addChordToSlot(selectedChord, sectionId, slot.id);
+                } else {
+                    // First click: just select the empty slot
+                    selectSlotOnly(sectionId, slot.id);
+                }
+                return;
+            }
+
+            // Filled slot: normal selection behavior
             if (isSelected && selectedSlots.length > 0) {
                 const reordered = [
                     ...selectedSlots.filter((s) => !(s.sectionId === sectionId && s.slotId === slot.id)),

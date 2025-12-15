@@ -18,6 +18,7 @@ import { formatChordForDisplay } from './utils/musicTheory';
 
 import { ConfirmDialog } from './components/ui/ConfirmDialog';
 import { HelpModal } from './components/HelpModal';
+import { OnboardingTooltip } from './components/OnboardingTooltip';
 
 function App() {
   const { currentSong, selectedKey, timelineVisible, toggleTimeline, selectedSectionId, selectedSlotId, clearSlot, clearTimeline, setTitle, loadSong: loadSongToStore, newSong, instrument, volume, isMuted, undo, redo, canUndo, canRedo, chordPanelVisible } = useSongStore();
@@ -1371,6 +1372,9 @@ function App() {
 
       {/* Help Modal */}
       <HelpModal isOpen={showHelp} onClose={() => setShowHelp(false)} />
+
+      {/* First-time Onboarding Tooltip */}
+      <OnboardingTooltip onOpenHelp={() => setShowHelp(true)} />
     </div>
   );
 }
