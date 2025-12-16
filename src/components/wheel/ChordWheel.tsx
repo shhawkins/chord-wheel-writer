@@ -1125,7 +1125,11 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({
 
                         // Add chord to the selected slot
                         addChordToSlot(newChord, currentSectionId, currentSlotId);
-                        selectNextSlotAfter(currentSectionId, currentSlotId);
+
+                        // Keep the added chord selected (don't advance to next slot)
+                        // Since the voicing modal disappears, user needs to see the chord they just added
+                        setSelectedSlot(currentSectionId, currentSlotId);
+                        setSelectedChord(newChord);
 
                         // Open timeline if it's hidden so user can see the result
                         if (!timelineVisible) {

@@ -267,9 +267,11 @@ export const SectionPreview: React.FC<SectionPreviewProps> = ({
                                                 return (
                                                     <div
                                                         key={beat.id}
+                                                        onClick={() => onSlotClick?.(beat.id)}
                                                         className={clsx(
                                                             "flex-1 min-w-0 rounded-sm flex items-center justify-center transition-all duration-150",
-                                                            isCurrentlyPlaying && "scale-105 z-10"
+                                                            isCurrentlyPlaying && "scale-105 z-10",
+                                                            onSlotClick && "cursor-pointer hover:scale-105 hover:bg-white/10 active:scale-95"
                                                         )}
                                                         style={{
                                                             backgroundColor: isCurrentlyPlaying
