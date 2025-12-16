@@ -7,6 +7,7 @@ import {
     getKeySignature,
     CIRCLE_OF_FIFTHS,
     formatChordForDisplay,
+    getQualitySymbol,
     type Chord
 } from '../../utils/musicTheory';
 import { WheelSegment } from './WheelSegment';
@@ -1094,7 +1095,7 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({
                             ...voicingPickerState.chord,
                             quality: quality as any, // Extended qualities like maj7, dom9, etc.
                             notes: newNotes,
-                            symbol: `${voicingPickerState.chord.root}${quality === 'major' ? '' : quality === 'minor' ? 'm' : quality}`
+                            symbol: `${voicingPickerState.chord.root}${getQualitySymbol(quality)}`
                         };
                         setSelectedChord(newChord);
                     }
@@ -1106,7 +1107,7 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({
                             ...voicingPickerState.chord,
                             quality: quality as any,
                             notes: newNotes,
-                            symbol: `${voicingPickerState.chord.root}${quality === 'major' ? '' : quality === 'minor' ? 'm' : quality}`
+                            symbol: `${voicingPickerState.chord.root}${getQualitySymbol(quality)}`
                         };
 
                         // Get current section/slot from store (may be updated after openTimeline)
@@ -1166,9 +1167,9 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({
                 } else if (quality === 'minor' || quality === 'm') {
                     shortName = formatChordForDisplay(`${selectedChord.root}m`);
                 } else if (quality === 'diminished' || quality === 'dim') {
-                    shortName = formatChordForDisplay(`${selectedChord.root}dim`);
+                    shortName = formatChordForDisplay(`${selectedChord.root}°`);
                 } else {
-                    shortName = formatChordForDisplay(`${selectedChord.root}${quality}`);
+                    shortName = formatChordForDisplay(`${selectedChord.root}${getQualitySymbol(quality)}`);
                 }
 
                 return (

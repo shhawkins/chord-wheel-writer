@@ -832,20 +832,7 @@ function App() {
     const uniqueChords: Set<string> = new Set();
 
     currentSong.sections.forEach(section => {
-      // Check if we need a new page (with some buffer for wrapped measures)
-      if (y > 260) {
-        doc.addPage();
-        y = 20;
-      }
-
-      // Section header
-      doc.setFontSize(14);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(0, 0, 0);
-      doc.text(`[${getSectionDisplayName(section, currentSong.sections)}]`, leftMargin, y);
-      y += 10;
-
-      // Build rhythm notation for each measure
+      // Build rhythm notation for each measure first to calculate height
       const measureNotations = section.measures.map(measure => {
         const beatCount = measure.beats.length;
 
@@ -880,6 +867,29 @@ function App() {
         }
       });
 
+      // Calculate the total height this section will need:
+      // - Section header: 10
+      // - Each row of chords: 10 per row
+      // - No chords message: 12
+      // - Space after section: 6
+      const numRows = measureNotations.length === 0 ? 1 : Math.ceil(measureNotations.length / measuresPerRow);
+      const rowHeight = measureNotations.length === 0 ? 12 : numRows * 10;
+      const sectionHeight = 10 + rowHeight + 6; // header + rows + spacing
+
+      // Check if we need a new page - ensure entire section fits on one page
+      // If we're past line 48 (not at start) and section won't fit, start new page
+      if (y > 48 && y + sectionHeight > 280) {
+        doc.addPage();
+        y = 20;
+      }
+
+      // Section header
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(0, 0, 0);
+      doc.text(`[${getSectionDisplayName(section, currentSong.sections)}]`, leftMargin, y);
+      y += 10;
+
       // Wrap measures into rows of 4
       doc.setFontSize(14);
       doc.setFont("helvetica", "normal");
@@ -889,17 +899,11 @@ function App() {
         y += 12;
       } else {
         for (let i = 0; i < measureNotations.length; i += measuresPerRow) {
-          if (y > 275) {
-            doc.addPage();
-            y = 20;
-          }
-
           const rowMeasures = measureNotations.slice(i, i + measuresPerRow);
           const rowText = rowMeasures.join('  |  ');
 
-          // Add continuation indicator if not first row
-          const prefix = i > 0 ? '    ' : '';
-          doc.text(prefix + rowText, leftMargin, y);
+          // All rows flush left at margin - no indentation needed
+          doc.text(rowText, leftMargin, y);
           y += 10;
         }
       }

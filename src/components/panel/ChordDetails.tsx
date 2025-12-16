@@ -2,7 +2,7 @@ import { useSongStore } from '../../store/useSongStore';
 import { PianoKeyboard } from './PianoKeyboard';
 import { GuitarChord } from './GuitarChord';
 import { MusicStaff } from './MusicStaff';
-import { getWheelColors, getChordNotes, getIntervalFromKey, invertChord, getMaxInversion, getInversionName, getChordSymbolWithInversion, formatChordForDisplay } from '../../utils/musicTheory';
+import { getWheelColors, getChordNotes, getIntervalFromKey, invertChord, getMaxInversion, getInversionName, getChordSymbolWithInversion, formatChordForDisplay, getQualitySymbol } from '../../utils/musicTheory';
 import { PanelRightClose, PanelRight, GripVertical, ChevronDown, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { playChord, playNote } from '../../utils/audioEngine';
 import { useState, useCallback, useEffect, useRef } from 'react';
@@ -145,7 +145,7 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar',
         } else if (quality === 'diminished' || quality === 'dim') {
             return formatChordForDisplay(`${chord.root}dim`);
         }
-        return formatChordForDisplay(`${chord.root}${quality}`);
+        return formatChordForDisplay(`${chord.root}${getQualitySymbol(quality)}`);
     };
 
     const handleNotePlay = useCallback((note: string, octave: number) => {
@@ -724,7 +724,7 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar',
                                     onTouchStart={chord ? (e) => e.stopPropagation() : undefined}
                                 >
                                     <span className={`${isLandscapeVariant ? 'text-lg' : isMobile ? 'text-sm' : 'text-xs sm:text-sm'} font-bold leading-none truncate`}>
-                                        {(isMobile && isDrawer) ? getShortChordName() : (chord ? formatChordForDisplay(`${chord.root}${(previewVariant || chord.quality) === 'maj' ? '' : ' ' + (previewVariant || chord.quality)}`) : 'Chord Details')}
+                                        {(isMobile && isDrawer) ? getShortChordName() : (chord ? formatChordForDisplay(`${chord.root}${getQualitySymbol(previewVariant || chord.quality)}`) : 'Chord Details')}
                                     </span>
                                     {chord?.numeral && (
                                         <span className={`${isLandscapeVariant ? 'text-sm' : 'text-[10px]'} font-serif italic opacity-70 shrink-0`}>{formatChordForDisplay(chord.numeral)}</span>

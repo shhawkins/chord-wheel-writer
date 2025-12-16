@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { getGuitarChord, type GuitarChordShape } from '../../utils/guitarChordData';
-import { formatChordForDisplay } from '../../utils/musicTheory';
+import { formatChordForDisplay, getQualitySymbol } from '../../utils/musicTheory';
 import { useIsMobile } from '../../hooks/useIsMobile';
 
 interface GuitarChordProps {
@@ -23,8 +23,8 @@ export const GuitarChord: React.FC<GuitarChordProps> = ({
     const lastClickTime = useRef(0);
     const clickTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    // Format chord name with proper flat symbols
-    const chordName = formatChordForDisplay(`${root}${quality === 'maj' ? '' : quality}`);
+    // Format chord name with proper flat symbols and quality symbol
+    const chordName = formatChordForDisplay(`${root}${getQualitySymbol(quality)}`);
 
     // Handle click with double-click detection
     const handleClick = () => {

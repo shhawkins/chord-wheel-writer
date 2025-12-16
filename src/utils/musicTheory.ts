@@ -63,18 +63,39 @@ export interface Chord {
 
 // CHORD_FORMULAS removed - using EXTENDED_CHORD_FORMULAS instead
 
-const CHORD_SYMBOLS: Record<string, string> = {
+export const CHORD_SYMBOLS: Record<string, string> = {
     major: '',
+    maj: '',
     minor: 'm',
     diminished: '°',
+    dim: '°',
     augmented: '+',
     major7: 'maj7',
     minor7: 'm7',
     dominant7: '7',
-    halfDiminished7: 'm7b5',
+    halfDiminished7: 'm7♭5',
     sus2: 'sus2',
     sus4: 'sus4',
+    // Extended chords
+    dominant9: '9',
+    dominant11: '11',
+    dominant13: '13',
+    major9: 'maj9',
+    minor9: 'm9',
+    add9: 'add9',
+    '6': '6',
+    m6: 'm6',
+    '7sus4': '7sus4',
+    dominant7sus4: '7sus4',
 };
+
+/**
+ * Convert a quality name to its display symbol
+ * e.g., 'dominant7' -> '7', 'major' -> '', 'minor' -> 'm'
+ */
+export function getQualitySymbol(quality: string): string {
+    return CHORD_SYMBOLS[quality] ?? quality;
+}
 
 export function normalizeNote(note: string): string {
     if (note.includes('b')) {
