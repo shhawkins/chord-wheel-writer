@@ -151,7 +151,7 @@ export const OnboardingTooltip: React.FC<OnboardingTooltipProps> = ({ onDismiss,
                     <div className="mt-5 p-3 rounded-xl bg-white/5 border border-white/10">
                         <div className="flex items-center justify-between gap-3">
                             <div className="flex items-center gap-2 text-xs text-gray-400">
-                                <MousePointer2 size={14} className="text-accent-primary shrink-0" />
+                                <MousePointer2 size={14} className="text-accent-primary shrink-0" style={{ transform: 'scaleX(-1)' }} />
                                 <span className="flex items-center gap-1.5 flex-wrap">
                                     <strong className="text-gray-300">Tip:</strong> Tap the
                                     <button
