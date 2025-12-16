@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { X, Music, Circle, Hash, Layers, Volume2, Hand, RotateCw, ListMusic, Map, Download, HelpCircle } from 'lucide-react';
 import { PlayableProgression } from './interactive/PlayableProgression';
 import { PlayableCadence } from './interactive/PlayableCadence';
-import { PROGRESSION_PRESETS, CADENCE_PRESETS } from '../utils/progressionPlayback';
+import { PROGRESSION_PRESETS, CADENCE_PRESETS, numeralToChord } from '../utils/progressionPlayback';
+import { playChord, initAudio } from '../utils/audioEngine';
 import { useSongStore } from '../store/useSongStore';
 
 interface HelpModalProps {
@@ -77,6 +78,67 @@ const MiniChordWheelLogo: React.FC<{ size?: number }> = ({ size = 32 }) => {
     );
 };
 
+/**
+ * Interactive grid of roman numerals - tapping plays the chord in the current key
+ */
+const InteractiveNumeralsGrid: React.FC<{ selectedKey: string }> = ({ selectedKey }) => {
+    const [playingNumeral, setPlayingNumeral] = useState<string | null>(null);
+
+    const handleNumeralTap = async (numeral: string) => {
+        try {
+            await initAudio();
+            const chord = numeralToChord(numeral, selectedKey);
+            setPlayingNumeral(numeral);
+            await playChord(chord.notes, '2n');
+            // Clear after a short delay
+            setTimeout(() => setPlayingNumeral(null), 400);
+        } catch (error) {
+            console.error('Error playing chord:', error);
+            setPlayingNumeral(null);
+        }
+    };
+
+    const numerals = ['I', 'ii', 'iii', 'IV', 'V', 'vi', 'vii°'];
+    const labels = ['Tonic (Home)', 'Mediant', 'Mediant', 'Subdom. (Away)', 'Dominant (Tension)', 'Rel. Minor', 'Leading Tone'];
+
+    return (
+        <div className="grid grid-cols-7 gap-1 text-center text-sm">
+            {numerals.map((num, i) => {
+                const isPlaying = playingNumeral === num;
+                const isMajor = ['I', 'IV', 'V'].includes(num);
+                const isDim = num === 'vii°';
+
+                // Get the actual chord name to show
+                const chord = numeralToChord(num, selectedKey);
+                const chordName = chord.symbol;
+
+                return (
+                    <button
+                        key={num}
+                        onClick={() => handleNumeralTap(num)}
+                        className={`rounded p-2 flex flex-col items-center justify-between h-20 cursor-pointer 
+                            transition-all duration-150 active:scale-95
+                            ${isMajor ? 'bg-accent-primary/20 border border-accent-primary/30 hover:bg-accent-primary/30' :
+                                isDim ? 'bg-red-500/10 border border-red-500/20 hover:bg-red-500/20' :
+                                    'bg-violet-500/15 border border-violet-500/25 hover:bg-violet-500/25'}
+                            ${isPlaying ? 'ring-2 ring-white/50 scale-[1.02]' : ''}`}
+                    >
+                        <span className={`font-bold mb-1 transition-colors ${isPlaying ? 'text-accent-primary' : 'text-white'}`}>
+                            {num}
+                        </span>
+                        <span className={`text-[9px] font-medium transition-colors ${isPlaying ? 'text-accent-primary' : 'text-gray-300'}`}>
+                            {chordName}
+                        </span>
+                        <span className="text-[10px] text-gray-400 leading-tight">
+                            {labels[i]}
+                        </span>
+                    </button>
+                );
+            })}
+        </div>
+    );
+};
+
 const HelpContent: React.FC<HelpContentProps> = ({ onClose }) => {
     const { selectedKey } = useSongStore();
 
@@ -114,7 +176,7 @@ const HelpContent: React.FC<HelpContentProps> = ({ onClose }) => {
                         <div className="pt-0.5">
                             <h4 className="text-sm font-semibold text-white mb-1">Change the key</h4>
                             <p className="text-xs text-gray-400 leading-relaxed">
-                                <strong className="text-gray-300">Drag the wheel</strong> to rotate and change keys. Highlighted chords always sound good together.
+                                <strong className="text-gray-300">Drag the wheel</strong> to rotate, or <strong className="text-gray-300">tap the key</strong> in the header to change keys. Highlighted chords always sound good together.
                             </p>
                         </div>
                     </div>
@@ -256,22 +318,7 @@ const HelpContent: React.FC<HelpContentProps> = ({ onClose }) => {
                 <div className="bg-bg-elevated/50 rounded-lg p-4 space-y-4">
                     <p className="text-sm text-gray-300">Musicians use roman numerals to talk about chords regardless of the specific key. This reveals the "DNA" of a song.</p>
 
-                    <div className="grid grid-cols-7 gap-1 text-center text-sm">
-                        {['I', 'ii', 'iii', 'IV', 'V', 'vi', 'vii°'].map((num, i) => (
-                            <div key={num} className={`rounded p-2 flex flex-col items-center justify-between h-20 ${['I', 'IV', 'V'].includes(num) ? 'bg-accent-primary/20 border border-accent-primary/30' :
-                                num === 'vii°' ? 'bg-red-500/10 border border-red-500/20' : 'bg-violet-500/15 border border-violet-500/25'
-                                }`}>
-                                <span className="font-bold text-white mb-1">{num}</span>
-                                <span className="text-[10px] text-gray-400 leading-tight">
-                                    {i === 0 ? 'Tonic (Home)' :
-                                        i === 3 ? 'Subdom. (Away)' :
-                                            i === 4 ? 'Dominant (Tension)' :
-                                                i === 5 ? 'Rel. Minor' :
-                                                    i === 6 ? 'Leading Tone' : 'Mediant'}
-                                </span>
-                            </div>
-                        ))}
-                    </div>
+                    <InteractiveNumeralsGrid selectedKey={selectedKey} />
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs text-gray-400">
                         <div className="p-2 rounded bg-bg-tertiary/50">
