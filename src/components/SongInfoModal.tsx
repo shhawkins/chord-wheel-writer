@@ -9,7 +9,8 @@ interface SongInfoModalProps {
     title: string;
     artist: string;
     tags: string[];
-    onSave: (title: string, artist: string, tags: string[]) => void;
+    timeSignature: [number, number];
+    onSave: (title: string, artist: string, tags: string[], timeSignature: [number, number]) => void;
 }
 
 /**
@@ -22,6 +23,7 @@ export const SongInfoModal: React.FC<SongInfoModalProps> = ({
     title,
     artist,
     tags,
+    timeSignature,
     onSave,
 }) => {
     const modalRef = useRef<HTMLDivElement>(null);
@@ -31,6 +33,7 @@ export const SongInfoModal: React.FC<SongInfoModalProps> = ({
     const [localTitle, setLocalTitle] = useState(title);
     const [localArtist, setLocalArtist] = useState(artist);
     const [localTags, setLocalTags] = useState<string[]>(tags);
+    const [localTimeSignature, setLocalTimeSignature] = useState<[number, number]>(timeSignature);
     const [newTagInput, setNewTagInput] = useState('');
 
     // Reset local state when modal opens
@@ -39,6 +42,7 @@ export const SongInfoModal: React.FC<SongInfoModalProps> = ({
             setLocalTitle(title);
             setLocalArtist(artist);
             setLocalTags(tags);
+            setLocalTimeSignature(timeSignature);
             setNewTagInput('');
             // Focus the title input after a small delay (for animation)
             setTimeout(() => {
@@ -46,7 +50,7 @@ export const SongInfoModal: React.FC<SongInfoModalProps> = ({
                 titleInputRef.current?.select();
             }, 100);
         }
-    }, [isOpen, title, artist, tags]);
+    }, [isOpen, title, artist, tags, timeSignature]);
 
     // Close on Escape key
     useEffect(() => {
@@ -66,7 +70,7 @@ export const SongInfoModal: React.FC<SongInfoModalProps> = ({
 
     const handleSave = () => {
         const finalTitle = localTitle.trim() || 'Untitled Song';
-        onSave(finalTitle, localArtist.trim(), localTags);
+        onSave(finalTitle, localArtist.trim(), localTags, localTimeSignature);
         onClose();
     };
 
@@ -174,6 +178,34 @@ export const SongInfoModal: React.FC<SongInfoModalProps> = ({
                                        px-3 border border-border-subtle 
                                        focus:outline-none focus:ring-1 focus:ring-accent-primary/50 focus:border-accent-primary"
                         />
+                    </div>
+
+                    {/* Time Signature */}
+                    <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider">
+                            Time Signature
+                        </label>
+                        <select
+                            value={`${localTimeSignature[0]}/${localTimeSignature[1]}`}
+                            onChange={(e) => {
+                                const [top, bottom] = e.target.value.split('/').map(n => parseInt(n, 10));
+                                setLocalTimeSignature([top, bottom]);
+                            }}
+                            className="w-full h-9 bg-bg-tertiary text-text-primary text-sm font-medium rounded-lg 
+                                       px-3 border border-border-subtle 
+                                       focus:outline-none focus:ring-1 focus:ring-accent-primary/50 focus:border-accent-primary"
+                        >
+                            <option value="4/4">4/4 (Common Time)</option>
+                            <option value="3/4">3/4 (Waltz)</option>
+                            <option value="2/4">2/4 (March)</option>
+                            <option value="5/4">5/4</option>
+                            <option value="6/8">6/8 (Compound)</option>
+                            <option value="7/8">7/8</option>
+                            <option value="12/8">12/8</option>
+                        </select>
+                        <p className="text-[10px] text-text-muted">
+                            Default for new sections. Sections can override this.
+                        </p>
                     </div>
 
                     {/* Tags Section */}

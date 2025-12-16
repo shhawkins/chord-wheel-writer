@@ -181,7 +181,7 @@ const MobilePortraitDrawers: React.FC<MobilePortraitDrawersProps> = ({
 
 
 function App() {
-  const { currentSong, selectedKey, timelineVisible, toggleTimeline, selectedSectionId, selectedSlotId, clearSlot, clearTimeline, setTitle, setArtist, setTags, loadSong: loadSongToStore, newSong, instrument, volume, isMuted, undo, redo, canUndo, canRedo, chordPanelVisible, isPlaying, songInfoModalVisible, toggleSongInfoModal } = useSongStore();
+  const { currentSong, selectedKey, timelineVisible, toggleTimeline, selectedSectionId, selectedSlotId, clearSlot, clearTimeline, setTitle, setArtist, setTags, setSongTimeSignature, loadSong: loadSongToStore, newSong, instrument, volume, isMuted, undo, redo, canUndo, canRedo, chordPanelVisible, isPlaying, songInfoModalVisible, toggleSongInfoModal } = useSongStore();
 
   // Audio Sync Logic
   useEffect(() => {
@@ -578,10 +578,11 @@ function App() {
   };
 
   // Handle song info save from modal
-  const handleSongInfoSave = (newTitle: string, newArtist: string, newTags: string[]) => {
+  const handleSongInfoSave = (newTitle: string, newArtist: string, newTags: string[], newTimeSignature: [number, number]) => {
     setTitle(newTitle);
     setArtist(newArtist);
     setTags(newTags);
+    setSongTimeSignature(newTimeSignature);
   };
 
   // Calculate song duration (Task 33)
@@ -814,11 +815,12 @@ function App() {
     doc.setLineWidth(0.5);
     doc.line(leftMargin, 22, pageWidth - leftMargin, 22);
 
-    // Song info row: Key | Tempo | Duration | Sections | Bars
+    // Song info row: Key | Time Sig | Tempo | Duration | Sections | Bars
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
     const infoItems = [
       `Key: ${formatChordForDisplay(selectedKey)}`,
+      `${currentSong.timeSignature[0]}/${currentSong.timeSignature[1]}`,
       `Tempo: ${currentSong.tempo} BPM`,
       `Duration: ${formattedDuration}`,
       `${totalSections} sections`,
@@ -1597,6 +1599,7 @@ function App() {
         title={currentSong.title}
         artist={currentSong.artist || ''}
         tags={currentSong.tags || []}
+        timeSignature={currentSong.timeSignature}
         onSave={handleSongInfoSave}
       />
 

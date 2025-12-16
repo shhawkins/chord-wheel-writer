@@ -185,6 +185,7 @@ interface SongState {
     setTitle: (title: string) => void;
     setArtist: (artist: string) => void;
     setTags: (tags: string[]) => void;
+    setSongTimeSignature: (signature: [number, number]) => void;
     loadSong: (song: Song) => void;
     newSong: () => void;
     addSection: (type: Section['type']) => void;
@@ -871,6 +872,14 @@ export const useSongStore = create<SongState>()(
                 return {
                     ...history,
                     currentSong: { ...state.currentSong, tags }
+                };
+            }),
+
+            setSongTimeSignature: (signature) => set((state) => {
+                const history = buildHistoryState(state);
+                return {
+                    ...history,
+                    currentSong: { ...state.currentSong, timeSignature: signature }
                 };
             }),
 
