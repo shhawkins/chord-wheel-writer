@@ -960,6 +960,82 @@ function App() {
       });
     }
 
+    // === SONG TIMELINE FOOTER ===
+    // Helper function to get section abbreviation for compact display
+    const getSectionAbbreviation = (section: typeof currentSong.sections[0], allSections: typeof currentSong.sections): string => {
+      const typeAbbreviations: Record<string, string> = {
+        'intro': 'In',
+        'verse': 'V',
+        'pre-chorus': 'PC',
+        'chorus': 'C',
+        'bridge': 'Br',
+        'interlude': 'Int',
+        'solo': 'So',
+        'breakdown': 'Bd',
+        'tag': 'Tg',
+        'hook': 'Hk',
+        'outro': 'Out',
+      };
+
+      const abbrev = typeAbbreviations[section.type] || section.type.charAt(0).toUpperCase();
+
+      // Count how many of this type exist
+      const sameTypeSections = allSections.filter(s => s.type === section.type);
+      if (sameTypeSections.length > 1) {
+        const index = sameTypeSections.findIndex(s => s.id === section.id) + 1;
+        return `${abbrev}${index}`;
+      }
+      return abbrev;
+    };
+
+    // Draw timeline footer on a page
+    const drawTimelineFooter = (pageDoc: jsPDF) => {
+      const horizontalY = 285; // Y position for horizontal line (centered)
+      const verticalExtent = 4; // How far vertical lines extend UP and DOWN from horizontal
+      const labelY = horizontalY - verticalExtent - 3; // Labels above the bracket
+      const timelineWidth = pageWidth - (leftMargin * 2);
+
+      // Calculate total measures for proportional sizing
+      const totalMeasures = currentSong.sections.reduce((acc, s) => acc + s.measures.length, 0);
+      if (totalMeasures === 0) return;
+
+      // Draw each section as a bracket with label above
+      let currentX = leftMargin;
+      pageDoc.setDrawColor(0, 0, 0);
+      pageDoc.setLineWidth(0.4);
+
+      currentSong.sections.forEach((section) => {
+        const sectionWidth = (section.measures.length / totalMeasures) * timelineWidth;
+        const bracketStartX = currentX + 2; // Small padding from edge
+        const bracketEndX = currentX + sectionWidth - 2;
+
+        // Draw horizontal line in the middle
+        pageDoc.line(bracketStartX, horizontalY, bracketEndX, horizontalY);
+
+        // Draw left vertical end cap (extending both UP and DOWN from horizontal)
+        pageDoc.line(bracketStartX, horizontalY - verticalExtent, bracketStartX, horizontalY + verticalExtent);
+
+        // Draw right vertical end cap (extending both UP and DOWN from horizontal)
+        pageDoc.line(bracketEndX, horizontalY - verticalExtent, bracketEndX, horizontalY + verticalExtent);
+
+        // Draw section label centered ABOVE the bracket
+        const label = getSectionAbbreviation(section, currentSong.sections);
+        pageDoc.setFontSize(7);
+        pageDoc.setFont("helvetica", "normal");
+        pageDoc.setTextColor(0, 0, 0);
+        pageDoc.text(label, currentX + sectionWidth / 2, labelY, { align: 'center' });
+
+        currentX += sectionWidth;
+      });
+    };
+
+    // Add timeline footer to all pages
+    const totalPages = doc.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i);
+      drawTimelineFooter(doc);
+    }
+
     // Generate filename
     const fileName = `${currentSong.title.replace(/\s+/g, '-').toLowerCase()}.pdf`;
 
