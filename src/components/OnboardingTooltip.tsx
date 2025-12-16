@@ -153,7 +153,7 @@ export const OnboardingTooltip: React.FC<OnboardingTooltipProps> = ({ onDismiss,
                             <div className="flex items-center gap-2 text-xs text-gray-400">
                                 <MousePointer2 size={14} className="text-accent-primary shrink-0" />
                                 <span className="flex items-center gap-1.5 flex-wrap">
-                                    <strong className="text-gray-300">Pro tip:</strong> Tap the
+                                    <strong className="text-gray-300">Tip:</strong> Tap the
                                     <button
                                         onClick={() => {
                                             handleDismiss();
