@@ -277,8 +277,8 @@ export const SectionOptionsPopup: React.FC<SectionOptionsPopupProps> = ({
                                     {measureCount}
                                 </span>
                                 <button
-                                    onClick={() => onBarsChange(Math.min(16, measureCount + 1))}
-                                    disabled={measureCount >= 16}
+                                    onClick={() => onBarsChange(Math.min(32, measureCount + 1))}
+                                    disabled={measureCount >= 32}
                                     className="h-8 w-8 flex items-center justify-center rounded-lg
                                                bg-bg-tertiary border border-border-subtle
                                                text-text-muted hover:text-text-primary hover:bg-bg-secondary
