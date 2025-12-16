@@ -41,6 +41,8 @@ const MobilePortraitDrawers: React.FC<MobilePortraitDrawersProps> = ({
   const isDraggingToggleBar = useRef(false);
 
   const arePanelsOpen = mobileTimelineOpen || chordPanelVisible;
+  // Only allow closing when BOTH panels are open
+  const areBothPanelsOpen = mobileTimelineOpen && chordPanelVisible;
 
   // Maximum drawer preview height during drag
   const maxPreviewHeight = 450; // Enough to show both timeline and chord details content
@@ -65,21 +67,17 @@ const MobilePortraitDrawers: React.FC<MobilePortraitDrawersProps> = ({
 
     const threshold = 40;
 
-    if (arePanelsOpen) {
-      // Panels are open - drag DOWN to close (negative offset)
+    if (areBothPanelsOpen) {
+      // BOTH panels are open - drag DOWN to close both (negative offset)
       if (toggleBarDragOffset < -threshold) {
         setMobileTimelineOpen(false);
-        if (chordPanelVisible) {
-          useSongStore.getState().toggleChordPanel();
-        }
+        useSongStore.getState().toggleChordPanel();
       }
     } else {
-      // Panels are closed - drag UP to open (positive offset)
+      // At least one panel is closed - drag UP to open both (positive offset)
       if (toggleBarDragOffset > threshold) {
-        setMobileTimelineOpen(true);
-        if (!chordPanelVisible) {
-          useSongStore.getState().toggleChordPanel();
-        }
+        if (!mobileTimelineOpen) setMobileTimelineOpen(true);
+        if (!chordPanelVisible) useSongStore.getState().toggleChordPanel();
       }
     }
 
@@ -89,18 +87,22 @@ const MobilePortraitDrawers: React.FC<MobilePortraitDrawersProps> = ({
   const handleToggleBarClick = () => {
     // Only toggle if we didn't drag significantly
     if (Math.abs(toggleBarDragOffset) < 15) {
-      const shouldOpen = !mobileTimelineOpen && !chordPanelVisible;
-      setMobileTimelineOpen(shouldOpen);
-      if (shouldOpen !== chordPanelVisible) {
+      if (areBothPanelsOpen) {
+        // Both open - close both
+        setMobileTimelineOpen(false);
         useSongStore.getState().toggleChordPanel();
+      } else {
+        // At least one closed - open both
+        if (!mobileTimelineOpen) setMobileTimelineOpen(true);
+        if (!chordPanelVisible) useSongStore.getState().toggleChordPanel();
       }
     }
   };
 
   const isDragging = toggleBarDragOffset !== 0;
 
-  // For closing: calculate how much height to reduce (shrinks the drawer)
-  const closingHeightReduction = arePanelsOpen && toggleBarDragOffset < 0
+  // For closing: calculate how much height to reduce (only when BOTH panels open)
+  const closingHeightReduction = areBothPanelsOpen && toggleBarDragOffset < 0
     ? Math.min(400, -toggleBarDragOffset * 1.5) // Reduce height based on drag
     : 0;
 
@@ -135,7 +137,7 @@ const MobilePortraitDrawers: React.FC<MobilePortraitDrawersProps> = ({
       >
         <ChevronUp
           size={16}
-          className={`text-text-muted transition-transform duration-200 ${arePanelsOpen ? 'rotate-180' : ''}`}
+          className={`text-text-muted transition-transform duration-200 ${areBothPanelsOpen ? 'rotate-180' : ''}`}
         />
       </div>
 

@@ -1166,15 +1166,19 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({
 
                 return (
                     <div
-                        className="absolute -bottom-4 right-3 flex items-center gap-1 z-10 cursor-pointer touch-feedback active:scale-95 transition-transform"
+                        className="fixed flex items-center gap-1 z-10 cursor-pointer touch-feedback active:scale-95"
                         style={{
+                            // Dynamic positioning: move up when timeline is open
+                            bottom: timelineVisible ? '260px' : '175px',
+                            right: '12px',
                             backgroundColor: 'transparent',
                             color: chordColor,
                             padding: '4px 10px',
                             borderRadius: '8px',
                             border: `2px solid ${chordColor}`,
                             backdropFilter: 'blur(8px)',
-                            background: 'rgba(0, 0, 0, 0.4)'
+                            background: 'rgba(0, 0, 0, 0.4)',
+                            transition: 'bottom 0.25s ease-out'
                         }}
                         onClick={(e) => {
                             e.stopPropagation();
