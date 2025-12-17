@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useCallback, useState } from 'react';
 
 interface PianoKeyboardProps {
     highlightedNotes: string[]; // e.g., ['C', 'E', 'G']
@@ -18,6 +18,12 @@ export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
     onNotePlay
 }) => {
     const whiteKeys = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
+    
+    // Glissando state
+    const containerRef = useRef<HTMLDivElement>(null);
+    const isGlissandoActive = useRef(false);
+    const playedNotesInGlissando = useRef<Set<string>>(new Set());
+    const [activeKey, setActiveKey] = useState<string | null>(null);
 
     // Convert note name to pitch class (0-11) for accurate comparison
     const noteToPitchClass = (note: string): number => {
@@ -58,11 +64,115 @@ export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
         return noteToPitchClass(note) === bassPitchClass;
     };
 
-    const handleKeyClick = (note: string, keyOctave: number) => {
-        if (onNotePlay) {
-            onNotePlay(note, keyOctave);
+    // Glissando: play note if not already played in this drag
+    const playNoteInGlissando = useCallback((note: string, keyOctave: number) => {
+        const noteKey = `${note}-${keyOctave}`;
+        if (!playedNotesInGlissando.current.has(noteKey)) {
+            playedNotesInGlissando.current.add(noteKey);
+            setActiveKey(noteKey);
+            if (onNotePlay) {
+                onNotePlay(note, keyOctave);
+            }
         }
-    };
+    }, [onNotePlay]);
+    
+    // Get note info from a point on the keyboard
+    const getNoteFromPoint = useCallback((clientX: number, clientY: number): { note: string; octave: number } | null => {
+        if (!containerRef.current) return null;
+        
+        const rect = containerRef.current.getBoundingClientRect();
+        const x = clientX - rect.left;
+        const y = clientY - rect.top;
+        const width = rect.width;
+        const height = rect.height;
+        
+        // Padding adjustments (3px 2px 2px 2px)
+        const paddingTop = 3;
+        const paddingLeft = 2;
+        const paddingRight = 2;
+        const innerWidth = width - paddingLeft - paddingRight;
+        const innerX = x - paddingLeft;
+        
+        // Check if we're in the black key zone (top 58% of height)
+        const blackKeyHeight = (height - paddingTop) * 0.58;
+        const isInBlackKeyZone = y - paddingTop < blackKeyHeight;
+        
+        // Black key positions (percentage of octave width)
+        const blackKeyPositions = [
+            { note: 'C#', offset: 7.14 },
+            { note: 'D#', offset: 14.28 },
+            { note: 'F#', offset: 28.57 },
+            { note: 'G#', offset: 35.71 },
+            { note: 'A#', offset: 42.85 },
+        ];
+        
+        const percentX = (innerX / innerWidth) * 100;
+        const blackKeyWidth = 5.5; // percentage width of black key
+        
+        // Check black keys first if in black key zone
+        if (isInBlackKeyZone) {
+            for (let oct = 0; oct < 2; oct++) {
+                const octaveOffset = oct * 50;
+                for (const { note, offset } of blackKeyPositions) {
+                    const leftPos = octaveOffset + offset;
+                    // Black keys are centered, so check half width on each side
+                    if (percentX >= leftPos - blackKeyWidth/2 && percentX <= leftPos + blackKeyWidth/2) {
+                        return { note, octave: octave + oct };
+                    }
+                }
+            }
+        }
+        
+        // Check white keys
+        const totalWhiteKeys = 14;
+        const whiteKeyWidth = 100 / totalWhiteKeys;
+        const whiteKeyIndex = Math.floor(percentX / whiteKeyWidth);
+        
+        if (whiteKeyIndex >= 0 && whiteKeyIndex < totalWhiteKeys) {
+            const octIndex = Math.floor(whiteKeyIndex / 7);
+            const noteIndex = whiteKeyIndex % 7;
+            return { note: whiteKeys[noteIndex], octave: octave + octIndex };
+        }
+        
+        return null;
+    }, [octave, whiteKeys]);
+    
+    // Handle pointer/touch events for glissando
+    const handlePointerDown = useCallback((e: React.PointerEvent) => {
+        isGlissandoActive.current = true;
+        playedNotesInGlissando.current.clear();
+        
+        const noteInfo = getNoteFromPoint(e.clientX, e.clientY);
+        if (noteInfo) {
+            playNoteInGlissando(noteInfo.note, noteInfo.octave);
+        }
+        
+        // Capture pointer for smooth dragging
+        (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+    }, [getNoteFromPoint, playNoteInGlissando]);
+    
+    const handlePointerMove = useCallback((e: React.PointerEvent) => {
+        if (!isGlissandoActive.current) return;
+        
+        const noteInfo = getNoteFromPoint(e.clientX, e.clientY);
+        if (noteInfo) {
+            playNoteInGlissando(noteInfo.note, noteInfo.octave);
+        }
+    }, [getNoteFromPoint, playNoteInGlissando]);
+    
+    const handlePointerUp = useCallback(() => {
+        isGlissandoActive.current = false;
+        playedNotesInGlissando.current.clear();
+        setActiveKey(null);
+    }, []);
+    
+    const handlePointerLeave = useCallback(() => {
+        if (isGlissandoActive.current) {
+            isGlissandoActive.current = false;
+            playedNotesInGlissando.current.clear();
+            setActiveKey(null);
+        }
+    }, []);
 
     const renderWhiteKeys = () => {
         const keys: React.ReactNode[] = [];
@@ -74,17 +184,25 @@ export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
                 const isHighlighted = getIsHighlighted(note);
                 const isRoot = getIsRoot(note);
                 const isBass = getIsBass(note);
+                const noteKey = `${note}-${keyOctave}`;
+                const isActive = activeKey === noteKey;
 
                 keys.push(
                     <div
                         key={`white-${oct}-${note}`}
-                        className="h-full rounded-b-md relative border-x border-b border-gray-400 cursor-pointer hover:brightness-95 active:brightness-90 transition-all"
+                        data-note={note}
+                        data-octave={keyOctave}
+                        className="h-full rounded-b-md relative border-x border-b border-gray-400 cursor-pointer transition-all"
                         style={{
                             width: `${100 / totalWhiteKeys}%`,
-                            background: 'linear-gradient(180deg, #fafafa 0%, #e8e8e8 70%, #d0d0d0 100%)',
-                            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.9), inset 0 -2px 4px rgba(0,0,0,0.08)'
+                            background: isActive 
+                                ? 'linear-gradient(180deg, #d0d0d0 0%, #c0c0c0 70%, #b0b0b0 100%)'
+                                : 'linear-gradient(180deg, #fafafa 0%, #e8e8e8 70%, #d0d0d0 100%)',
+                            boxShadow: isActive
+                                ? 'inset 0 2px 4px rgba(0,0,0,0.15), inset 0 -1px 2px rgba(0,0,0,0.05)'
+                                : 'inset 0 1px 0 rgba(255,255,255,0.9), inset 0 -2px 4px rgba(0,0,0,0.08)',
+                            transform: isActive ? 'translateY(1px)' : 'none'
                         }}
-                        onClick={() => handleKeyClick(note, keyOctave)}
                     >
                         {/* Dot indicator for highlighted notes */}
                         {isHighlighted && (
@@ -148,21 +266,28 @@ export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
                 const isRoot = getIsRoot(note);
                 const isBass = getIsBass(note);
                 const leftPos = octaveOffset + offset;
+                const noteKey = `${note}-${keyOctave}`;
+                const isActive = activeKey === noteKey;
 
                 keys.push(
                     <div
                         key={`black-${oct}-${note}`}
-                        className="absolute top-0 rounded-b-md cursor-pointer hover:brightness-125 active:brightness-150 transition-all"
+                        data-note={note}
+                        data-octave={keyOctave}
+                        className="absolute top-0 rounded-b-md cursor-pointer transition-all"
                         style={{
                             left: `${leftPos}%`,
                             width: '5.5%',
-                            height: '58%',
+                            height: isActive ? '56%' : '58%',
                             transform: 'translateX(-50%)',
-                            background: 'linear-gradient(180deg, #333 0%, #1a1a1a 70%, #0a0a0a 100%)',
-                            boxShadow: '0 3px 6px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08)',
-                            pointerEvents: 'auto'
+                            background: isActive
+                                ? 'linear-gradient(180deg, #555 0%, #333 70%, #222 100%)'
+                                : 'linear-gradient(180deg, #333 0%, #1a1a1a 70%, #0a0a0a 100%)',
+                            boxShadow: isActive
+                                ? '0 1px 3px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.12)'
+                                : '0 3px 6px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08)',
+                            pointerEvents: 'none'
                         }}
-                        onClick={() => handleKeyClick(note, keyOctave)}
                     >
                         {/* Dot indicator for highlighted notes */}
                         {isHighlighted && (
@@ -209,7 +334,8 @@ export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
 
     return (
         <div
-            className="relative w-full rounded-lg select-none overflow-hidden"
+            ref={containerRef}
+            className="relative w-full rounded-lg select-none overflow-hidden touch-none"
             style={{
                 height: '80px',
                 minHeight: '80px',
@@ -217,6 +343,11 @@ export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
                 boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.6)',
                 padding: '3px 2px 2px 2px'
             }}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerLeave={handlePointerLeave}
+            onPointerCancel={handlePointerUp}
         >
             <div className="relative w-full h-full overflow-hidden">
                 {/* White keys */}
