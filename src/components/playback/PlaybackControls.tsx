@@ -216,173 +216,187 @@ export const PlaybackControls: React.FC = () => {
     return (
         <div
             data-playback-controls
-            className={`${isMobile && isLandscape ? 'h-8' : isMobile ? 'h-11' : 'h-12'} bg-bg-elevated border-t border-border-subtle flex items-center justify-between ${isMobile ? 'px-2 gap-1' : 'px-6'}`}
+            className="flex flex-col w-full bg-bg-elevated border-t border-border-subtle"
         >
-            {/* Transport Controls - Compact */}
-            <div className="flex items-center gap-0.5">
-                <button
-                    onClick={() => handleSkip('prev')}
-                    className={`${isMobile && isLandscape ? 'p-1' : 'p-1.5'} text-text-secondary hover:text-text-primary transition-colors touch-feedback flex items-center justify-center`}
-                >
-                    <SkipBack size={isMobile && isLandscape ? 12 : 16} />
-                </button>
-                <button
-                    onClick={handlePlayPause}
-                    disabled={isLoading}
-                    className={`${isMobile && isLandscape ? 'w-6 h-6' : isMobile ? 'w-8 h-8' : 'w-9 h-9'} rounded-full bg-accent-primary hover:bg-indigo-500 disabled:bg-accent-primary/50 flex items-center justify-center text-white shadow-md transition-all hover:scale-105 active:scale-95 touch-feedback`}
-                >
-                    {isLoading ? (
-                        <Loader2 size={isMobile && isLandscape ? 12 : isMobile ? 16 : 18} className="animate-spin" />
-                    ) : isPlaying ? (
-                        <Pause size={isMobile && isLandscape ? 12 : isMobile ? 16 : 18} fill="currentColor" />
+            {/* Active Controls Row */}
+            <div className={`${isMobile && isLandscape ? 'h-8' : isMobile ? 'h-11' : 'h-12'} flex items-center justify-between ${isMobile ? 'px-2 gap-1' : 'px-6'} relative z-20`}>
+                {/* Transport Controls - Compact */}
+                <div className="flex items-center gap-0.5">
+                    <button
+                        onClick={() => handleSkip('prev')}
+                        className={`${isMobile && isLandscape ? 'p-1' : 'p-1.5'} text-text-secondary hover:text-text-primary transition-colors touch-feedback flex items-center justify-center`}
+                    >
+                        <SkipBack size={isMobile && isLandscape ? 12 : 16} />
+                    </button>
+                    <button
+                        onClick={handlePlayPause}
+                        disabled={isLoading}
+                        className={`${isMobile && isLandscape ? 'w-6 h-6' : isMobile ? 'w-8 h-8' : 'w-9 h-9'} rounded-full bg-accent-primary hover:bg-indigo-500 disabled:bg-accent-primary/50 flex items-center justify-center text-white shadow-md transition-all hover:scale-105 active:scale-95 touch-feedback`}
+                    >
+                        {isLoading ? (
+                            <Loader2 size={isMobile && isLandscape ? 12 : isMobile ? 16 : 18} className="animate-spin" />
+                        ) : isPlaying ? (
+                            <Pause size={isMobile && isLandscape ? 12 : isMobile ? 16 : 18} fill="currentColor" />
+                        ) : (
+                            <Play size={isMobile && isLandscape ? 12 : isMobile ? 16 : 18} fill="currentColor" className="ml-0.5" />
+                        )}
+                    </button>
+                    <button
+                        onClick={() => handleSkip('next')}
+                        className={`${isMobile && isLandscape ? 'p-1' : 'p-1.5'} text-text-secondary hover:text-text-primary transition-colors touch-feedback flex items-center justify-center`}
+                    >
+                        <SkipForward size={isMobile && isLandscape ? 12 : 16} />
+                    </button>
+                    {/* Loop toggle - visible on mobile and desktop */}
+                    {isMobile ? (
+                        <>
+                            <button
+                                onClick={cycleSelectedSection}
+                                className={`${isLandscape ? 'p-1' : 'p-1.5'} transition-colors text-text-secondary hover:text-text-primary touch-feedback`}
+                                title="Cycle to Next Section"
+                            >
+                                <RefreshCw size={isLandscape ? 12 : 14} />
+                            </button>
+                            <button
+                                onClick={handleLoopToggle}
+                                className={`${isLandscape ? 'p-1' : 'p-1.5'} transition-colors touch-feedback ${isLooping ? 'text-accent-primary' : 'text-text-secondary hover:text-text-primary'}`}
+                                title="Loop Section"
+                            >
+                                <Repeat size={isLandscape ? 12 : 14} />
+                            </button>
+                        </>
                     ) : (
-                        <Play size={isMobile && isLandscape ? 12 : isMobile ? 16 : 18} fill="currentColor" className="ml-0.5" />
-                    )}
-                </button>
-                <button
-                    onClick={() => handleSkip('next')}
-                    className={`${isMobile && isLandscape ? 'p-1' : 'p-1.5'} text-text-secondary hover:text-text-primary transition-colors touch-feedback flex items-center justify-center`}
-                >
-                    <SkipForward size={isMobile && isLandscape ? 12 : 16} />
-                </button>
-                {/* Loop toggle - visible on mobile and desktop */}
-                {isMobile ? (
-                    <>
-                        <button
-                            onClick={cycleSelectedSection}
-                            className={`${isLandscape ? 'p-1' : 'p-1.5'} transition-colors text-text-secondary hover:text-text-primary touch-feedback`}
-                            title="Cycle to Next Section"
-                        >
-                            <RefreshCw size={isLandscape ? 12 : 14} />
-                        </button>
                         <button
                             onClick={handleLoopToggle}
-                            className={`${isLandscape ? 'p-1' : 'p-1.5'} transition-colors touch-feedback ${isLooping ? 'text-accent-primary' : 'text-text-secondary hover:text-text-primary'}`}
+                            className={`p-1.5 transition-colors ml-1 ${isLooping ? 'text-accent-primary' : 'text-text-secondary hover:text-text-primary'}`}
                             title="Loop Section"
                         >
-                            <Repeat size={isLandscape ? 12 : 14} />
+                            <Repeat size={14} />
                         </button>
-                    </>
-                ) : (
-                    <button
-                        onClick={handleLoopToggle}
-                        className={`p-1.5 transition-colors ml-1 ${isLooping ? 'text-accent-primary' : 'text-text-secondary hover:text-text-primary'}`}
-                        title="Loop Section"
-                    >
-                        <Repeat size={14} />
-                    </button>
-                )}
-            </div>
+                    )}
+                </div>
 
-            {/* Tempo & Info - Show on all views */}
-            <div className="flex items-center">
-                {isMobile ? (
-                    // Tappable BPM display for mobile (both portrait and landscape)
-                    isEditingBpm ? (
-                        <input
-                            ref={bpmInputRef}
-                            type="number"
-                            inputMode="numeric"
-                            value={bpmInputValue}
-                            onChange={(e) => setBpmInputValue(e.target.value)}
-                            onBlur={handleBpmSave}
-                            onKeyDown={handleBpmKeyDown}
-                            className={`${isLandscape ? 'w-10 text-[9px] h-4' : 'w-12 text-[11px] h-5'} bg-bg-tertiary border border-accent-primary rounded-sm px-1 text-center text-text-primary font-medium focus:outline-none`}
-                            min={40}
-                            max={240}
-                        />
+                {/* Tempo & Info - Show on all views */}
+                <div className="flex items-center">
+                    {isMobile ? (
+                        // Tappable BPM display for mobile (both portrait and landscape)
+                        isEditingBpm ? (
+                            <input
+                                ref={bpmInputRef}
+                                type="number"
+                                inputMode="numeric"
+                                value={bpmInputValue}
+                                onChange={(e) => setBpmInputValue(e.target.value)}
+                                onBlur={handleBpmSave}
+                                onKeyDown={handleBpmKeyDown}
+                                className={`${isLandscape ? 'w-10 text-[9px] h-4' : 'w-12 text-[11px] h-5'} bg-bg-tertiary border border-accent-primary rounded-sm px-1 text-center text-text-primary font-medium focus:outline-none`}
+                                min={40}
+                                max={240}
+                            />
+                        ) : (
+                            <div
+                                onTouchStart={handleBpmTouchStart}
+                                onTouchMove={handleBpmTouchMove}
+                                onTouchEnd={handleBpmTouchEnd}
+                                onClick={handleBpmTap}
+                                className={`${isLandscape ? 'text-[9px] px-1.5 h-4' : 'text-[11px] px-2 h-5'} font-medium ${isSwiping ? 'text-accent-primary' : 'text-text-secondary'} hover:text-text-primary transition-colors touch-feedback whitespace-nowrap flex items-center cursor-ew-resize select-none`}
+                            >
+                                {tempo} <span className={`${isSwiping ? 'text-accent-primary/70' : 'text-text-muted'} ml-0.5`}>BPM</span>
+                            </div>
+                        )
                     ) : (
-                        <div
-                            onTouchStart={handleBpmTouchStart}
-                            onTouchMove={handleBpmTouchMove}
-                            onTouchEnd={handleBpmTouchEnd}
-                            onClick={handleBpmTap}
-                            className={`${isLandscape ? 'text-[9px] px-1.5 h-4' : 'text-[11px] px-2 h-5'} font-medium ${isSwiping ? 'text-accent-primary' : 'text-text-secondary'} hover:text-text-primary transition-colors touch-feedback whitespace-nowrap flex items-center cursor-ew-resize select-none`}
+                        <div className="flex items-center gap-2">
+                            <span className="text-text-secondary font-medium">Tempo</span>
+                            <input
+                                type="number"
+                                value={tempo}
+                                onChange={(e) => setTempo(Number(e.target.value))}
+                                className="w-14 bg-bg-tertiary border border-border-subtle rounded px-2 py-1 text-center text-text-primary text-[11px] font-medium"
+                                min={40}
+                                max={240}
+                            />
+                            <span className="text-text-muted">BPM</span>
+                        </div>
+                    )}
+                </div>
+
+                {/* Instrument & Volume - Compact for mobile */}
+                <div className={`flex items-center ${isMobile ? 'gap-1.5' : 'gap-4'}`}>
+                    {/* Instrument Selector */}
+                    <div className="flex items-center gap-1">
+                        {!isMobile && (
+                            <div className="flex items-center rounded bg-bg-tertiary/60 border border-border-subtle/70 h-7">
+                                <button
+                                    onClick={() => cycleInstrument('prev')}
+                                    className="px-1 h-full text-text-secondary hover:text-text-primary hover:bg-bg-tertiary rounded-l transition-colors flex items-center"
+                                    title="Previous instrument"
+                                >
+                                    <ChevronLeft size={12} />
+                                </button>
+                                <button
+                                    onClick={() => cycleInstrument('next')}
+                                    className="px-1 h-full text-text-secondary hover:text-text-primary hover:bg-bg-tertiary rounded-r transition-colors flex items-center"
+                                    title="Next instrument"
+                                >
+                                    <ChevronRight size={12} />
+                                </button>
+                            </div>
+                        )}
+                        {isMobile && !isLandscape && <Music size={14} className="text-text-muted" />}
+                        {/* Show instrument selector on all views (including landscape for voice selection) */}
+                        <select
+                            value={instrument}
+                            onChange={(e) => setInstrument(e.target.value as InstrumentType)}
+                            className={`bg-bg-tertiary border border-border-subtle rounded ${isMobile && isLandscape
+                                ? 'px-3 py-1 h-6 text-[7px] min-w-[60px]'
+                                : isMobile
+                                    ? 'px-1.5 h-7 text-[11px] min-w-[70px]'
+                                    : 'px-2 h-7 text-[10px] min-w-[130px]'
+                                } text-text-secondary focus:outline-none focus:border-accent-primary cursor-pointer`}
                         >
-                            {tempo} <span className={`${isSwiping ? 'text-accent-primary/70' : 'text-text-muted'} ml-0.5`}>BPM</span>
-                        </div>
-                    )
-                ) : (
-                    <div className="flex items-center gap-2">
-                        <span className="text-text-secondary font-medium">Tempo</span>
-                        <input
-                            type="number"
-                            value={tempo}
-                            onChange={(e) => setTempo(Number(e.target.value))}
-                            className="w-14 bg-bg-tertiary border border-border-subtle rounded px-2 py-1 text-center text-text-primary text-[11px] font-medium"
-                            min={40}
-                            max={240}
-                        />
-                        <span className="text-text-muted">BPM</span>
+                            {instrumentOptions.map((opt) => (
+                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            ))}
+                        </select>
                     </div>
-                )}
-            </div>
 
-            {/* Instrument & Volume - Compact for mobile */}
-            <div className={`flex items-center ${isMobile ? 'gap-1.5' : 'gap-4'}`}>
-                {/* Instrument Selector */}
-                <div className="flex items-center gap-1">
-                    {!isMobile && (
-                        <div className="flex items-center rounded bg-bg-tertiary/60 border border-border-subtle/70 h-7">
-                            <button
-                                onClick={() => cycleInstrument('prev')}
-                                className="px-1 h-full text-text-secondary hover:text-text-primary hover:bg-bg-tertiary rounded-l transition-colors flex items-center"
-                                title="Previous instrument"
-                            >
-                                <ChevronLeft size={12} />
-                            </button>
-                            <button
-                                onClick={() => cycleInstrument('next')}
-                                className="px-1 h-full text-text-secondary hover:text-text-primary hover:bg-bg-tertiary rounded-r transition-colors flex items-center"
-                                title="Next instrument"
-                            >
-                                <ChevronRight size={12} />
-                            </button>
-                        </div>
-                    )}
-                    {isMobile && !isLandscape && <Music size={14} className="text-text-muted" />}
-                    {/* Show instrument selector on all views (including landscape for voice selection) */}
-                    <select
-                        value={instrument}
-                        onChange={(e) => setInstrument(e.target.value as InstrumentType)}
-                        className={`bg-bg-tertiary border border-border-subtle rounded ${isMobile && isLandscape
-                            ? 'px-3 py-1 h-6 text-[7px] min-w-[60px]'
-                            : isMobile
-                                ? 'px-1.5 h-7 text-[11px] min-w-[70px]'
-                                : 'px-2 h-7 text-[10px] min-w-[130px]'
-                            } text-text-secondary focus:outline-none focus:border-accent-primary cursor-pointer`}
-                    >
-                        {instrumentOptions.map((opt) => (
-                            <option key={opt.value} value={opt.value}>{opt.label}</option>
-                        ))}
-                    </select>
-                </div>
-
-                {/* Volume/Mute Toggle */}
-                <div className={`flex items-center ${isMobile ? '' : 'gap-2 w-28'}`}>
-                    <button
-                        onClick={toggleMute}
-                        className={`${isMobile ? 'p-1.5' : 'p-1'} text-text-secondary hover:text-text-primary transition-colors touch-feedback flex items-center justify-center rounded`}
-                        title={isMuted ? "Unmute" : "Mute"}
-                    >
-                        {isMuted || volume === 0 ? <VolumeX size={isMobile ? 16 : 14} /> : <Volume2 size={isMobile ? 16 : 14} />}
-                    </button>
-                    {!isMobile && (
-                        <input
-                            type="range"
-                            min="0"
-                            max="1"
-                            step="0.01"
-                            value={isMuted ? 0 : volume}
-                            onChange={(e) => {
-                                if (isMuted) toggleMute();
-                                setVolume(Number(e.target.value));
-                            }}
-                            className={`w-full h-1 bg-bg-tertiary rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2.5 [&::-webkit-slider-thumb]:h-2.5 [&::-webkit-slider-thumb]:bg-accent-primary [&::-webkit-slider-thumb]:rounded-full ${isMuted ? 'opacity-50' : ''}`}
-                        />
-                    )}
+                    {/* Volume/Mute Toggle */}
+                    <div className={`flex items-center ${isMobile ? '' : 'gap-2 w-28'}`}>
+                        <button
+                            onClick={toggleMute}
+                            className={`${isMobile ? 'p-1.5' : 'p-1'} text-text-secondary hover:text-text-primary transition-colors touch-feedback flex items-center justify-center rounded`}
+                            title={isMuted ? "Unmute" : "Mute"}
+                        >
+                            {isMuted || volume === 0 ? <VolumeX size={isMobile ? 16 : 14} /> : <Volume2 size={isMobile ? 16 : 14} />}
+                        </button>
+                        {!isMobile && (
+                            <input
+                                type="range"
+                                min="0"
+                                max="1"
+                                step="0.01"
+                                value={isMuted ? 0 : volume}
+                                onChange={(e) => {
+                                    if (isMuted) toggleMute();
+                                    setVolume(Number(e.target.value));
+                                }}
+                                className={`w-full h-1 bg-bg-tertiary rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2.5 [&::-webkit-slider-thumb]:h-2.5 [&::-webkit-slider-thumb]:bg-accent-primary [&::-webkit-slider-thumb]:rounded-full ${isMuted ? 'opacity-50' : ''}`}
+                            />
+                        )}
+                    </div>
                 </div>
             </div>
+
+            {/* Safe Area Status Bar - uses bottom space visually without interactive elements */}
+            {isMobile && !isLandscape && (
+                <div
+                    className="w-full bg-bg-elevated/50 flex justify-center items-start pt-[6px]"
+                    style={{ height: 'env(safe-area-inset-bottom)', minHeight: 'env(safe-area-inset-bottom)' }}
+                >
+                    {/* Visual indicator of timeline progress or just a decorative handle */}
+                    <div className="w-32 h-1 rounded-full bg-white/5" />
+                </div>
+            )}
         </div>
     );
 };

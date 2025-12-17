@@ -110,7 +110,10 @@ export const SectionOptionsPopup: React.FC<SectionOptionsPopupProps> = ({
             {/* Darker overlay for better focus */}
             <div
                 className="fixed inset-0 z-[99998] bg-black/40 backdrop-blur-[2px] animate-in fade-in duration-200"
-                onClick={onClose}
+                onClick={(e) => {
+                    e.stopPropagation();
+                    onClose();
+                }}
             />
 
             {/* Navigation Arrows - positioned beside modal */}
@@ -224,7 +227,10 @@ export const SectionOptionsPopup: React.FC<SectionOptionsPopupProps> = ({
                         )}
                     </div>
                     <button
-                        onClick={onClose}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onClose();
+                        }}
                         className="p-1.5 rounded-full hover:bg-bg-tertiary text-text-muted hover:text-text-primary transition-colors shrink-0"
                     >
                         <X size={14} />

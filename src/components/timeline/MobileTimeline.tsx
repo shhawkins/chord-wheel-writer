@@ -1051,7 +1051,19 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
                         onCopy={() => {
                             if (editingSectionId) {
                                 duplicateSection(editingSectionId);
-                                setEditingSectionId(null);
+
+                                // Auto switch to the new section (next one)
+                                setTimeout(() => {
+                                    const state = useSongStore.getState();
+                                    const newSections = state.currentSong.sections;
+                                    const nextIndex = currentEditIndex + 1;
+
+                                    if (nextIndex < newSections.length) {
+                                        const newSection = newSections[nextIndex];
+                                        setEditingSectionId(newSection.id);
+                                        setActiveSectionIndex(nextIndex);
+                                    }
+                                }, 0);
                             }
                         }}
                         onClear={() => {

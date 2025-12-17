@@ -41,6 +41,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { getSectionDisplayName, type Section, type InstrumentType } from '../../types';
 import { SongTimeline } from './SongTimeline';
+import { SectionOptionsPopup } from './SectionOptionsPopup';
 
 interface SongOverviewProps {
     onSave?: () => void;
@@ -630,6 +631,9 @@ export const SongOverview: React.FC<SongOverviewProps> = ({ onSave, onExport }) 
     const [bpmInputValue, setBpmInputValue] = useState(tempo.toString());
     const bpmInputRef = useRef<HTMLInputElement>(null);
 
+    // State for section options popup
+    const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
+
     // Swipe gesture state for BPM adjustment
     const [isSwiping, setIsSwiping] = useState(false);
     const swipeStartX = useRef<number | null>(null);
@@ -802,11 +806,12 @@ export const SongOverview: React.FC<SongOverviewProps> = ({ onSave, onExport }) 
     // Focus / Dismiss
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
+            if (editingSectionId) return;
             if (e.key === 'Escape') toggleSongMap(false);
         };
         if (songMapVisible) window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [songMapVisible, toggleSongMap]);
+    }, [songMapVisible, toggleSongMap, editingSectionId]);
 
     // Auto-scroll to playing section during playback
     useEffect(() => {
@@ -937,7 +942,7 @@ export const SongOverview: React.FC<SongOverviewProps> = ({ onSave, onExport }) 
                 <div className="px-4 pb-4">
                     <SongTimeline
                         sections={currentSong.sections}
-                        activeSectionId={(playingSectionId || selectedMapSectionId) || undefined}
+                        activeSectionId={(playingSectionId || selectedMapSectionId || editingSectionId) || undefined}
                         onReorder={reorderSections}
                         onAddSection={addSuggestedSection}
                         onSectionClick={(sectionId) => {
@@ -949,10 +954,109 @@ export const SongOverview: React.FC<SongOverviewProps> = ({ onSave, onExport }) 
                                     block: 'nearest'
                                 });
                             }
+                            setEditingSectionId(sectionId);
+                            setSelectedMapChord(null);
+                            setSelectedMapBeatId(null);
+                            setSelectedMapSectionId(null);
                         }}
                     />
                 </div>
             </div>
+
+            {/* Section Options Modal */}
+            {editingSectionId && (() => {
+                const sectionIndex = currentSong.sections.findIndex((s: Section) => s.id === editingSectionId);
+                const section = currentSong.sections[sectionIndex];
+
+                if (!section) return null;
+
+                const hasPrev = sectionIndex > 0;
+                const hasNext = sectionIndex < currentSong.sections.length - 1;
+
+                return (
+                    <SectionOptionsPopup
+                        section={section}
+                        isOpen={true}
+                        onClose={() => setEditingSectionId(null)}
+                        onTimeSignatureChange={(val) => {
+                            const [top, bottom] = val.split('/').map(Number);
+                            if (top && bottom) {
+                                useSongStore.getState().setSectionTimeSignature(section.id, [top, bottom]);
+                            }
+                        }}
+                        onBarsChange={(count) => useSongStore.getState().setSectionMeasures(section.id, count)}
+                        onStepCountChange={(steps) => useSongStore.getState().setSectionSubdivision(section.id, steps)}
+                        onNameChange={(name, type) => useSongStore.getState().updateSection(section.id, { name, type })}
+                        onCopy={() => {
+                            useSongStore.getState().duplicateSection(section.id);
+                            // Auto switch to the new section (next one)
+                            const nextIndex = sectionIndex + 1;
+                            if (nextIndex < useSongStore.getState().currentSong.sections.length) {
+                                // Wait a tick for store update
+                                setTimeout(() => {
+                                    const newSection = useSongStore.getState().currentSong.sections[nextIndex];
+                                    if (newSection) setEditingSectionId(newSection.id);
+                                }, 0);
+                            }
+                        }}
+                        onClear={() => useSongStore.getState().clearSection(section.id)}
+                        onDelete={() => {
+                            useSongStore.getState().removeSection(section.id);
+                            setEditingSectionId(null);
+                        }}
+                        songTimeSignature={currentSong.timeSignature}
+                        onNavigatePrev={() => {
+                            if (hasPrev) {
+                                const newId = currentSong.sections[sectionIndex - 1].id;
+                                setEditingSectionId(newId);
+                                const sectionElement = scrollContainerRef.current?.querySelector(`[data-section-id="${newId}"]`);
+                                if (sectionElement) {
+                                    sectionElement.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                                }
+                            }
+                        }}
+                        onNavigateNext={() => {
+                            if (hasNext) {
+                                const newId = currentSong.sections[sectionIndex + 1].id;
+                                setEditingSectionId(newId);
+                                const sectionElement = scrollContainerRef.current?.querySelector(`[data-section-id="${newId}"]`);
+                                if (sectionElement) {
+                                    sectionElement.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                                }
+                            }
+                        }}
+                        hasPrev={hasPrev}
+                        hasNext={hasNext}
+                        sectionIndex={sectionIndex}
+                        totalSections={currentSong.sections.length}
+                        onSlotClick={(beatId) => {
+                            // Close popup and select the slot
+                            setEditingSectionId(null);
+                            // Find the chord in the section to select
+                            const beat = section.measures.flatMap(m => m.beats).find(b => b.id === beatId);
+                            if (beat && beat.chord) {
+                                useSongStore.getState().setSelectedChord(beat.chord);
+                            }
+                            setSelectedSlot(section.id, beatId);
+                            openTimeline();
+                        }}
+                        onMoveUp={() => {
+                            if (sectionIndex > 0) {
+                                const newSections = [...currentSong.sections];
+                                [newSections[sectionIndex - 1], newSections[sectionIndex]] = [newSections[sectionIndex], newSections[sectionIndex - 1]];
+                                reorderSections(newSections);
+                            }
+                        }}
+                        onMoveDown={() => {
+                            if (sectionIndex < currentSong.sections.length - 1) {
+                                const newSections = [...currentSong.sections];
+                                [newSections[sectionIndex], newSections[sectionIndex + 1]] = [newSections[sectionIndex + 1], newSections[sectionIndex]];
+                                reorderSections(newSections);
+                            }
+                        }}
+                    />
+                );
+            })()}
 
             {/* Scrollable Map Area - Edge to Edge */}
             <div

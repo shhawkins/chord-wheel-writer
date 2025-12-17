@@ -27,9 +27,8 @@ interface MobilePortraitDrawersProps {
   mobileTimelineOpen: boolean;
   setMobileTimelineOpen: (open: boolean) => void;
   chordPanelVisible: boolean;
-  chordPanelVisible: boolean;
+
   setChordPanelScrolledToBottom: (scrolled: boolean) => void;
-  footerVisible: boolean;
 }
 
 const MobilePortraitDrawers: React.FC<MobilePortraitDrawersProps> = ({
@@ -37,7 +36,6 @@ const MobilePortraitDrawers: React.FC<MobilePortraitDrawersProps> = ({
   setMobileTimelineOpen,
   chordPanelVisible,
   setChordPanelScrolledToBottom,
-  footerVisible,
 }) => {
   // Drag gesture state for combined toggle bar
   const toggleBarTouchStartY = useRef<number>(0);
@@ -125,7 +123,7 @@ const MobilePortraitDrawers: React.FC<MobilePortraitDrawersProps> = ({
 
   return (
     <div
-      className="shrink-0 flex flex-col overflow-hidden"
+      className="shrink-0 flex flex-col overflow-hidden bg-bg-secondary"
       style={{
         // Normal state: 65vh, during close preview: reduce height
         maxHeight: isPreviewingClose
@@ -135,18 +133,21 @@ const MobilePortraitDrawers: React.FC<MobilePortraitDrawersProps> = ({
         transition: isDragging ? 'none' : 'all 0.25s ease-out',
       }}
     >
-      {/* Combined Toggle Bar - thin bar with chevron, supports drag and tap */}
+      {/* Combined Toggle Bar - complex handle that absorbs safe area when closed */}
       <div
-        className="h-6 flex items-center justify-center bg-bg-secondary border-t border-border-subtle cursor-grab active:cursor-grabbing select-none"
+        className="flex flex-col items-center bg-bg-secondary border-t border-border-subtle cursor-grab active:cursor-grabbing select-none"
         onTouchStart={handleToggleBarTouchStart}
         onTouchMove={handleToggleBarTouchMove}
         onTouchEnd={handleToggleBarTouchEnd}
         onClick={handleToggleBarClick}
       >
-        <ChevronUp
-          size={16}
-          className={`text-text-muted transition-transform duration-200 ${canCloseByDragDown ? 'rotate-180' : ''}`}
-        />
+        {/* Actual handle area - stays at top */}
+        <div className="h-6 w-full flex items-center justify-center">
+          <ChevronUp
+            size={16}
+            className={`text-text-muted transition-transform duration-200 ${canCloseByDragDown ? 'rotate-180' : ''}`}
+          />
+        </div>
       </div>
 
       {/* Drawer Container */}
@@ -164,13 +165,11 @@ const MobilePortraitDrawers: React.FC<MobilePortraitDrawersProps> = ({
           onToggle={() => setMobileTimelineOpen(!mobileTimelineOpen)}
         />
 
-        {/* Chord Details Drawer - force visible during opening preview */}
         <div
           data-chord-details
           className="shrink-0 bg-bg-secondary overflow-hidden"
           style={{
             maxHeight: mobileTimelineOpen || isPreviewingOpen ? '45vh' : '55vh',
-            paddingBottom: footerVisible ? 0 : 'env(safe-area-inset-bottom)'
           }}
         >
           <ChordDetails
@@ -180,6 +179,7 @@ const MobilePortraitDrawers: React.FC<MobilePortraitDrawersProps> = ({
           />
         </div>
       </div>
+
     </div>
   );
 };
@@ -1162,7 +1162,7 @@ function App() {
   };
 
   return (
-    <div className="h-full w-full flex flex-col bg-bg-primary text-text-primary overflow-hidden">
+    <div className="h-full w-full flex flex-col bg-bg-secondary text-text-primary overflow-hidden">
       {/* Header - slides up when in mobile immersive mode, when chord panel is open, or in landscape by default */}
       <header
         className={`${isMobile ? 'h-14' : 'h-12'} border-b border-border-subtle grid grid-cols-[1fr_auto_1fr] items-center ${isMobile ? 'px-4' : 'px-3'} bg-bg-secondary shrink-0 z-20 transition-all duration-300 ease-out ${(isMobile && !isLandscape && (mobileImmersive || chordPanelVisible)) ||
@@ -1377,7 +1377,6 @@ function App() {
                   onPanChange={handlePanChange}
                   rotationOffset={wheelRotationOffset}
                   disableModeToggle={wheelRotationOffset !== 0}
-                  footerVisible={isPlaying || !(isMobile && !isLandscape && (mobileImmersive || (chordPanelVisible && !chordPanelScrolledToBottom)))}
                 />
               </div>
             </div>
@@ -1572,17 +1571,13 @@ function App() {
           setMobileTimelineOpen={setMobileTimelineOpen}
           chordPanelVisible={chordPanelVisible}
           setChordPanelScrolledToBottom={setChordPanelScrolledToBottom}
-          footerVisible={isPlaying || !(mobileImmersive || (chordPanelVisible && !chordPanelScrolledToBottom))}
         />
       )}
 
       {/* Footer: Playback - hidden in mobile immersive mode or when chord panel is open (unless scrolled to bottom), BUT always show when playing */}
       {(isPlaying || !(isMobile && !isLandscape && (mobileImmersive || (chordPanelVisible && !chordPanelScrolledToBottom)))) && (
         <div
-          className="shrink-0 z-30 relative bg-bg-elevated"
-          style={{
-            paddingBottom: isMobile ? 'env(safe-area-inset-bottom)' : undefined
-          }}
+          className="shrink-0 z-30 relative bg-bg-elevated transition-all duration-300"
         >
           <PlaybackControls />
         </div>
