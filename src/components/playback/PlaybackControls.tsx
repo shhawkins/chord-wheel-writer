@@ -120,6 +120,9 @@ export const PlaybackControls: React.FC = () => {
     const instrumentOptions: { value: InstrumentType, label: string }[] = [
         { value: 'piano', label: 'Piano' },
         { value: 'epiano', label: 'Electric Piano' },
+        { value: 'guitar-jazzmaster', label: 'Fender Jazzmaster' },
+        { value: 'guitar-acoustic', label: 'Kay Archtop Acoustic' },
+        { value: 'guitar-nylon', label: 'Nylon String Guitar' },
         { value: 'organ', label: 'Organ' },
         { value: 'pad', label: 'Pad' },
         ...customInstruments.map(inst => ({ value: inst.id, label: inst.name })),

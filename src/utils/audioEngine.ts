@@ -8,6 +8,9 @@ let instruments: Record<string, Tone.Sampler | Tone.PolySynth | null> = {
     piano: null,
     epiano: null,
     guitar: null,
+    'guitar-jazzmaster': null,
+    'guitar-acoustic': null,
+    'guitar-nylon': null,
     organ: null,
     synth: null,
     strings: null,
@@ -243,6 +246,57 @@ export const initAudio = async () => {
             const volume = new Tone.Volume(-9).toDestination();
             sampler.connect(volume);
             
+            return sampler;
+        });
+
+        safeCreate('guitar-jazzmaster', () => {
+            const sampler = new Tone.Sampler({
+                urls: {
+                    "C3": "electric-guitar-c3.m4a",
+                    "C4": "electric-guitar-c4.m4a",
+                    "C5": "electric-guitar-c5.m4a",
+                },
+                attack: 0.005,
+                release: 3,
+                curve: "exponential",
+                baseUrl: "/samples/",
+            });
+            const volume = new Tone.Volume(-9).toDestination();
+            sampler.connect(volume);
+            return sampler;
+        });
+
+        safeCreate('guitar-acoustic', () => {
+            const sampler = new Tone.Sampler({
+                urls: {
+                    "C3": "kay-acoustic-c3.mp3",
+                    "C4": "kay-acoustic-c4.mp3",
+                    "C5": "kay-acoustic-c5.mp3",
+                },
+                attack: 0.005,
+                release: 3,
+                curve: "exponential",
+                baseUrl: "/samples/",
+            });
+            const volume = new Tone.Volume(-9).toDestination();
+            sampler.connect(volume);
+            return sampler;
+        });
+
+        safeCreate('guitar-nylon', () => {
+            const sampler = new Tone.Sampler({
+                urls: {
+                    "C3": "nylon-guitar-c3.mp3",
+                    "C4": "nylon-string-c4.mp3",
+                    "C5": "nylon-string-c5.mp3",
+                },
+                attack: 0.005,
+                release: 3,
+                curve: "exponential",
+                baseUrl: "/samples/",
+            });
+            const volume = new Tone.Volume(-9).toDestination();
+            sampler.connect(volume);
             return sampler;
         });
 
