@@ -462,7 +462,17 @@ export const playChord = async (notes: string[], duration: string = "1n", time?:
     }
 
     try {
-        inst.triggerAttackRelease(voicedNotes, duration, time);
+        // For Sampler instruments, trigger each note individually
+        // This avoids issues with how Sampler handles array inputs
+        if (inst instanceof Tone.Sampler) {
+            console.log('[Audio] Playing sampler chord:', voicedNotes);
+            voicedNotes.forEach(note => {
+                (inst as Tone.Sampler).triggerAttackRelease(note, duration, time);
+            });
+        } else {
+            // PolySynth can handle arrays natively
+            (inst as Tone.PolySynth).triggerAttackRelease(voicedNotes, duration, time);
+        }
     } catch (err) {
         console.error(`Failed to play chord`, err);
     }
