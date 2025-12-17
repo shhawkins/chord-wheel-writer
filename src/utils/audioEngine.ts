@@ -140,12 +140,19 @@ const createCustomSampler = (instrument: CustomInstrument) => {
     if (!instrument.samples || Object.keys(instrument.samples).length === 0) return null;
 
     try {
-        return new Tone.Sampler({
+        const sampler = new Tone.Sampler({
             urls: instrument.samples,
             attack: 0.005, // 5ms attack to prevent clicking
-            release: 1,
+            release: 3, // 3 second release for natural sustain
+            curve: "exponential", // Natural decay curve
             // No baseUrl needed as we use full data URIs or absolute URLs
-        }).toDestination();
+        });
+        
+        // Add volume control to prevent clipping (-9dB for headroom)
+        const volume = new Tone.Volume(-9).toDestination();
+        sampler.connect(volume);
+        
+        return sampler;
     } catch (e) {
         console.error(`Failed to create custom sampler for ${instrument.name}`, e);
         return null;
@@ -219,16 +226,25 @@ export const initAudio = async () => {
             baseUrl,
         }).toDestination());
 
-        safeCreate('guitar', () => new Tone.Sampler({
-            urls: {
-                "C3": "electric-guitar-c3.m4a",
-                "C4": "electric-guitar-c4.m4a",
-                "C5": "electric-guitar-c5.m4a",
-            },
-            attack: 0.005, // 5ms attack to prevent clicking
-            release: 1,
-            baseUrl: "/samples/",
-        }).toDestination());
+        safeCreate('guitar', () => {
+            const sampler = new Tone.Sampler({
+                urls: {
+                    "C3": "electric-guitar-c3.m4a",
+                    "C4": "electric-guitar-c4.m4a",
+                    "C5": "electric-guitar-c5.m4a",
+                },
+                attack: 0.005, // 5ms attack to prevent clicking
+                release: 3, // 3 second release for natural sustain
+                curve: "exponential", // Natural decay curve
+                baseUrl: "/samples/",
+            });
+            
+            // Add volume control to prevent clipping (-9dB for headroom)
+            const volume = new Tone.Volume(-9).toDestination();
+            sampler.connect(volume);
+            
+            return sampler;
+        });
 
         safeCreate('organ', () => new Tone.PolySynth(Tone.AMSynth, {
             harmonicity: 3,
