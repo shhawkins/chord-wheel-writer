@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Music, Circle, Hash, Layers, Volume2, Hand, RotateCw, ListMusic, Map, Download, HelpCircle } from 'lucide-react';
+import { X, Music, Circle, Hash, Layers, Volume2, Hand, RotateCw, ListMusic, Map, Download, HelpCircle, Share, MoreVertical } from 'lucide-react';
 import { PlayableProgression } from './interactive/PlayableProgression';
 import { PlayableCadence } from './interactive/PlayableCadence';
 import { PROGRESSION_PRESETS, CADENCE_PRESETS, numeralToChord } from '../utils/progressionPlayback';
@@ -305,6 +305,24 @@ const HelpContent: React.FC<HelpContentProps> = ({ onClose }) => {
                                         <HelpCircle size={10} />
                                     </span>
                                     button anytime to reopen this guide.
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Install App Tip */}
+                        <div className="p-3 rounded-xl bg-purple-500/5 border border-purple-500/20">
+                            <div className="flex items-start gap-2 text-xs text-gray-400">
+                                <Share size={14} className="text-purple-400 shrink-0 mt-0.5" />
+                                <span>
+                                    <strong className="text-purple-400">Install App:</strong> For the best full-screen experience, tap
+                                    <span className="inline-flex mx-1 items-center justify-center w-5 h-5 bg-bg-secondary/80 rounded text-text-muted border border-border-subtle/60 align-middle">
+                                        <Share size={10} />
+                                    </span>
+                                    (iOS) or
+                                    <span className="inline-flex mx-1 items-center justify-center w-5 h-5 bg-bg-secondary/80 rounded text-text-muted border border-border-subtle/60 align-middle">
+                                        <MoreVertical size={10} />
+                                    </span>
+                                    (Android) and select <strong className="text-gray-300">"Add to Home Screen"</strong>.
                                 </span>
                             </div>
                         </div>

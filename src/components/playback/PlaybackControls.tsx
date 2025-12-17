@@ -21,7 +21,9 @@ export const PlaybackControls: React.FC = () => {
         isLooping,
         playingSectionId,
         selectedSectionId,
-        setSelectedSlot
+        setSelectedSlot,
+        customInstruments,
+        toggleInstrumentManagerModal
     } = useSongStore();
 
     const { isMobile, isLandscape } = useMobileLayout();
@@ -120,6 +122,8 @@ export const PlaybackControls: React.FC = () => {
         { value: 'epiano', label: 'Electric Piano' },
         { value: 'organ', label: 'Organ' },
         { value: 'pad', label: 'Pad' },
+        ...customInstruments.map(inst => ({ value: inst.id, label: inst.name })),
+        { value: 'manage', label: '+ Manage Instruments...' }
     ];
 
     // Clamp instrument to available options
@@ -346,7 +350,13 @@ export const PlaybackControls: React.FC = () => {
                         {/* Show instrument selector on all views (including landscape for voice selection) */}
                         <select
                             value={instrument}
-                            onChange={(e) => setInstrument(e.target.value as InstrumentType)}
+                            onChange={(e) => {
+                                if (e.target.value === 'manage') {
+                                    toggleInstrumentManagerModal(true);
+                                } else {
+                                    setInstrument(e.target.value as InstrumentType);
+                                }
+                            }}
                             className={`bg-bg-tertiary border border-border-subtle rounded ${isMobile && isLandscape
                                 ? 'px-3 py-1 h-6 text-[7px] min-w-[60px]'
                                 : isMobile

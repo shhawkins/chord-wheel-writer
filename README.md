@@ -59,6 +59,7 @@ Tap the **"?"** icon to access interactive music theory lessons and songwriting 
 
 <p align="center">
   <img src="docs/screenshots/songwriting-toolkit.jpg" alt="Songwriting Toolkit with Cadences" width="300" />
+    <img src="docs/screenshots/scales-panel.jpg" alt="Scales Panel" width="300" />
 </p>
 
 ### 🎸 Famous Progressions

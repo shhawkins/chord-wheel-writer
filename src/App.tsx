@@ -21,6 +21,7 @@ import { HelpModal } from './components/HelpModal';
 import { OnboardingTooltip } from './components/OnboardingTooltip';
 import { SongInfoModal } from './components/SongInfoModal';
 import { KeySelectorModal } from './components/KeySelectorModal';
+import { InstrumentManagerModal } from './components/playback/InstrumentManagerModal';
 
 // Mobile Portrait Drawers Component - handles combined toggle bar with drag gesture
 interface MobilePortraitDrawersProps {
@@ -188,7 +189,7 @@ const MobilePortraitDrawers: React.FC<MobilePortraitDrawersProps> = ({
 
 
 function App() {
-  const { currentSong, selectedKey, timelineVisible, toggleTimeline, selectedSectionId, selectedSlotId, clearSlot, clearTimeline, setTitle, setArtist, setTags, setSongTimeSignature, loadSong: loadSongToStore, newSong, instrument, volume, isMuted, undo, redo, canUndo, canRedo, chordPanelVisible, isPlaying, songInfoModalVisible, toggleSongInfoModal } = useSongStore();
+  const { currentSong, selectedKey, timelineVisible, toggleTimeline, selectedSectionId, selectedSlotId, clearSlot, clearTimeline, setTitle, setArtist, setTags, setSongTimeSignature, loadSong: loadSongToStore, newSong, instrument, volume, isMuted, undo, redo, canUndo, canRedo, chordPanelVisible, isPlaying, songInfoModalVisible, toggleSongInfoModal, instrumentManagerModalVisible, toggleInstrumentManagerModal } = useSongStore();
 
   // Audio Sync Logic
   useEffect(() => {
@@ -1615,6 +1616,11 @@ function App() {
         timeSignature={currentSong.timeSignature}
         onSave={handleSongInfoSave}
       />
+
+      {/* Instrument Manager Modal */}
+      {instrumentManagerModalVisible && (
+        <InstrumentManagerModal onClose={() => toggleInstrumentManagerModal(false)} />
+      )}
 
       {/* First-time Onboarding Tooltip */}
       <OnboardingTooltip onOpenHelp={() => setShowHelp(true)} />

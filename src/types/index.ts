@@ -94,4 +94,13 @@ export type InstrumentType =
     | 'bell'
     | 'lead'
     | 'bass'
-    | 'choir';
+    | 'choir'
+    | string; // Allow custom instrument IDs
+
+export interface CustomInstrument {
+    id: string;
+    name: string;
+    // Map of pitch (e.g. "C4") to base64 audio string or URL
+    samples: Record<string, string>;
+    createdAt: number;
+}

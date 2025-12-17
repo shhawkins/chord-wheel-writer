@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { Song, Section, InstrumentType, Measure } from '../types';
+import type { Song, Section, InstrumentType, Measure, CustomInstrument } from '../types';
 import { CIRCLE_OF_FIFTHS, type Chord } from '../utils/musicTheory';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -122,6 +122,7 @@ interface SongState {
     timelineVisible: boolean;     // Toggle timeline visibility
     songMapVisible: boolean;      // Toggle Song Map visibility
     songInfoModalVisible: boolean; // Toggle Song Info Modal visibility
+    instrumentManagerModalVisible: boolean; // Toggle Instrument Manager Modal visibility
     collapsedSections: Record<string, boolean>; // Per-section collapsed UI state
 
     // Chord panel sections state (for portrait mode voicing picker logic)
@@ -145,6 +146,7 @@ interface SongState {
     volume: number;
     instrument: InstrumentType;
     isMuted: boolean;
+    customInstruments: CustomInstrument[];
 
     // Actions
     setKey: (key: string, options?: { skipRotation?: boolean }) => void;
@@ -155,6 +157,7 @@ interface SongState {
     openTimeline: () => void;  // Opens timeline if not already open (for double-tap from wheel/details)
     toggleSongMap: (force?: boolean) => void;
     toggleSongInfoModal: (force?: boolean) => void;
+    toggleInstrumentManagerModal: (force?: boolean) => void;
     toggleSectionCollapsed: (sectionId: string) => void;
     setChordPanelGuitarExpanded: (expanded: boolean) => void;
     setChordPanelVoicingsExpanded: (expanded: boolean) => void;
@@ -180,6 +183,8 @@ interface SongState {
     setPlayingSlot: (sectionId: string | null, slotId: string | null) => void;
     toggleLoop: () => void;
     toggleMute: () => void;
+    addCustomInstrument: (instrument: CustomInstrument) => void;
+    removeCustomInstrument: (id: string) => void;
 
     // Song Actions
     setTitle: (title: string) => void;
@@ -436,6 +441,7 @@ export const useSongStore = create<SongState>()(
             timelineVisible: true,
             songMapVisible: false,
             songInfoModalVisible: false,
+            instrumentManagerModalVisible: false,
             collapsedSections: {},
             chordPanelGuitarExpanded: false,  // Collapsed by default on mobile
             chordPanelVoicingsExpanded: false, // Collapsed by default
@@ -453,6 +459,17 @@ export const useSongStore = create<SongState>()(
             volume: 0.8,
             instrument: 'piano' as InstrumentType,
             isMuted: false,
+            customInstruments: [] as CustomInstrument[],
+
+            addCustomInstrument: (instrument) => set((state) => ({
+                customInstruments: [...state.customInstruments, instrument]
+            })),
+
+            removeCustomInstrument: (id) => set((state) => ({
+                customInstruments: state.customInstruments.filter(i => i.id !== id),
+                // If the removed instrument was selected, revert to piano
+                instrument: state.instrument === id ? 'piano' : state.instrument
+            })),
 
             setKey: (key, options) => set((state) => {
                 // In rotating mode, also update the wheel rotation to snap this key to the top
@@ -548,6 +565,9 @@ export const useSongStore = create<SongState>()(
             })),
             toggleSongInfoModal: (force?: boolean) => set((state) => ({
                 songInfoModalVisible: force !== undefined ? force : !state.songInfoModalVisible
+            })),
+            toggleInstrumentManagerModal: (force?: boolean) => set((state) => ({
+                instrumentManagerModalVisible: force !== undefined ? force : !state.instrumentManagerModalVisible
             })),
             toggleSectionCollapsed: (sectionId) => set((state) => {
                 const next = { ...state.collapsedSections, [sectionId]: !state.collapsedSections?.[sectionId] };

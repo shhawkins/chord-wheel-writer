@@ -1,10 +1,10 @@
 import * as Tone from 'tone';
-import type { InstrumentType, Song } from '../types';
+import type { InstrumentType, Song, CustomInstrument } from '../types';
 import { useSongStore } from '../store/useSongStore';
 
 type InstrumentName = InstrumentType;
 
-let instruments: Record<InstrumentName, Tone.Sampler | Tone.PolySynth | null> = {
+let instruments: Record<string, Tone.Sampler | Tone.PolySynth | null> = {
     piano: null,
     epiano: null,
     guitar: null,
@@ -135,9 +135,41 @@ export const unlockAudioForIOS = async (): Promise<void> => {
     console.log('[iOS Audio] Unlock sequence complete');
 };
 
+const createCustomSampler = (instrument: CustomInstrument) => {
+    // If no samples, fallback or return null
+    if (!instrument.samples || Object.keys(instrument.samples).length === 0) return null;
+
+    try {
+        return new Tone.Sampler({
+            urls: instrument.samples,
+            release: 1,
+            // No baseUrl needed as we use full data URIs or absolute URLs
+        }).toDestination();
+    } catch (e) {
+        console.error(`Failed to create custom sampler for ${instrument.name}`, e);
+        return null;
+    }
+};
+
+export const reloadCustomInstruments = () => {
+    const { customInstruments } = useSongStore.getState();
+    customInstruments.forEach(inst => {
+        if (!instruments[inst.id]) {
+            const sampler = createCustomSampler(inst);
+            if (sampler) {
+                instruments[inst.id] = sampler;
+            }
+        }
+    });
+};
+
 export const setInstrument = (name: string) => {
-    if (name in instruments) {
+    if (currentInstrument !== name) {
         currentInstrument = name as InstrumentName;
+        // If it's a custom instrument we haven't loaded yet (e.g. added recently), try loading it
+        if (!instruments[name]) {
+            reloadCustomInstruments();
+        }
     }
 };
 
@@ -299,6 +331,14 @@ export const initAudio = async () => {
             oscillator: { type: "sine" },
             envelope: { attack: 0.8, decay: 0.3, sustain: 0.9, release: 1.8 }
         }).toDestination());
+
+        safeCreate('choir', () => new Tone.PolySynth(Tone.Synth, {
+            oscillator: { type: "sine" },
+            envelope: { attack: 0.8, decay: 0.3, sustain: 0.9, release: 1.8 }
+        }).toDestination());
+
+        // Load custom instruments
+        reloadCustomInstruments();
 
         await Tone.loaded();
     })();
