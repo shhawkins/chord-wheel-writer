@@ -8,6 +8,118 @@ interface InstrumentManagerModalProps {
     onClose: () => void;
 }
 
+/**
+ * Trim silence from the beginning and end of an audio blob
+ * Uses Web Audio API to detect and remove silent portions
+ */
+const trimSilence = async (audioBlob: Blob): Promise<Blob> => {
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const arrayBuffer = await audioBlob.arrayBuffer();
+    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+    
+    const channelData = audioBuffer.getChannelData(0);
+    const sampleRate = audioBuffer.sampleRate;
+    const threshold = 0.01; // Amplitude threshold for "silence"
+    
+    // Find start (first non-silent sample)
+    let start = 0;
+    for (let i = 0; i < channelData.length; i++) {
+        if (Math.abs(channelData[i]) > threshold) {
+            start = Math.max(0, i - Math.floor(sampleRate * 0.05)); // Keep 50ms before sound starts
+            break;
+        }
+    }
+    
+    // Find end (last non-silent sample)
+    let end = channelData.length;
+    for (let i = channelData.length - 1; i >= 0; i--) {
+        if (Math.abs(channelData[i]) > threshold) {
+            end = Math.min(channelData.length, i + Math.floor(sampleRate * 0.1)); // Keep 100ms after sound ends
+            break;
+        }
+    }
+    
+    // Create new buffer with trimmed audio
+    const duration = (end - start) / sampleRate;
+    const trimmedBuffer = audioContext.createBuffer(
+        audioBuffer.numberOfChannels,
+        end - start,
+        sampleRate
+    );
+    
+    for (let channel = 0; channel < audioBuffer.numberOfChannels; channel++) {
+        const sourceData = audioBuffer.getChannelData(channel);
+        const targetData = trimmedBuffer.getChannelData(channel);
+        for (let i = 0; i < trimmedBuffer.length; i++) {
+            targetData[i] = sourceData[start + i];
+        }
+    }
+    
+    // Convert back to blob
+    const offlineContext = new OfflineAudioContext(
+        trimmedBuffer.numberOfChannels,
+        trimmedBuffer.length,
+        sampleRate
+    );
+    const source = offlineContext.createBufferSource();
+    source.buffer = trimmedBuffer;
+    source.connect(offlineContext.destination);
+    source.start();
+    
+    const renderedBuffer = await offlineContext.startRendering();
+    
+    // Export as WAV (better browser compatibility than webm)
+    const wavBlob = audioBufferToWav(renderedBuffer);
+    return wavBlob;
+};
+
+/**
+ * Convert AudioBuffer to WAV blob
+ */
+const audioBufferToWav = (buffer: AudioBuffer): Blob => {
+    const length = buffer.length * buffer.numberOfChannels * 2;
+    const arrayBuffer = new ArrayBuffer(44 + length);
+    const view = new DataView(arrayBuffer);
+    const channels: Float32Array[] = [];
+    let offset = 0;
+    
+    // Write WAV header
+    const writeString = (str: string) => {
+        for (let i = 0; i < str.length; i++) {
+            view.setUint8(offset++, str.charCodeAt(i));
+        }
+    };
+    
+    writeString('RIFF');
+    view.setUint32(offset, 36 + length, true); offset += 4;
+    writeString('WAVE');
+    writeString('fmt ');
+    view.setUint32(offset, 16, true); offset += 4; // Format chunk size
+    view.setUint16(offset, 1, true); offset += 2; // PCM
+    view.setUint16(offset, buffer.numberOfChannels, true); offset += 2;
+    view.setUint32(offset, buffer.sampleRate, true); offset += 4;
+    view.setUint32(offset, buffer.sampleRate * buffer.numberOfChannels * 2, true); offset += 4;
+    view.setUint16(offset, buffer.numberOfChannels * 2, true); offset += 2;
+    view.setUint16(offset, 16, true); offset += 2;
+    writeString('data');
+    view.setUint32(offset, length, true); offset += 4;
+    
+    // Interleave channels
+    for (let i = 0; i < buffer.numberOfChannels; i++) {
+        channels.push(buffer.getChannelData(i));
+    }
+    
+    for (let i = 0; i < buffer.length; i++) {
+        for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
+            const sample = Math.max(-1, Math.min(1, channels[channel][i]));
+            view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
+            offset += 2;
+        }
+    }
+    
+    return new Blob([arrayBuffer], { type: 'audio/wav' });
+};
+
 export const InstrumentManagerModal: React.FC<InstrumentManagerModalProps> = ({ onClose }) => {
     const { customInstruments, addCustomInstrument, removeCustomInstrument } = useSongStore();
     const [view, setView] = useState<'list' | 'create'>('list');
@@ -33,14 +145,29 @@ export const InstrumentManagerModal: React.FC<InstrumentManagerModalProps> = ({ 
                 audioChunksRef.current.push(event.data);
             };
 
-            mediaRecorder.onstop = () => {
+            mediaRecorder.onstop = async () => {
                 const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-                const reader = new FileReader();
-                reader.readAsDataURL(audioBlob);
-                reader.onloadend = () => {
-                    const base64data = reader.result as string;
-                    setSamples(prev => ({ ...prev, [note]: base64data }));
-                };
+                
+                // Trim silence from the recording
+                try {
+                    const trimmedBlob = await trimSilence(audioBlob);
+                    const reader = new FileReader();
+                    reader.readAsDataURL(trimmedBlob);
+                    reader.onloadend = () => {
+                        const base64data = reader.result as string;
+                        setSamples(prev => ({ ...prev, [note]: base64data }));
+                    };
+                } catch (err) {
+                    console.error("Error trimming audio:", err);
+                    // Fallback to original if trimming fails
+                    const reader = new FileReader();
+                    reader.readAsDataURL(audioBlob);
+                    reader.onloadend = () => {
+                        const base64data = reader.result as string;
+                        setSamples(prev => ({ ...prev, [note]: base64data }));
+                    };
+                }
+                
                 stream.getTracks().forEach(track => track.stop());
             };
 
@@ -124,15 +251,29 @@ export const InstrumentManagerModal: React.FC<InstrumentManagerModalProps> = ({ 
                             />
                         </div>
 
-                        <div className="bg-accent-primary/10 border border-accent-primary/20 rounded-lg p-3">
-                            <div className="flex items-start gap-2">
-                                <AlertCircle size={16} className="text-accent-primary mt-0.5 shrink-0" />
-                                <p className="text-xs text-text-secondary">
-                                    <strong>Efficiency Tip:</strong> You don't need a sample for every note!
-                                    Just record <strong>C3, C4, and C5</strong>. The audio engine will automatically
-                                    pitch-shift them to fill the keyboard.
-                                </p>
+                        <div className="space-y-2">
+                            <div className="bg-accent-primary/10 border border-accent-primary/20 rounded-lg p-3">
+                                <div className="flex items-start gap-2">
+                                    <AlertCircle size={16} className="text-accent-primary mt-0.5 shrink-0" />
+                                    <p className="text-xs text-text-secondary">
+                                        <strong>Efficiency Tip:</strong> You don't need a sample for every note!
+                                        Just record <strong>C3, C4, and C5</strong>. The audio engine will automatically
+                                        pitch-shift them to fill the keyboard.
+                                    </p>
+                                </div>
                             </div>
+                            
+                            {recordingNote && (
+                                <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
+                                    <div className="flex items-start gap-2">
+                                        <Mic size={16} className="text-red-500 mt-0.5 shrink-0 animate-pulse" />
+                                        <p className="text-xs text-text-secondary">
+                                            <strong>Recording {recordingNote}:</strong> Play the note cleanly, 
+                                            then click stop. Silence will be auto-trimmed!
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         <div className="space-y-3">
@@ -179,7 +320,7 @@ export const InstrumentManagerModal: React.FC<InstrumentManagerModalProps> = ({ 
                                         <label className="p-2 rounded-full hover:bg-bg-elevated text-text-secondary hover:text-accent-primary transition-colors cursor-pointer">
                                             <input
                                                 type="file"
-                                                accept="audio/*"
+                                                accept="audio/mpeg,audio/mp3,audio/wav,audio/m4a,audio/x-m4a,audio/aac,audio/ogg,audio/webm,.mp3,.wav,.m4a,.aac,.ogg,.webm"
                                                 className="hidden"
                                                 onChange={(e) => handleFileUpload(e, note)}
                                             />

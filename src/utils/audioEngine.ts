@@ -142,6 +142,7 @@ const createCustomSampler = (instrument: CustomInstrument) => {
     try {
         return new Tone.Sampler({
             urls: instrument.samples,
+            attack: 0.005, // 5ms attack to prevent clicking
             release: 1,
             // No baseUrl needed as we use full data URIs or absolute URLs
         }).toDestination();
@@ -224,6 +225,7 @@ export const initAudio = async () => {
                 "C4": "electric-guitar-c4.m4a",
                 "C5": "electric-guitar-c5.m4a",
             },
+            attack: 0.005, // 5ms attack to prevent clicking
             release: 1,
             baseUrl: "/samples/",
         }).toDestination());
