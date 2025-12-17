@@ -258,3 +258,23 @@ button:active {
     backdrop-filter: blur(8px);
   }
 }
+
+/* Draggable element utility - prevents all forms of text selection on touch devices */
+.draggable-element {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Ensure child elements of draggables also don't trigger selection */
+.draggable-element * {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  pointer-events: none;
+}

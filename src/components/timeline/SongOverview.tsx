@@ -11,7 +11,8 @@ import {
     SkipBack,
     SkipForward,
     Save,
-    Download
+    Download,
+    Music
 } from 'lucide-react';
 import clsx from 'clsx';
 import { getWheelColors, formatChordForDisplay, type Chord } from '../../utils/musicTheory';
@@ -37,7 +38,7 @@ import {
     useSortable
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { getSectionDisplayName, type Section } from '../../types';
+import { getSectionDisplayName, type Section, type InstrumentType } from '../../types';
 
 interface SongOverviewProps {
     onSave?: () => void;
@@ -172,9 +173,16 @@ const SortableSection = ({ section, allSections, onSelectBeat, onBeatTap, onEmpt
             <div
                 ref={setNodeRef}
                 data-section-id={section.id}
-                style={{ ...style, width: sectionWidth, height: sectionHeight, touchAction: 'none' }}
+                style={{
+                    ...style,
+                    width: sectionWidth,
+                    height: sectionHeight,
+                    touchAction: 'none',
+                    WebkitTouchCallout: 'none',
+                    WebkitUserSelect: 'none',
+                }}
                 className={clsx(
-                    "relative flex flex-col rounded-lg overflow-hidden shrink-0 transition-all border cursor-pointer",
+                    "relative flex flex-col rounded-lg overflow-hidden shrink-0 transition-all border cursor-pointer select-none draggable-element",
                     theme.bg,
                     theme.border,
                     isDragging ? "opacity-50 z-50 ring-2 ring-accent-primary" : "hover:border-opacity-70 hover:scale-[1.02]",
@@ -217,11 +225,15 @@ const SortableSection = ({ section, allSections, onSelectBeat, onBeatTap, onEmpt
             {/* Header / Drag Handle */}
             <div
                 className={clsx(
-                    "absolute top-0 left-0 right-0 h-8 flex items-center justify-between px-3 select-none border-b border-white/5",
+                    "absolute top-0 left-0 right-0 h-8 flex items-center justify-between px-3 select-none border-b border-white/5 draggable-element",
                     theme.headers,
                     "cursor-grab active:cursor-grabbing"
                 )}
-                style={{ touchAction: 'none' }}
+                style={{
+                    touchAction: 'none',
+                    WebkitTouchCallout: 'none',
+                    WebkitUserSelect: 'none',
+                }}
                 {...attributes}
                 {...listeners}
             >
@@ -590,7 +602,9 @@ export const SongOverview: React.FC<SongOverviewProps> = ({ onSave, onExport }) 
         tempo,
         setTempo,
         playingSectionId,
-        openTimeline
+        openTimeline,
+        instrument,
+        setInstrument
     } = useSongStore();
 
     // BPM editing state
@@ -1100,6 +1114,25 @@ export const SongOverview: React.FC<SongOverviewProps> = ({ onSave, onExport }) 
                         >
                             <SkipForward size={22} fill="currentColor" />
                         </button>
+                    </div>
+
+                    {/* Voice Selector */}
+                    <div className="flex flex-col items-center gap-1">
+                        <span className="text-[10px] uppercase tracking-wider text-white/30 font-bold flex items-center gap-1">
+                            <Music size={10} />
+                            Voice
+                        </span>
+                        <select
+                            value={instrument}
+                            onChange={(e) => setInstrument(e.target.value as InstrumentType)}
+                            className="bg-bg-tertiary border border-white/10 rounded px-3 py-1 text-sm text-accent-primary font-medium focus:outline-none focus:border-accent-primary cursor-pointer appearance-none text-center min-w-[100px] hover:bg-bg-elevated transition-colors"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <option value="piano">Piano</option>
+                            <option value="epiano">E. Piano</option>
+                            <option value="organ">Organ</option>
+                            <option value="pad">Pad</option>
+                        </select>
                     </div>
                 </div>
             </div>

@@ -1,13 +1,122 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { useSongStore } from '../../store/useSongStore';
 import { getWheelColors, normalizeNote, formatChordForDisplay } from '../../utils/musicTheory';
 import { playChord } from '../../utils/audioEngine';
-import { Plus, Play, ChevronLeft, ChevronRight, PanelRightClose, Map, Settings2, RotateCcw, RotateCw } from 'lucide-react';
+import { Plus, Play, ChevronLeft, ChevronRight, Map, Settings2, RotateCcw, RotateCw } from 'lucide-react';
 import { SectionOptionsPopup } from './SectionOptionsPopup';
 import { useMobileLayout } from '../../hooks/useIsMobile';
 import { NoteValueSelector } from './NoteValueSelector';
-import { getSectionDisplayName } from '../../types';
+import { getSectionDisplayName, type Section } from '../../types';
 import clsx from 'clsx';
+import {
+    DndContext,
+    DragOverlay,
+    closestCenter,
+    KeyboardSensor,
+    PointerSensor,
+    TouchSensor,
+    useSensor,
+    useSensors,
+    type DragStartEvent,
+    type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+    arrayMove,
+    SortableContext,
+    sortableKeyboardCoordinates,
+    horizontalListSortingStrategy,
+    useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+
+// Sortable section tab component for drag-and-drop reordering
+interface SortableSectionTabProps {
+    section: Section;
+    allSections: Section[];
+    isActive: boolean;
+    isDesktop: boolean;
+    onActivate: () => void;
+    onEdit: () => void;
+}
+
+const SortableSectionTab: React.FC<SortableSectionTabProps> = ({
+    section,
+    allSections,
+    isActive,
+    isDesktop,
+    onActivate,
+    onEdit,
+}) => {
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging,
+    } = useSortable({ id: section.id });
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+    };
+
+    const displayName = getSectionDisplayName(section, allSections);
+    const firstLetter = displayName.charAt(0).toUpperCase();
+
+    return (
+        <button
+            ref={setNodeRef}
+            data-section-id={section.id}
+            onClick={() => {
+                // Only handle click if not dragging
+                if (isDragging) return;
+                if (isActive) {
+                    onEdit();
+                } else {
+                    onActivate();
+                }
+            }}
+            className={clsx(
+                "no-touch-enlarge relative font-semibold transition-all touch-feedback shrink-0 draggable-element",
+                "flex items-center justify-center touch-none select-none", // touch-none + select-none + draggable-element prevents text selection
+                isActive
+                    ? clsx(
+                        "rounded-full text-white shadow-lg whitespace-nowrap overflow-hidden",
+                        isDesktop ? "w-32 h-9 text-xs" : "w-24 h-8 text-[11px]"
+                    )
+                    : clsx(
+                        "rounded-full text-text-secondary hover:text-text-primary border border-border-medium hover:border-border-subtle hover:bg-bg-tertiary",
+                        isDesktop ? "w-9 h-9 text-sm" : "w-8 h-8 text-xs"
+                    ),
+                isDragging && "opacity-50 scale-95 z-50"
+            )}
+            style={{
+                ...style,
+                // Prevent iOS text selection and callout menu
+                WebkitTouchCallout: 'none',
+                WebkitUserSelect: 'none',
+                ...(isActive ? {
+                    background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #6366f1 100%)',
+                    boxShadow: '0 0 16px rgba(99, 102, 241, 0.5), inset 0 1px 0 rgba(255,255,255,0.2)',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                } : undefined)
+            }}
+            title={`${displayName} - Hold to drag`}
+            {...attributes}
+            {...listeners}
+        >
+            {isActive ? (
+                <span className="flex items-center gap-1 px-2 truncate pointer-events-none">
+                    <span className="truncate">{displayName}</span>
+                    <Settings2 size={isDesktop ? 14 : 12} className="opacity-70 shrink-0" />
+                </span>
+            ) : (
+                firstLetter
+            )}
+        </button>
+    );
+};
 
 interface MobileTimelineProps {
     isOpen: boolean;
@@ -87,6 +196,57 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
 
     // Double-tap tracking for empty slots
     const lastTapTimeRef = useRef<{ slotId: string; time: number } | null>(null);
+
+    // Drag-and-drop state for section tabs
+    const [activeDragId, setActiveDragId] = useState<string | null>(null);
+
+    // DnD sensors - Touch sensor needs delay to allow tapping vs dragging
+    const sensors = useSensors(
+        useSensor(PointerSensor, {
+            activationConstraint: {
+                distance: 8, // Require 8px movement before drag starts
+            },
+        }),
+        useSensor(TouchSensor, {
+            activationConstraint: {
+                delay: 250, // 250ms hold before drag starts on touch
+                tolerance: 8, // Allow 8px movement during the delay
+            },
+        }),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates,
+        })
+    );
+
+    // Handle section drag start
+    const handleSectionDragStart = (event: DragStartEvent) => {
+        setActiveDragId(event.active.id as string);
+    };
+
+    // Handle section drag end - reorder sections
+    const handleSectionDragEnd = (event: DragEndEvent) => {
+        const { active, over } = event;
+        setActiveDragId(null);
+
+        if (over && active.id !== over.id) {
+            const oldIndex = currentSong.sections.findIndex((s) => s.id === active.id);
+            const newIndex = currentSong.sections.findIndex((s) => s.id === over.id);
+
+            if (oldIndex !== -1 && newIndex !== -1) {
+                const newSections = arrayMove(currentSong.sections, oldIndex, newIndex);
+                reorderSections(newSections);
+
+                // Update the active section index to follow the moved section
+                if (oldIndex === activeSectionIndex) {
+                    setActiveSectionIndex(newIndex);
+                } else if (oldIndex < activeSectionIndex && newIndex >= activeSectionIndex) {
+                    setActiveSectionIndex(activeSectionIndex - 1);
+                } else if (oldIndex > activeSectionIndex && newIndex <= activeSectionIndex) {
+                    setActiveSectionIndex(activeSectionIndex + 1);
+                }
+            }
+        }
+    };
 
     // Auto-scroll to selected section when it changes (only when not playing)
     useEffect(() => {
@@ -485,74 +645,76 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
                         <ChevronLeft size={isDesktop ? 18 : 16} />
                     </button>
 
-                    {/* Section tabs - horizontal scroll */}
-                    <div
-                        ref={sectionTabsRef}
-                        className={clsx(
-                            "flex-1 flex items-center overflow-x-auto scrollbar-hide px-1 mx-1",
-                            isDesktop ? "gap-2" : "gap-1.5"
-                        )}
+                    {/* Section tabs - horizontal scroll with drag-and-drop */}
+                    <DndContext
+                        sensors={sensors}
+                        collisionDetection={closestCenter}
+                        onDragStart={handleSectionDragStart}
+                        onDragEnd={handleSectionDragEnd}
                     >
-                        {currentSong.sections.map((section, idx) => {
-                            const isActive = idx === activeSectionIndex;
-                            const displayName = getSectionDisplayName(section, currentSong.sections);
-                            const firstLetter = displayName.charAt(0).toUpperCase();
-                            return (
-                                <button
-                                    key={section.id}
-                                    data-section-id={section.id}
-                                    onClick={() => {
-                                        if (isActive) {
-                                            setEditingSectionId(section.id);
-                                            return;
-                                        }
-                                        setActiveSectionIndex(idx);
-                                        if (section.measures[0]?.beats[0]) {
-                                            setSelectedSlot(section.id, section.measures[0].beats[0].id);
-                                        }
-                                    }}
-                                    className={clsx(
-                                        "no-touch-enlarge relative font-semibold transition-all touch-feedback shrink-0",
-                                        "flex items-center justify-center",
-                                        isActive
-                                            ? clsx(
-                                                "rounded-full text-white shadow-lg whitespace-nowrap overflow-hidden",
-                                                isDesktop ? "w-32 h-9 text-xs" : "w-24 h-8 text-[11px]"
-                                            )
-                                            : clsx(
-                                                "rounded-full text-text-secondary hover:text-text-primary border border-border-medium hover:border-border-subtle hover:bg-bg-tertiary",
-                                                isDesktop ? "w-9 h-9 text-sm" : "w-8 h-8 text-xs"
-                                            )
-                                    )}
-                                    style={isActive ? {
-                                        background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #6366f1 100%)',
-                                        boxShadow: '0 0 16px rgba(99, 102, 241, 0.5), inset 0 1px 0 rgba(255,255,255,0.2)',
-                                        border: '1px solid rgba(255,255,255,0.2)',
-                                    } : undefined}
-                                    title={displayName}
-                                >
-                                    {isActive ? (
-                                        <span className="flex items-center gap-1 px-2 truncate">
-                                            <span className="truncate">{displayName}</span>
-                                            <Settings2 size={isDesktop ? 14 : 12} className="opacity-70 shrink-0" />
-                                        </span>
-                                    ) : (
-                                        firstLetter
-                                    )}
-                                </button>
-                            );
-                        })}
-                        <button
-                            onClick={() => addSuggestedSection()}
+                        <div
+                            ref={sectionTabsRef}
                             className={clsx(
-                                "no-touch-enlarge rounded-full text-text-muted hover:text-accent-primary touch-feedback shrink-0 border border-dashed border-border-medium hover:border-accent-primary/50 transition-all hover:bg-accent-primary/10 flex items-center justify-center",
-                                isDesktop ? "w-9 h-9" : "w-8 h-8"
+                                "flex-1 flex items-center overflow-x-auto scrollbar-hide px-1 mx-1",
+                                isDesktop ? "gap-2" : "gap-1.5"
                             )}
-                            title="Add section"
                         >
-                            <Plus size={isDesktop ? 14 : 12} />
-                        </button>
-                    </div>
+                            <SortableContext
+                                items={currentSong.sections.map(s => s.id)}
+                                strategy={horizontalListSortingStrategy}
+                            >
+                                {currentSong.sections.map((section, idx) => (
+                                    <SortableSectionTab
+                                        key={section.id}
+                                        section={section}
+                                        allSections={currentSong.sections}
+                                        isActive={idx === activeSectionIndex}
+                                        isDesktop={isDesktop}
+                                        onActivate={() => {
+                                            setActiveSectionIndex(idx);
+                                            if (section.measures[0]?.beats[0]) {
+                                                setSelectedSlot(section.id, section.measures[0].beats[0].id);
+                                            }
+                                        }}
+                                        onEdit={() => setEditingSectionId(section.id)}
+                                    />
+                                ))}
+                            </SortableContext>
+                            <button
+                                onClick={() => addSuggestedSection()}
+                                className={clsx(
+                                    "no-touch-enlarge rounded-full text-text-muted hover:text-accent-primary touch-feedback shrink-0 border border-dashed border-border-medium hover:border-accent-primary/50 transition-all hover:bg-accent-primary/10 flex items-center justify-center",
+                                    isDesktop ? "w-9 h-9" : "w-8 h-8"
+                                )}
+                                title="Add section"
+                            >
+                                <Plus size={isDesktop ? 14 : 12} />
+                            </button>
+                        </div>
+
+                        {/* Drag overlay for smooth visual feedback */}
+                        <DragOverlay>
+                            {activeDragId ? (
+                                <div
+                                    className={clsx(
+                                        "rounded-full text-white font-semibold shadow-2xl flex items-center justify-center",
+                                        isDesktop ? "w-32 h-9 text-xs" : "w-24 h-8 text-[11px]"
+                                    )}
+                                    style={{
+                                        background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #6366f1 100%)',
+                                        boxShadow: '0 0 24px rgba(99, 102, 241, 0.7), inset 0 1px 0 rgba(255,255,255,0.2)',
+                                        border: '1px solid rgba(255,255,255,0.3)',
+                                        transform: 'scale(1.05) rotate(3deg)',
+                                    }}
+                                >
+                                    {(() => {
+                                        const section = currentSong.sections.find(s => s.id === activeDragId);
+                                        return section ? getSectionDisplayName(section, currentSong.sections) : '';
+                                    })()}
+                                </div>
+                            ) : null}
+                        </DragOverlay>
+                    </DndContext>
 
                     <button
                         onClick={() => navigateSection('next')}
@@ -564,17 +726,6 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
                     >
                         <ChevronRight size={isDesktop ? 18 : 16} />
                     </button>
-
-                    {/* Close button - alternative to swiping (hidden on desktop when embedded) */}
-                    {!hideCloseButton && (
-                        <button
-                            onClick={onToggle}
-                            className="p-2 min-w-[40px] min-h-[40px] hover:bg-bg-tertiary rounded transition-colors touch-feedback flex items-center justify-center ml-1"
-                            title="Close timeline"
-                        >
-                            <PanelRightClose size={18} className="text-text-muted rotate-90" />
-                        </button>
-                    )}
                 </div>
             )}
 
