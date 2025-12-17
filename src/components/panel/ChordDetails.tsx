@@ -2,7 +2,7 @@ import { useSongStore } from '../../store/useSongStore';
 import { PianoKeyboard } from './PianoKeyboard';
 import { GuitarChord } from './GuitarChord';
 import { MusicStaff } from './MusicStaff';
-import { getWheelColors, getChordNotes, getIntervalFromKey, invertChord, getMaxInversion, getInversionName, getChordSymbolWithInversion, formatChordForDisplay, getQualitySymbol } from '../../utils/musicTheory';
+import { getWheelColors, getChordNotes, getIntervalFromKey, invertChord, getMaxInversion, getInversionName, getChordSymbolWithInversion, formatChordForDisplay, getQualitySymbol, getMajorScale } from '../../utils/musicTheory';
 import { PanelRightClose, PanelRight, GripVertical, ChevronDown, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { playChord, playNote } from '../../utils/audioEngine';
 import { useState, useCallback, useEffect, useRef } from 'react';
@@ -52,6 +52,7 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar',
 
     // Collapsible sections state - all collapsed by default on mobile for compact view
     const [showVariations, setShowVariationsLocal] = useState(false); // Collapsed by default
+    const [showScales, setShowScales] = useState(false); // Collapsed by default
     const [showTheory, setShowTheory] = useState(false); // Collapsed by default
     const [showGuitar, setShowGuitarLocal] = useState(!isMobile || isLandscapeVariant); // Collapsed on mobile (except landscape), expanded on desktop
     const [chordInversion, setChordInversion] = useState(0); // Chord inversion (0 = root position)
@@ -83,6 +84,7 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar',
     // Refs for auto-scrolling sections into view
     const guitarSectionRef = useRef<HTMLDivElement>(null);
     const voicingsSectionRef = useRef<HTMLDivElement>(null);
+    const scalesSectionRef = useRef<HTMLDivElement>(null);
     const theorySectionRef = useRef<HTMLDivElement>(null);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -1110,6 +1112,78 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar',
                                         </p>
                                     </div>
                                 )}
+                            </div>
+
+                            {/* Scales - All modes in the current key */}
+                            <div
+                                ref={scalesSectionRef}
+                                className={`${isLandscapeExpanded ? 'px-3 py-1' : isMobile ? 'px-5 py-1 mt-2' : 'px-5 py-1'} rounded-none`}
+                                style={{ backgroundColor: '#1e1e28', borderBottom: '1px solid #3a3a4a', scrollMarginTop: '60px' }}
+                            >
+                                <button
+                                    onClick={() => {
+                                        const newState = !showScales;
+                                        setShowScales(newState);
+                                        if (newState) {
+                                            setTimeout(() => scrollSectionIntoView(scalesSectionRef), 50);
+                                        }
+                                    }}
+                                    className={`w-full flex items-center justify-between ${showScales ? 'mb-2' : 'mb-0'} cursor-pointer rounded-none`}
+                                    style={{ backgroundColor: 'transparent' }}
+                                >
+                                    <h3 className={`${isCompactLandscape ? 'text-[9px]' : isMobile ? 'text-[11px]' : 'text-[10px]'} font-semibold text-text-secondary uppercase tracking-wide`}>
+                                        Scales in {formatChordForDisplay(selectedKey)}
+                                    </h3>
+                                    <ChevronDown
+                                        size={isCompactLandscape ? 8 : isMobile ? 14 : 12}
+                                        className={`text-text-secondary transition-transform ${showScales ? 'rotate-180' : ''}`}
+                                    />
+                                </button>
+                                {showScales && (() => {
+                                    const scale = getMajorScale(selectedKey);
+                                    const getModeScale = (startDegree: number) => {
+                                        const rotated = [...scale.slice(startDegree), ...scale.slice(0, startDegree)];
+                                        return rotated.map(n => formatChordForDisplay(n)).join(' – ');
+                                    };
+                                    const modes = [
+                                        { name: 'Ionian (I)', degree: 0, quality: 'MAJ', color: '#EAB308', desc: 'Bright, happy' },
+                                        { name: 'Dorian (ii)', degree: 1, quality: 'min', color: '#8B5CF6', desc: 'Hopeful minor, jazzy' },
+                                        { name: 'Phrygian (iii)', degree: 2, quality: 'min', color: '#F97316', desc: 'Spanish, exotic' },
+                                        { name: 'Lydian (IV)', degree: 3, quality: 'MAJ', color: '#06B6D4', desc: 'Dreamy, floating' },
+                                        { name: 'Mixolydian (V)', degree: 4, quality: 'MAJ', color: '#10B981', desc: 'Bluesy, rock' },
+                                        { name: 'Aeolian (vi)', degree: 5, quality: 'min', color: '#3B82F6', desc: 'Sad, melancholic' },
+                                        { name: 'Locrian (vii°)', degree: 6, quality: 'dim', color: '#EF4444', desc: 'Dark, unstable' },
+                                    ];
+                                    return (
+                                        <div className="space-y-1.5 pb-2">
+                                            {modes.map((mode) => (
+                                                <div
+                                                    key={mode.name}
+                                                    className="bg-bg-tertiary/50 p-2 rounded"
+                                                    style={{ borderLeft: `2px solid ${mode.color}` }}
+                                                >
+                                                    <div className="flex items-center justify-between mb-0.5">
+                                                        <span className={`${isMobile ? 'text-[11px]' : 'text-[10px]'} font-medium text-white`}>
+                                                            {formatChordForDisplay(scale[mode.degree])} {mode.name.split(' ')[0]}
+                                                        </span>
+                                                        <span
+                                                            className="text-[8px] px-1 py-0.5 rounded"
+                                                            style={{ color: mode.color, backgroundColor: `${mode.color}15` }}
+                                                        >
+                                                            {mode.quality}
+                                                        </span>
+                                                    </div>
+                                                    <p className={`${isMobile ? 'text-[9px]' : 'text-[8px]'} text-gray-400 mb-1`}>
+                                                        {mode.desc}
+                                                    </p>
+                                                    <p className={`${isMobile ? 'text-[10px]' : 'text-[9px]'} text-gray-500 font-mono tracking-wide`}>
+                                                        {getModeScale(mode.degree)}
+                                                    </p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    );
+                                })()}
                             </div>
 
                             {/* End of Collapsible Sections Container */}
