@@ -1,6 +1,6 @@
 {
-    "name": "Songwriter's Wheel",
-    "short_name": "Chord Wheel",
+    "name": "Songwriter Wheel",
+    "short_name": "Songwriter Wheel",
     "description": "Interactive chord wheel for songwriting and music theory",
     "start_url": "/",
     "display": "standalone",

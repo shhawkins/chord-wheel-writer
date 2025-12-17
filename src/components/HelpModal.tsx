@@ -554,7 +554,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose, isEmbedde
                         <div className="w-8 h-8">
                             <MiniChordWheelLogo size={32} />
                         </div>
-                        <h2 className="text-lg font-bold text-white">Chord Wheel Guide</h2>
+                        <h2 className="text-lg font-bold text-white">Songwriter Wheel Guide</h2>
                     </div>
                     <button
                         onClick={onClose}

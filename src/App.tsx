@@ -1171,7 +1171,7 @@ function App() {
               <Logo size={isMobile ? 32 : 24} />
 
             </div>
-            <span className={`font-bold ${isMobile ? 'text-xs' : 'text-sm'} tracking-tight hidden sm:block text-text-muted`}>Songwriter's Wheel</span>
+            <span className={`font-bold ${isMobile ? 'text-xs' : 'text-sm'} tracking-tight hidden sm:block text-text-muted`}>Songwriter Wheel</span>
           </div>
         </div>
 
@@ -1322,7 +1322,7 @@ function App() {
                 <button
                   onClick={() => setShowHelp(true)}
                   className="no-touch-enlarge w-8 h-8 flex items-center justify-center bg-bg-secondary/60 hover:bg-bg-tertiary backdrop-blur-sm rounded-full text-text-muted hover:text-accent-primary transition-colors border border-border-subtle/40"
-                  title="Chord Wheel Guide"
+                  title="Songwriter Wheel Guide"
                 >
                   <HelpCircle size={16} />
                 </button>
@@ -1388,7 +1388,7 @@ function App() {
               }}
               className={`absolute ${isLandscape ? 'top-2 right-2 w-8 h-8' : 'top-3 right-3 w-11 h-11'} flex items-center justify-center bg-bg-secondary/90 hover:bg-bg-tertiary backdrop-blur-sm rounded-full text-text-muted hover:text-accent-primary transition-colors shadow-lg border border-border-subtle z-50`}
               style={{ touchAction: 'auto', pointerEvents: 'auto' }}
-              title="Chord Wheel Guide"
+              title="Songwriter Wheel Guide"
             >
               <HelpCircle size={isLandscape ? 14 : 20} />
             </button>
