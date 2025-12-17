@@ -138,18 +138,18 @@ export const unlockAudioForIOS = async (): Promise<void> => {
     console.log('[iOS Audio] Unlock sequence complete');
 };
 
-/**
- * Create a limiter chain for sampled instruments to prevent clipping
- * The limiter ensures the signal never exceeds -1dB, preventing distortion
- */
-const createSamplerWithLimiter = (samplerOptions: ConstructorParameters<typeof Tone.Sampler>[0]): Tone.Sampler => {
-    const sampler = new Tone.Sampler(samplerOptions);
-    // Chain: Sampler -> Volume (-12dB headroom) -> Limiter (-1dB ceiling) -> Destination
-    // -12dB gives plenty of headroom for hot samples and stacked chord notes
-    const volume = new Tone.Volume(-12);
-    const limiter = new Tone.Limiter(-1);
-    sampler.chain(volume, limiter, Tone.Destination);
-    return sampler;
+// Global limiter to prevent clipping on master output
+let masterLimiter: Tone.Limiter | null = null;
+
+const ensureMasterLimiter = () => {
+    if (!masterLimiter) {
+        // Insert a limiter between all audio and the final destination
+        // -3dB ceiling prevents clipping while maintaining loudness
+        masterLimiter = new Tone.Limiter(-3).toDestination();
+        // Reduce master volume to give headroom
+        Tone.Destination.volume.value = -6;
+    }
+    return masterLimiter;
 };
 
 const createCustomSampler = (instrument: CustomInstrument) => {
@@ -157,12 +157,11 @@ const createCustomSampler = (instrument: CustomInstrument) => {
     if (!instrument.samples || Object.keys(instrument.samples).length === 0) return null;
 
     try {
-        // Use limiter chain to prevent clipping with user samples
-        return createSamplerWithLimiter({
+        // Create sampler exactly like piano - simple and proven to work
+        return new Tone.Sampler({
             urls: instrument.samples,
             release: 2,
-            // No baseUrl needed as we use full data URIs or absolute URLs
-        });
+        }).connect(ensureMasterLimiter());
     } catch (e) {
         console.error(`Failed to create custom sampler for ${instrument.name}`, e);
         return null;
@@ -236,11 +235,11 @@ export const initAudio = async () => {
             baseUrl,
         }).toDestination());
 
-        // Sampled guitars - using limiter chain to prevent clipping
-        // Note: Tone.Sampler automatically pitch-shifts samples to fill the range
+        // Sampled guitars - same simple pattern as piano, all through master limiter
         const guitarBaseUrl = "/samples/";
+        const limiter = ensureMasterLimiter();
         
-        safeCreate('guitar', () => createSamplerWithLimiter({
+        safeCreate('guitar', () => new Tone.Sampler({
             urls: {
                 "C3": "electric-guitar-c3.m4a",
                 "C4": "electric-guitar-c4.m4a",
@@ -248,9 +247,9 @@ export const initAudio = async () => {
             },
             release: 2,
             baseUrl: guitarBaseUrl,
-        }));
+        }).connect(limiter));
 
-        safeCreate('guitar-jazzmaster', () => createSamplerWithLimiter({
+        safeCreate('guitar-jazzmaster', () => new Tone.Sampler({
             urls: {
                 "C3": "electric-guitar-c3.m4a",
                 "C4": "electric-guitar-c4.m4a",
@@ -258,9 +257,9 @@ export const initAudio = async () => {
             },
             release: 2,
             baseUrl: guitarBaseUrl,
-        }));
+        }).connect(limiter));
 
-        safeCreate('guitar-acoustic', () => createSamplerWithLimiter({
+        safeCreate('guitar-acoustic', () => new Tone.Sampler({
             urls: {
                 "C3": "kay-acoustic-c3.mp3",
                 "C4": "kay-acoustic-c4.mp3",
@@ -268,9 +267,9 @@ export const initAudio = async () => {
             },
             release: 2,
             baseUrl: guitarBaseUrl,
-        }));
+        }).connect(limiter));
 
-        safeCreate('guitar-nylon', () => createSamplerWithLimiter({
+        safeCreate('guitar-nylon', () => new Tone.Sampler({
             urls: {
                 "C3": "nylon-guitar-c3.mp3",
                 "C4": "nylon-string-c4.mp3",
@@ -278,7 +277,7 @@ export const initAudio = async () => {
             },
             release: 2,
             baseUrl: guitarBaseUrl,
-        }));
+        }).connect(limiter));
 
         safeCreate('organ', () => new Tone.PolySynth(Tone.AMSynth, {
             harmonicity: 3,
