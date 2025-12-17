@@ -1272,10 +1272,10 @@ function App() {
 
           <button
             onClick={handleExport}
-            className={`flex items-center justify-center ${isMobile ? 'text-xs px-3 py-1.5 min-w-[44px] min-h-[44px]' : 'text-[11px] px-2.5 py-1 gap-1.5'} bg-text-primary text-bg-primary rounded font-medium hover:bg-white transition-colors touch-feedback`}
+            className={`flex items-center justify-center ${isMobile ? 'text-xs px-3 py-1.5 min-w-[44px] min-h-[44px] gap-1' : 'text-[11px] px-2.5 py-1 gap-1.5'} bg-text-primary text-bg-primary rounded font-medium hover:bg-white transition-colors touch-feedback`}
           >
             <Download size={isMobile ? 16 : 12} />
-            <span className="hidden sm:inline sm:ml-1.5">Export</span>
+            <span className={isMobile ? 'text-[10px] font-bold' : 'hidden sm:inline'}>PDF</span>
           </button>
         </div>
       </header>
@@ -1592,7 +1592,7 @@ function App() {
       />
 
       {/* Song Overview Modal (Map) */}
-      <SongOverview />
+      <SongOverview onSave={handleSave} onExport={handleExport} />
 
       {/* Help Modal */}
       <HelpModal isOpen={showHelp} onClose={() => setShowHelp(false)} />

@@ -293,17 +293,27 @@ const HelpContent: React.FC<HelpContentProps> = ({ onClose }) => {
                         </div>
                     </div>
 
-                    {/* Tip callout */}
-                    <div className="p-3 rounded-xl bg-accent-primary/5 border border-accent-primary/20">
-                        <div className="flex items-center gap-2 text-xs text-gray-400">
-                            <HelpCircle size={14} className="text-accent-primary shrink-0" />
-                            <span className="flex items-center gap-1.5 flex-wrap">
-                                <strong className="text-accent-primary">Tip:</strong> Tap the
-                                <span className="inline-flex items-center justify-center w-5 h-5 bg-bg-secondary/80 rounded-full text-text-muted border border-border-subtle/60">
-                                    <HelpCircle size={10} />
+                    {/* Tip callouts */}
+                    <div className="space-y-2">
+                        <div className="p-3 rounded-xl bg-accent-primary/5 border border-accent-primary/20">
+                            <div className="flex items-center gap-2 text-xs text-gray-400">
+                                <HelpCircle size={14} className="text-accent-primary shrink-0" />
+                                <span className="flex items-center gap-1.5 flex-wrap">
+                                    <strong className="text-accent-primary">Tip:</strong> Tap the
+                                    <span className="inline-flex items-center justify-center w-5 h-5 bg-bg-secondary/80 rounded-full text-text-muted border border-border-subtle/60">
+                                        <HelpCircle size={10} />
+                                    </span>
+                                    button anytime to reopen this guide.
                                 </span>
-                                button anytime to reopen this guide.
-                            </span>
+                            </div>
+                        </div>
+                        <div className="p-3 rounded-xl bg-accent-primary/5 border border-accent-primary/20">
+                            <div className="flex items-center gap-2 text-xs text-gray-400">
+                                <HelpCircle size={14} className="text-accent-primary shrink-0" />
+                                <span>
+                                    <strong className="text-accent-primary">Tip:</strong> Header and footer hiding? Tap the black background behind the chord wheel to bring them back.
+                                </span>
+                            </div>
                         </div>
                     </div>
                 </div>

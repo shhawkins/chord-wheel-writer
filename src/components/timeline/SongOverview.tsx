@@ -9,7 +9,9 @@ import {
     Play,
     Pause,
     SkipBack,
-    SkipForward
+    SkipForward,
+    Save,
+    Download
 } from 'lucide-react';
 import clsx from 'clsx';
 import { getWheelColors, formatChordForDisplay, type Chord } from '../../utils/musicTheory';
@@ -36,6 +38,11 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { getSectionDisplayName, type Section } from '../../types';
+
+interface SongOverviewProps {
+    onSave?: () => void;
+    onExport?: () => void;
+}
 
 // Enhanced section colors
 const SECTION_THEMES: Record<string, { bg: string; headers: string; border: string; accent: string }> = {
@@ -125,7 +132,7 @@ interface SortableSectionProps {
 const BASE_MEASURE_WIDTH = 60;
 
 // Compact threshold - switch to simplified view below this zoom level
-const COMPACT_THRESHOLD = 0.35;
+const COMPACT_THRESHOLD = 0.25;
 
 // Default theme fallback
 const DEFAULT_THEME = {
@@ -568,7 +575,10 @@ const ChordDetailPanel: React.FC<ChordDetailPanelProps> = ({
     );
 };
 
-export const SongOverview: React.FC = () => {
+export const SongOverview: React.FC<SongOverviewProps> = ({ onSave, onExport }) => {
+    const { isMobile, isLandscape } = useMobileLayout();
+    const isMobileLandscape = isMobile && isLandscape;
+
     const {
         currentSong,
         songMapVisible,
@@ -836,12 +846,40 @@ export const SongOverview: React.FC = () => {
                         </div>
                     </div>
 
-                    <button
-                        onClick={() => toggleSongMap(false)}
-                        className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 active:bg-white/20 flex items-center justify-center text-white/70 transition-colors"
-                    >
-                        <X size={16} />
-                    </button>
+                    {/* Action buttons */}
+                    <div className="flex items-center gap-2">
+                        {onSave && (
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onSave();
+                                }}
+                                className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 active:bg-white/20 flex items-center justify-center text-white/70 hover:text-white transition-colors"
+                                title="Save song"
+                            >
+                                <Save size={16} />
+                            </button>
+                        )}
+                        {onExport && (
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onExport();
+                                }}
+                                className="h-8 px-2.5 rounded-full bg-accent-primary/20 hover:bg-accent-primary/30 active:bg-accent-primary/40 flex items-center justify-center gap-1 text-accent-primary hover:text-white transition-colors"
+                                title="Export PDF"
+                            >
+                                <Download size={14} />
+                                <span className="text-[10px] font-bold">PDF</span>
+                            </button>
+                        )}
+                        <button
+                            onClick={() => toggleSongMap(false)}
+                            className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 active:bg-white/20 flex items-center justify-center text-white/70 transition-colors"
+                        >
+                            <X size={16} />
+                        </button>
+                    </div>
                 </div>
 
                 {/* Song Stats Bar */}
@@ -973,14 +1011,14 @@ export const SongOverview: React.FC = () => {
                     {/* Zoom Control */}
                     <div className="flex items-center gap-4 w-full">
                         <button
-                            onClick={() => setZoomLevel(Math.max(0.15, zoomLevel - 0.1))}
+                            onClick={() => setZoomLevel(Math.max(0.08, zoomLevel - 0.1))}
                             className="p-2 -m-2 text-text-secondary active:text-white transition-colors"
                         >
                             <ZoomOut size={18} />
                         </button>
                         <input
                             type="range"
-                            min="0.15"
+                            min="0.08"
                             max="2"
                             step="0.05"
                             value={zoomLevel}

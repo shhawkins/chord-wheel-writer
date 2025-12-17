@@ -147,7 +147,7 @@ interface SongState {
     isMuted: boolean;
 
     // Actions
-    setKey: (key: string) => void;
+    setKey: (key: string, options?: { skipRotation?: boolean }) => void;
     rotateWheel: (direction: 'cw' | 'ccw') => void;  // Cumulative rotation
     toggleWheelMode: () => void;
     toggleChordPanel: () => void;
@@ -454,14 +454,25 @@ export const useSongStore = create<SongState>()(
             instrument: 'piano' as InstrumentType,
             isMuted: false,
 
-            setKey: (key) => set((state) => {
+            setKey: (key, options) => set((state) => {
                 // In rotating mode, also update the wheel rotation to snap this key to the top
-                if (state.wheelMode === 'rotating') {
+                if (state.wheelMode === 'rotating' && !options?.skipRotation) {
                     const keyIndex = CIRCLE_OF_FIFTHS.indexOf(key);
                     if (keyIndex !== -1) {
+                        // Smart rotation: find the closest rotation angle to the current one
+                        // that matches the target key position. This prevents "spinning back"
+                        // when crossing the 0/360 boundary or when the wheel is wound up.
+                        const currentRotation = state.wheelRotation;
+                        const targetBaseRotation = -(keyIndex * 30);
+
+                        // Calculate shortest path to the target rotation
+                        const delta = targetBaseRotation - currentRotation;
+                        // Normalize delta to [-180, 180]
+                        const normalizedDelta = delta - 360 * Math.round(delta / 360);
+
                         return {
                             selectedKey: key,
-                            wheelRotation: -(keyIndex * 30)
+                            wheelRotation: currentRotation + normalizedDelta
                         };
                     }
                 }

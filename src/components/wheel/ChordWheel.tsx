@@ -167,7 +167,7 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({
             ? (currentIndex + 1) % 12
             : (currentIndex - 1 + 12) % 12;
 
-        setKey(CIRCLE_OF_FIFTHS[newIndex]);
+        setKey(CIRCLE_OF_FIFTHS[newIndex], { skipRotation: true });
         rotateWheel(direction);  // Update cumulative rotation
     }, [selectedKey, setKey, rotateWheel]);
 
