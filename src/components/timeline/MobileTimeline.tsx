@@ -129,7 +129,15 @@ const SortableSectionTab: React.FC<SortableSectionTabProps> = ({
                 {isActive ? (
                     <span className="flex items-center gap-1 px-2 truncate pointer-events-none">
                         <span className="truncate">{displayName}</span>
-                        <Settings2 size={isDesktop ? 14 : 12} className="opacity-70 shrink-0" />
+                        <span
+                            className="pointer-events-auto cursor-pointer hover:opacity-100 p-0.5 -m-0.5 rounded transition-opacity"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onEdit();
+                            }}
+                        >
+                            <Settings2 size={isDesktop ? 14 : 12} className="opacity-70 hover:opacity-100 shrink-0" />
+                        </span>
                     </span>
                 ) : (
                     firstLetter
@@ -138,9 +146,18 @@ const SortableSectionTab: React.FC<SortableSectionTabProps> = ({
 
             {/* Invisible drag handle - positioned in center, smaller than the pill */}
             {/* This is the only area that responds to drag gestures */}
+            {/* Also handles clicks to ensure taps work even when hitting the drag area */}
             <div
                 {...attributes}
                 {...listeners}
+                onClick={() => {
+                    if (isDragging) return;
+                    if (isActive) {
+                        onEdit();
+                    } else {
+                        onActivate();
+                    }
+                }}
                 className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 touch-none draggable-element cursor-grab active:cursor-grabbing"
                 style={{
                     // Small centered hit area for drag - about 60% of pill size

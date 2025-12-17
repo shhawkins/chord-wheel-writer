@@ -493,6 +493,98 @@ const HelpContent: React.FC<HelpContentProps> = ({ onClose }) => {
                     </div>
                 </div>
             </section >
+
+            {/* 5. Scales & Modes */}
+            <section>
+                <h3 className="text-accent-primary font-bold text-sm uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <Music size={12} />
+                    Scales & Modes
+                </h3>
+                <div className="bg-bg-elevated/50 rounded-lg p-4 space-y-4">
+                    <p className="text-sm text-gray-300">
+                        <strong className="text-white">Same notes, different starting points, totally different vibes.</strong>
+                    </p>
+                    <p className="text-xs text-gray-400">
+                        Think of modes as different "camera angles" on the same scale. Start a C major scale from different notes, and you unlock seven distinct musical personalities — each with its own emotional flavor.
+                    </p>
+
+                    {/* Modes Table */}
+                    <div className="space-y-2">
+                        {/* Ionian */}
+                        <div className="bg-bg-tertiary p-3 rounded border-l-2 border-yellow-500">
+                            <div className="flex items-center justify-between mb-1">
+                                <strong className="text-white text-sm">Ionian (I)</strong>
+                                <span className="text-[10px] text-yellow-400 bg-yellow-500/10 px-1.5 py-0.5 rounded">MAJOR</span>
+                            </div>
+                            <p className="text-xs text-gray-400">The standard major scale. Bright, happy, resolved. <span className="text-gray-500">This is your "home base."</span></p>
+                        </div>
+
+                        {/* Dorian */}
+                        <div className="bg-bg-tertiary p-3 rounded border-l-2 border-violet-500">
+                            <div className="flex items-center justify-between mb-1">
+                                <strong className="text-white text-sm">Dorian (ii)</strong>
+                                <span className="text-[10px] text-violet-400 bg-violet-500/10 px-1.5 py-0.5 rounded">minor</span>
+                            </div>
+                            <p className="text-xs text-gray-400">Minor with a raised 6th. <span className="text-gray-300">Hopeful minor</span> — less sad, more cool. <span className="text-gray-500">Think jazz, funk, and "So What".</span></p>
+                        </div>
+
+                        {/* Phrygian */}
+                        <div className="bg-bg-tertiary p-3 rounded border-l-2 border-orange-500">
+                            <div className="flex items-center justify-between mb-1">
+                                <strong className="text-white text-sm">Phrygian (iii)</strong>
+                                <span className="text-[10px] text-orange-400 bg-orange-500/10 px-1.5 py-0.5 rounded">minor</span>
+                            </div>
+                            <p className="text-xs text-gray-400">Minor with a flat 2nd. <span className="text-gray-300">Spanish, exotic, intense.</span> <span className="text-gray-500">Classic in Flamenco and metal.</span></p>
+                        </div>
+
+                        {/* Lydian */}
+                        <div className="bg-bg-tertiary p-3 rounded border-l-2 border-cyan-500">
+                            <div className="flex items-center justify-between mb-1">
+                                <strong className="text-white text-sm">Lydian (IV)</strong>
+                                <span className="text-[10px] text-cyan-400 bg-cyan-500/10 px-1.5 py-0.5 rounded">MAJOR</span>
+                            </div>
+                            <p className="text-xs text-gray-400">Major with a raised 4th. <span className="text-gray-300">Dreamy, floating, magical.</span> <span className="text-gray-500">Film composers love this for wonder and awe.</span></p>
+                        </div>
+
+                        {/* Mixolydian */}
+                        <div className="bg-bg-tertiary p-3 rounded border-l-2 border-emerald-500">
+                            <div className="flex items-center justify-between mb-1">
+                                <strong className="text-white text-sm">Mixolydian (V)</strong>
+                                <span className="text-[10px] text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">MAJOR</span>
+                            </div>
+                            <p className="text-xs text-gray-400">Major with a flat 7th. <span className="text-gray-300">Bluesy, rock 'n roll.</span> <span className="text-gray-500">Common over dominant (V) chords.</span></p>
+                        </div>
+
+                        {/* Aeolian */}
+                        <div className="bg-bg-tertiary p-3 rounded border-l-2 border-blue-500">
+                            <div className="flex items-center justify-between mb-1">
+                                <strong className="text-white text-sm">Aeolian (vi)</strong>
+                                <span className="text-[10px] text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded">minor</span>
+                            </div>
+                            <p className="text-xs text-gray-400">The natural minor scale. <span className="text-gray-300">Sad, introspective, melancholic.</span> <span className="text-gray-500">The basis of most minor-key music.</span></p>
+                        </div>
+
+                        {/* Locrian */}
+                        <div className="bg-bg-tertiary p-3 rounded border-l-2 border-red-500/50">
+                            <div className="flex items-center justify-between mb-1">
+                                <strong className="text-white text-sm">Locrian (vii°)</strong>
+                                <span className="text-[10px] text-red-400 bg-red-500/10 px-1.5 py-0.5 rounded">dim</span>
+                            </div>
+                            <p className="text-xs text-gray-400">Flat 2nd and flat 5th. <span className="text-gray-300">Dark, unstable, unsettling.</span> <span className="text-gray-500">Rarely used — its tonic chord is diminished!</span></p>
+                        </div>
+                    </div>
+
+                    {/* Pro tip */}
+                    <div className="p-3 rounded-xl bg-accent-primary/5 border border-accent-primary/20 mt-4">
+                        <div className="flex items-start gap-2 text-xs text-gray-400">
+                            <HelpCircle size={14} className="text-accent-primary shrink-0 mt-0.5" />
+                            <span>
+                                <strong className="text-accent-primary">Key insight:</strong> Every mode shares the same notes as its parent major scale. C Dorian uses the same notes as B♭ major. The magic is in which note feels like "home."
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </section>
         </>
     );
 };
