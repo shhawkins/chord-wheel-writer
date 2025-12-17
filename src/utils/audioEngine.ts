@@ -144,8 +144,9 @@ export const unlockAudioForIOS = async (): Promise<void> => {
  */
 const createSamplerWithLimiter = (samplerOptions: ConstructorParameters<typeof Tone.Sampler>[0]): Tone.Sampler => {
     const sampler = new Tone.Sampler(samplerOptions);
-    // Chain: Sampler -> Volume (-6dB headroom) -> Limiter (-1dB ceiling) -> Destination
-    const volume = new Tone.Volume(-6);
+    // Chain: Sampler -> Volume (-12dB headroom) -> Limiter (-1dB ceiling) -> Destination
+    // -12dB gives plenty of headroom for hot samples and stacked chord notes
+    const volume = new Tone.Volume(-12);
     const limiter = new Tone.Limiter(-1);
     sampler.chain(volume, limiter, Tone.Destination);
     return sampler;
@@ -475,17 +476,11 @@ export const playChord = async (notes: string[], duration: string = "1n", time?:
     }
 
     try {
-        // For Sampler instruments, trigger each note individually
-        // This avoids issues with how Sampler handles array inputs
-        if (inst instanceof Tone.Sampler) {
-            console.log('[Audio] Playing sampler chord:', voicedNotes);
-            voicedNotes.forEach(note => {
-                (inst as Tone.Sampler).triggerAttackRelease(note, duration, time);
-            });
-        } else {
-            // PolySynth can handle arrays natively
-            (inst as Tone.PolySynth).triggerAttackRelease(voicedNotes, duration, time);
-        }
+        // Always trigger each note individually - works for both Sampler and PolySynth
+        // Sampler requires individual notes, and PolySynth handles them fine too
+        voicedNotes.forEach(note => {
+            inst!.triggerAttackRelease(note, duration, time);
+        });
     } catch (err) {
         console.error(`Failed to play chord`, err);
     }
