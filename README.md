@@ -1,8 +1,8 @@
-# 🎵 Chord Wheel Writer
+# 🎵 Songwriter's Wheel
 
 A fun, educational, and practical web app for musicians and songwriters to brainstorm ideas, explore music theory, create chord progressions, and arrange complete songs.
 
-**🎸 [Try it live →](https://shhawkins.github.io/chord-wheel-writer/)**
+**🎸 [Try it live →](https://chord-wheel-writer.vercel.app)**
 
 ---
 
@@ -37,6 +37,10 @@ Built around the classic **Chord Wheel** concept — a circle of fifths on the i
 - **Playback** — Listen to your progressions with adjustable BPM
 - **Section management** — Duplicate, reorder, and customize sections
 
+<p align="center">
+  <img src="docs/screenshots/section-editor.png" alt="Section Editor" width="300" />
+</p>
+
 ### 📄 PDF Export
 With one click, export a beautifully formatted, printable **chord sheet** of your song complete with:
 - Guitar chord diagrams for all chords in your song
@@ -51,6 +55,10 @@ With one click, export a beautifully formatted, printable **chord sheet** of you
 
 ### 📚 Music Theory Education
 Tap the **"?"** icon to access interactive music theory lessons and songwriting tips, helping you understand *why* certain chords work well together.
+
+<p align="center">
+  <img src="docs/screenshots/songwriting-toolkit.jpg" alt="Songwriting Toolkit with Cadences" width="300" />
+</p>
 
 ### 🎸 Famous Progressions
 Explore and learn from famous chord progressions used in popular songs, and use them as starting points for your own creations.
@@ -97,11 +105,13 @@ npm run build
 
 ## 🗺️ Roadmap
 
+- [ ] Improved timeline interaction
+- [ ] MIDI export — Load your song into a DAW and keep developing your ideas
 - [ ] More interactive music theory modules
 - [ ] Additional songwriting prompts and exercises
-- [ ] MIDI export — Load your song into a DAW and keep developing your ideas
 - [ ] Alternate tuning support (Drop D, DADGAD, Open G, etc.)
-- [ ] Chord chart generation for custom voicings
+- [ ] Generate chord charts for various guitar voicings of the same chord
+- [ ] Interactive module for exploring scales and modes
 - [ ] Additional instrument voicings
 - [ ] Song saving/loading to cloud
 
