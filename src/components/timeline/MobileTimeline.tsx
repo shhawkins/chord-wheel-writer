@@ -745,7 +745,10 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
                                                             className={clsx(
                                                                 "absolute rounded-full bg-black/70 backdrop-blur-sm flex items-center justify-center cursor-pointer border border-white/30 active:bg-white/30",
                                                                 isDesktop
-                                                                    ? "w-4 h-4 -top-2 -right-2 opacity-0 group-hover:opacity-100 hover:bg-white/20 hover:border-white/50 transition-all z-30"
+                                                                    ? clsx(
+                                                                        "w-4 h-4 -top-2 -right-2 hover:bg-white/20 hover:border-white/50 transition-all z-30",
+                                                                        isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                                                                    )
                                                                     : "w-5 h-5 -top-2.5 -right-2.5 opacity-100 z-30" // Centered on corner, high z-index
                                                             )}
                                                             title="Remove chord"
