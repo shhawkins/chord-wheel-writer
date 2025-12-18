@@ -8,7 +8,8 @@ import {
     Music,
     ChevronDown,
     Plus,
-    Check
+    Check,
+    Wine
 } from 'lucide-react';
 import { useSongStore } from '../../store/useSongStore';
 import { playChord, setInstrument as setAudioInstrument } from '../../utils/audioEngine';
@@ -41,7 +42,8 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
         if (type.includes('piano') || type.includes('organ') || type.includes('marimba') || type.includes('synth') || type.includes('pad')) return <Keyboard size={variant === 'tiny' ? 12 : 14} />;
         if (type.includes('guitar') || type.includes('bass') || type.includes('archtop') || type.includes('string')) return <Guitar size={variant === 'tiny' ? 12 : 14} />;
         if (type.includes('mic') || type.includes('choir')) return <Mic size={variant === 'tiny' ? 12 : 14} />;
-        if (type.includes('wind') || type.includes('sax') || type.includes('flute') || type.includes('ocarina') || type.includes('harmonica') || type.includes('brass')) return <Wind size={variant === 'tiny' ? 12 : 14} />;
+        if (type.includes('wind') || type.includes('sax') || type.includes('flute') || type.includes('ocarina') || type.includes('harmonica') || type.includes('brass') || type.includes('melodica')) return <Wind size={variant === 'tiny' ? 12 : 14} />;
+        if (type.includes('wine')) return <Wine size={variant === 'tiny' ? 12 : 14} />;
         return <Music size={variant === 'tiny' ? 12 : 14} />;
     };
 
@@ -53,6 +55,8 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
         { value: 'ocarina', label: 'Ocarina' },
         { value: 'bass-electric', label: 'Electric Bass' },
         { value: 'harmonica', label: 'Harmonica' },
+        { value: 'melodica', label: 'Melodica' },
+        { value: 'wine-glass', label: 'Wine Glass' },
         { value: 'organ', label: 'Organ' },
         { value: 'epiano', label: 'Electric Piano' },
         { value: 'pad', label: 'Pad' },
@@ -61,6 +65,7 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
 
     // Touch handling for better responsiveness
     const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+    const itemTouchStartRef = useRef<{ x: number; y: number } | null>(null);
 
     const handleTouchStart = (e: React.TouchEvent) => {
         touchStartRef.current = {
@@ -84,6 +89,49 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
             onInteraction?.();
         }
         touchStartRef.current = null;
+    };
+
+    const handleItemTouchStart = (e: React.TouchEvent) => {
+        itemTouchStartRef.current = {
+            x: e.touches[0].clientX,
+            y: e.touches[0].clientY
+        };
+    };
+
+    const handleItemTouchEnd = (e: React.TouchEvent, value: InstrumentType) => {
+        if (!itemTouchStartRef.current) return;
+
+        const endX = e.changedTouches[0].clientX;
+        const endY = e.changedTouches[0].clientY;
+        const deltaX = Math.abs(endX - itemTouchStartRef.current.x);
+        const deltaY = Math.abs(endY - itemTouchStartRef.current.y);
+
+        // Only select if it was a tap (not a scroll)
+        if (deltaX < 10 && deltaY < 10) {
+            e.preventDefault();
+            e.stopPropagation();
+            handleSelect(value);
+        }
+        itemTouchStartRef.current = null;
+    };
+
+    const handleManageButtonTouchEnd = (e: React.TouchEvent) => {
+        if (!itemTouchStartRef.current) return;
+
+        const endX = e.changedTouches[0].clientX;
+        const endY = e.changedTouches[0].clientY;
+        const deltaX = Math.abs(endX - itemTouchStartRef.current.x);
+        const deltaY = Math.abs(endY - itemTouchStartRef.current.y);
+
+        // Only trigger if it was a tap (not a scroll)
+        if (deltaX < 10 && deltaY < 10) {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleInstrumentManagerModal(true);
+            setShowMenu(false);
+            onInteraction?.();
+        }
+        itemTouchStartRef.current = null;
     };
 
     useEffect(() => {
@@ -151,11 +199,8 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
                         <button
                             key={opt.value}
                             onClick={() => handleSelect(opt.value)}
-                            onTouchEnd={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                handleSelect(opt.value);
-                            }}
+                            onTouchStart={handleItemTouchStart}
+                            onTouchEnd={(e) => handleItemTouchEnd(e, opt.value)}
                             className={clsx(
                                 "text-left px-3 py-2 rounded-lg text-sm transition-all flex items-center justify-between group",
                                 instrument === opt.value
@@ -184,13 +229,8 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
                             setShowMenu(false);
                             onInteraction?.();
                         }}
-                        onTouchEnd={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            toggleInstrumentManagerModal(true);
-                            setShowMenu(false);
-                            onInteraction?.();
-                        }}
+                        onTouchStart={handleItemTouchStart}
+                        onTouchEnd={handleManageButtonTouchEnd}
                         className={clsx(
                             "text-left px-3 py-2.5 rounded-lg text-sm transition-all flex items-center gap-2.5",
                             "text-accent-primary hover:bg-accent-primary/10 font-semibold"

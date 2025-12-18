@@ -312,7 +312,7 @@ export const InstrumentManagerModal: React.FC<InstrumentManagerModalProps> = ({ 
                                 <div className="flex items-start gap-2">
                                     <AlertCircle size={16} className="text-accent-primary mt-0.5 shrink-0" />
                                     <p className="text-xs text-text-secondary">
-                                        <strong>Efficiency Tip:</strong> You don't need a sample for every note!
+                                        <strong>Tip:</strong> You don't need a sample for every note!
                                         Just record <strong>C3, C4, and C5</strong>. The audio engine will automatically
                                         pitch-shift them to fill the keyboard.
                                     </p>

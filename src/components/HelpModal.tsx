@@ -182,7 +182,20 @@ const HelpContent: React.FC<HelpContentProps> = ({ onClose }) => {
                         </div>
                     </div>
 
-                    {/* Step 3 */}
+                    {/* Step 3 - Voice Selection */}
+                    <div className="flex items-start gap-4 group">
+                        <div className="shrink-0 w-10 h-10 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center group-hover:bg-violet-500/20 transition-colors">
+                            <Volume2 size={18} className="text-violet-400" />
+                        </div>
+                        <div className="pt-0.5">
+                            <h4 className="text-sm font-semibold text-white mb-1">Play chords with real instruments</h4>
+                            <p className="text-xs text-gray-400 leading-relaxed">
+                                Choose from <strong className="text-gray-300">piano, guitars, bass, harmonica, ocarina, melodica, wine glass,</strong> and more. You can even create your own instrument by sampling just three notes (C3, C4, C5).
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Step 4 */}
                     <div className="flex items-start gap-4 group">
                         <div className="shrink-0 w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center group-hover:bg-emerald-500/20 transition-colors">
                             <ListMusic size={18} className="text-emerald-400" />
@@ -195,7 +208,7 @@ const HelpContent: React.FC<HelpContentProps> = ({ onClose }) => {
                         </div>
                     </div>
 
-                    {/* Step 4 */}
+                    {/* Step 5 */}
                     <div className="flex items-start gap-4 group">
                         <div className="shrink-0 w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center group-hover:bg-amber-500/20 transition-colors">
                             <Map size={18} className="text-amber-400" />
@@ -208,7 +221,7 @@ const HelpContent: React.FC<HelpContentProps> = ({ onClose }) => {
                         </div>
                     </div>
 
-                    {/* Step 5 */}
+                    {/* Step 6 - Export */}
                     <div className="flex items-start gap-4 group">
                         <div className="shrink-0 w-10 h-10 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center group-hover:bg-sky-500/20 transition-colors">
                             <Download size={18} className="text-sky-400" />

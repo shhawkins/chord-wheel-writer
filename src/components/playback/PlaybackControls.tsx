@@ -125,12 +125,14 @@ export const PlaybackControls: React.FC = () => {
         { value: 'ocarina', label: 'Ocarina' },
         { value: 'bass-electric', label: 'Electric Bass' },
         { value: 'harmonica', label: 'Harmonica' },
+        { value: 'melodica', label: 'Melodica' },
+        { value: 'wine-glass', label: 'Wine Glass' },
         // User requested Pad and Organ at the bottom, with EPiano in between
         { value: 'organ', label: 'Organ' },
         { value: 'epiano', label: 'Electric Piano' },
         { value: 'pad', label: 'Pad' },
 
-        ...customInstruments.map(inst => ({ value: inst.id, label: inst.name })),
+        ...customInstruments.map((inst: any) => ({ value: inst.id, label: inst.name })),
         { value: 'manage', label: '+ Manage Instruments...' }
     ];
 

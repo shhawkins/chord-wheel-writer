@@ -101,6 +101,8 @@ export type InstrumentType =
     | 'ocarina'
     | 'acoustic-archtop'
     | 'nylon-string'
+    | 'melodica'
+    | 'wine-glass'
     | string; // Allow custom instrument IDs
 
 export interface CustomInstrument {

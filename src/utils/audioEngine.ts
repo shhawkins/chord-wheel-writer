@@ -25,6 +25,8 @@ let instruments: Record<string, Tone.Sampler | Tone.PolySynth | null> = {
     ocarina: null,
     'acoustic-archtop': null,
     'nylon-string': null,
+    melodica: null,
+    'wine-glass': null,
 };
 
 let currentInstrument: InstrumentName = 'piano';
@@ -430,6 +432,28 @@ export const initAudio = async () => {
                 "C3": "guitalele-c3.mp3",
                 "C4": "guitalele-c4.mp3",
                 "C5": "guitalele-c5.mp3",
+            },
+            release: 2,
+            attack: 0.05,
+            baseUrl: "/samples/",
+        }).connect(ensureMasterLimiter()));
+
+        safeCreate('melodica', () => new Tone.Sampler({
+            urls: {
+                "C3": "melodica-c3.mp3",
+                "C4": "melodica-c4.mp3",
+                "C5": "melodica-c5.mp3",
+            },
+            release: 2,
+            attack: 0.05,
+            baseUrl: "/samples/",
+        }).connect(ensureMasterLimiter()));
+
+        safeCreate('wine-glass', () => new Tone.Sampler({
+            urls: {
+                "C3": "wine-glass-c3.mp3",
+                "C4": "wine-glass-c4.mp3",
+                "C5": "wine-glass-c5.mp3",
             },
             release: 2,
             attack: 0.05,
