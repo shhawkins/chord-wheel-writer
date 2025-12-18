@@ -1162,11 +1162,11 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({
                 // Get short chord name (similar to ChordDetails.getShortChordName)
                 const quality = selectedChord.quality;
                 let shortName: string;
-                if (quality === 'major' || quality === 'maj') {
+                if (quality === 'major') {
                     shortName = formatChordForDisplay(selectedChord.root);
-                } else if (quality === 'minor' || quality === 'm') {
+                } else if (quality === 'minor') {
                     shortName = formatChordForDisplay(`${selectedChord.root}m`);
-                } else if (quality === 'diminished' || quality === 'dim') {
+                } else if (quality === 'diminished') {
                     shortName = formatChordForDisplay(`${selectedChord.root}°`);
                 } else {
                     shortName = formatChordForDisplay(`${selectedChord.root}${getQualitySymbol(quality)}`);

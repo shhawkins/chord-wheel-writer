@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useSongStore } from '../../store/useSongStore';
-import { Play, Pause, SkipBack, SkipForward, Repeat, Volume2, VolumeX, ChevronLeft, ChevronRight, Loader2, Music, RefreshCw } from 'lucide-react';
-import { playSong, pauseSong, skipToSection, scheduleSong, setTempo as setAudioTempo, toggleLoopMode, setInstrument as setAudioInstrument, unlockAudioForIOS } from '../../utils/audioEngine';
+import { Play, Pause, SkipBack, SkipForward, Repeat, Volume2, VolumeX, ChevronLeft, ChevronRight, Loader2, Music, RefreshCw, Plus } from 'lucide-react';
+import { playSong, pauseSong, skipToSection, scheduleSong, setTempo as setAudioTempo, toggleLoopMode, setInstrument as setAudioInstrument, unlockAudioForIOS, playChord } from '../../utils/audioEngine';
 import type { InstrumentType } from '../../types';
 import { useMobileLayout } from '../../hooks/useIsMobile';
 
@@ -119,12 +119,17 @@ export const PlaybackControls: React.FC = () => {
 
     const instrumentOptions: { value: InstrumentType, label: string }[] = [
         { value: 'piano', label: 'Piano' },
-        { value: 'epiano', label: 'Electric Piano' },
         { value: 'guitar-jazzmaster', label: 'Jazzmaster' },
+        { value: 'acoustic-archtop', label: 'Acoustic Archtop' },
+        { value: 'nylon-string', label: 'Nylon String' },
+        { value: 'ocarina', label: 'Ocarina' },
         { value: 'bass-electric', label: 'Electric Bass' },
         { value: 'harmonica', label: 'Harmonica' },
+        // User requested Pad and Organ at the bottom, with EPiano in between
         { value: 'organ', label: 'Organ' },
+        { value: 'epiano', label: 'Electric Piano' },
         { value: 'pad', label: 'Pad' },
+
         ...customInstruments.map(inst => ({ value: inst.id, label: inst.name })),
         { value: 'manage', label: '+ Manage Instruments...' }
     ];
@@ -150,7 +155,12 @@ export const PlaybackControls: React.FC = () => {
         const nextIndex = direction === 'next'
             ? (idx + 1) % instrumentOptions.length
             : (idx - 1 + instrumentOptions.length) % instrumentOptions.length;
-        setInstrument(instrumentOptions[nextIndex].value);
+
+        const nextInst = instrumentOptions[nextIndex].value as InstrumentType;
+        const { selectedChord } = useSongStore.getState();
+        setAudioInstrument(nextInst);
+        setInstrument(nextInst);
+        playChord(selectedChord?.notes || ['C4', 'E4', 'G4']);
     };
 
     // BPM editing handlers
@@ -364,7 +374,11 @@ export const PlaybackControls: React.FC = () => {
                                 if (e.target.value === 'manage') {
                                     toggleInstrumentManagerModal(true);
                                 } else {
-                                    setInstrument(e.target.value as InstrumentType);
+                                    const nextInst = e.target.value as InstrumentType;
+                                    const { selectedChord } = useSongStore.getState();
+                                    setAudioInstrument(nextInst);
+                                    setInstrument(nextInst);
+                                    playChord(selectedChord?.notes || ['C4', 'E4', 'G4']);
                                 }
                             }}
                             className={`bg-bg-tertiary border border-border-subtle rounded ${isMobile && isLandscape
@@ -378,6 +392,13 @@ export const PlaybackControls: React.FC = () => {
                                 <option key={opt.value} value={opt.value}>{opt.label}</option>
                             ))}
                         </select>
+                        <button
+                            onClick={() => toggleInstrumentManagerModal(true)}
+                            className="bg-bg-tertiary border border-border-subtle rounded w-7 h-7 flex items-center justify-center text-text-secondary hover:text-text-primary transition-colors"
+                            title="Create Instrument"
+                        >
+                            <Plus size={14} />
+                        </button>
                     </div>
 
                     {/* Volume/Mute Toggle */}

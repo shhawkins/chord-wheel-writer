@@ -3,6 +3,7 @@ import { useSongStore } from '../../store/useSongStore';
 import { X, Mic, Upload, Trash2, Play, Square, Check, AlertCircle } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import type { CustomInstrument } from '../../types';
+import { playChord, setInstrument as setAudioInstrument } from '../../utils/audioEngine';
 
 interface InstrumentManagerModalProps {
     onClose: () => void;
@@ -120,9 +121,17 @@ const audioBufferToWav = (buffer: AudioBuffer): Blob => {
     return new Blob([arrayBuffer], { type: 'audio/wav' });
 };
 
+const base64ToBlob = async (base64: string): Promise<Blob> => {
+    const res = await fetch(base64);
+    return res.blob();
+};
+
+
 export const InstrumentManagerModal: React.FC<InstrumentManagerModalProps> = ({ onClose }) => {
-    const { customInstruments, addCustomInstrument, removeCustomInstrument, setInstrument } = useSongStore();
+    const { customInstruments, addCustomInstrument, removeCustomInstrument, setInstrument, uploadSample, saveInstrumentToCloud } = useSongStore();
     const [view, setView] = useState<'list' | 'create'>('list');
+    const [isSaving, setIsSaving] = useState(false);
+
 
     // Creation State
     const [name, setName] = useState('');
@@ -199,26 +208,67 @@ export const InstrumentManagerModal: React.FC<InstrumentManagerModalProps> = ({ 
         }
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!name.trim()) return;
         if (Object.keys(samples).length === 0) {
             alert("Please add at least one sample.");
             return;
         }
 
+        setIsSaving(true);
+        const instrumentId = uuidv4();
+        const uploadedSamples: Record<string, string> = {};
+
+        // Upload samples to cloud
+        try {
+            for (const [note, base64] of Object.entries(samples)) {
+                // If it's already a URL (e.g. from editing? unlikely here), keep it
+                if (base64.startsWith('http')) {
+                    uploadedSamples[note] = base64;
+                    continue;
+                }
+
+                const blob = await base64ToBlob(base64);
+                // Folder: instruments/INSTRUMENT_ID
+                // File: NOTE.wav
+                const url = await uploadSample(blob, `instruments/${instrumentId}`, `${note}.wav`);
+
+                if (url) {
+                    uploadedSamples[note] = url;
+                } else {
+                    console.warn(`Failed to upload sample for ${note}, falling back to local base64 (might fail save size limits)`);
+                    uploadedSamples[note] = base64;
+                }
+            }
+        } catch (error) {
+            console.error("Upload error:", error);
+            alert("Some samples failed to upload. instrument saved locally.");
+            // Fallback to what we have?
+        }
+
         const newInstrument: CustomInstrument = {
-            id: uuidv4(),
+            id: instrumentId,
             name: name.trim(),
-            samples,
+            type: 'sampler',
+            samples: Object.keys(uploadedSamples).length > 0 ? uploadedSamples : samples,
             createdAt: Date.now()
         };
 
         addCustomInstrument(newInstrument);
+        const { selectedChord } = useSongStore.getState();
+        setAudioInstrument(newInstrument.id);
         setInstrument(newInstrument.id); // Auto-select the new instrument
+        playChord(selectedChord?.notes || ['C4', 'E4', 'G4']);
+
+        // Save metadata to cloud DB
+        await saveInstrumentToCloud(newInstrument);
+
+        setIsSaving(false);
         setView('list');
         setName('');
         setSamples({});
     };
+
 
     const handlePreview = async (note: string) => {
         const sample = samples[note];
@@ -344,11 +394,19 @@ export const InstrumentManagerModal: React.FC<InstrumentManagerModalProps> = ({ 
                         </button>
                         <button
                             onClick={handleSave}
-                            disabled={!name || Object.keys(samples).length === 0}
-                            className="px-4 py-2 text-sm font-medium bg-accent-primary text-white rounded hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            disabled={!name || Object.keys(samples).length === 0 || isSaving}
+                            className="px-4 py-2 text-sm font-medium bg-accent-primary text-white rounded hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
                         >
-                            Save Instrument
+                            {isSaving ? (
+                                <>
+                                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    Saving...
+                                </>
+                            ) : (
+                                'Save Instrument'
+                            )}
                         </button>
+
                     </div>
                 </div>
             </div>

@@ -98,11 +98,15 @@ export type InstrumentType =
     | 'bass-electric'
     | 'harmonica'
     | 'choir'
+    | 'ocarina'
+    | 'acoustic-archtop'
+    | 'nylon-string'
     | string; // Allow custom instrument IDs
 
 export interface CustomInstrument {
     id: string;
     name: string;
+    type?: string; // 'sampler' | 'synth'
     // Map of pitch (e.g. "C4") to base64 audio string or URL
     samples: Record<string, string>;
     createdAt: number;

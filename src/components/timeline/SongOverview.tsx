@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useMobileLayout } from '../../hooks/useIsMobile';
+import { VoiceSelector } from '../playback/VoiceSelector';
 import { useSongStore } from '../../store/useSongStore';
 import {
     X,
@@ -414,7 +415,7 @@ const ChordDetailPanel: React.FC<ChordDetailPanelProps> = ({
                         className="text-sm font-bold"
                         style={{ color: chordColor }}
                     >
-                        {formatChordForDisplay(displayChord.symbol || `${displayChord.root}${displayChord.quality === 'maj' ? '' : displayChord.quality}`)}
+                        {formatChordForDisplay(displayChord.symbol || `${displayChord.root}${displayChord.quality === 'major' ? '' : displayChord.quality}`)}
                     </span>
                     {displayChord.numeral && (
                         <span className="text-[10px] font-serif italic text-white/40">
@@ -463,7 +464,7 @@ const ChordDetailPanel: React.FC<ChordDetailPanelProps> = ({
                                 className="text-base font-bold"
                                 style={{ color: chordColor }}
                             >
-                                {formatChordForDisplay(displayChord.symbol || `${displayChord.root}${displayChord.quality === 'maj' ? '' : displayChord.quality}`)}
+                                {formatChordForDisplay(displayChord.symbol || `${displayChord.root}${displayChord.quality === 'major' ? '' : displayChord.quality}`)}
                             </span>
                         </div>
                         {displayChord.numeral && (
@@ -550,7 +551,7 @@ const ChordDetailPanel: React.FC<ChordDetailPanelProps> = ({
                             className="text-xl font-bold"
                             style={{ color: chordColor }}
                         >
-                            {formatChordForDisplay(displayChord.symbol || `${displayChord.root}${displayChord.quality === 'maj' ? '' : displayChord.quality}`)}
+                            {formatChordForDisplay(displayChord.symbol || `${displayChord.root}${displayChord.quality === 'major' ? '' : displayChord.quality}`)}
                         </span>
                     </div>
                     {displayChord.numeral && (
@@ -619,8 +620,6 @@ export const SongOverview: React.FC<SongOverviewProps> = ({ onSave, onExport }) 
         setTempo,
         playingSectionId,
         openTimeline,
-        instrument,
-        setInstrument,
         removeSection,
 
         addSuggestedSection
@@ -1055,7 +1054,7 @@ export const SongOverview: React.FC<SongOverviewProps> = ({ onSave, onExport }) 
                             // Close popup and select the slot
                             setEditingSectionId(null);
                             // Find the chord in the section to select
-                            const beat = section.measures.flatMap(m => m.beats).find(b => b.id === beatId);
+                            const beat = section.measures.flatMap((m: any) => m.beats).find((b: any) => b.id === beatId);
                             if (beat && beat.chord) {
                                 useSongStore.getState().setSelectedChord(beat.chord);
                             }
@@ -1290,17 +1289,10 @@ export const SongOverview: React.FC<SongOverviewProps> = ({ onSave, onExport }) 
                             <Music size={10} />
                             Voice
                         </span>
-                        <select
-                            value={instrument}
-                            onChange={(e) => setInstrument(e.target.value as InstrumentType)}
-                            className="bg-bg-tertiary border border-white/10 rounded px-3 py-1 text-sm text-accent-primary font-medium focus:outline-none focus:border-accent-primary cursor-pointer appearance-none text-center min-w-[100px] hover:bg-bg-elevated transition-colors"
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            <option value="piano">Piano</option>
-                            <option value="epiano">E. Piano</option>
-                            <option value="organ">Organ</option>
-                            <option value="pad">Pad</option>
-                        </select>
+                        <VoiceSelector
+                            variant="compact"
+                            className="z-10"
+                        />
                     </div>
                 </div>
             </div>

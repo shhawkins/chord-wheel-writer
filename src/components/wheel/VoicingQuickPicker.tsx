@@ -5,6 +5,7 @@ import { playChord } from '../../utils/audioEngine';
 import { getChordNotes } from '../../utils/musicTheory';
 import { useMobileLayout } from '../../hooks/useIsMobile';
 import { Info, Plus } from 'lucide-react';
+import { VoiceSelector } from '../playback/VoiceSelector';
 
 interface VoicingOption {
     quality: string;
@@ -50,7 +51,36 @@ export const VoicingQuickPicker: React.FC<VoicingQuickPickerProps> = ({
     const [currentQuality, setCurrentQuality] = useState<string | undefined>(selectedQuality);
 
     // Double-tap tracking
+
+    // Double-tap tracking
     const lastTapRef = useRef<{ quality: string; time: number } | null>(null);
+
+    // Touch handling for better responsiveness
+    const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+
+    const handleTouchStart = (e: React.TouchEvent) => {
+        touchStartRef.current = {
+            x: e.touches[0].clientX,
+            y: e.touches[0].clientY
+        };
+    };
+
+    const handleTouchEnd = (e: React.TouchEvent, action: () => void) => {
+        if (!touchStartRef.current) return;
+
+        const endX = e.changedTouches[0].clientX;
+        const endY = e.changedTouches[0].clientY;
+        const deltaX = Math.abs(endX - touchStartRef.current.x);
+        const deltaY = Math.abs(endY - touchStartRef.current.y);
+
+        // Allow some slop (10px) to consider it a tap vs drag/scroll
+        if (deltaX < 10 && deltaY < 10) {
+            if (e.cancelable) e.preventDefault(); // Prevent click firing if possible
+            action();
+        }
+
+        touchStartRef.current = null;
+    };
 
     // Auto-fade timer
     const fadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -159,10 +189,10 @@ export const VoicingQuickPicker: React.FC<VoicingQuickPickerProps> = ({
             ref={modalRef}
             className={clsx(
                 "fixed bg-bg-elevated border border-border-medium rounded-xl shadow-xl",
-                "flex flex-row flex-nowrap items-center justify-center",
+                "flex flex-row flex-nowrap items-center justify-between",
                 "animate-in fade-in zoom-in-95 duration-150",
-                // Smaller padding/gap when many voicings
-                voicings.length > 5 ? "p-1 gap-1" : (isLandscapeMobile ? "p-1 gap-1" : "p-2 gap-2")
+                // Smaller padding/gap when many voicings - ONLY on mobile
+                (isMobile && voicings.length > 5) ? "p-1 gap-1" : (isLandscapeMobile ? "p-1 gap-1" : "p-2 gap-2")
             )}
             style={{
                 // Position varies by mode:
@@ -184,114 +214,143 @@ export const VoicingQuickPicker: React.FC<VoicingQuickPickerProps> = ({
                 zIndex: 99999
             }}
         >
-            {voicings.map((voicing) => {
-                const isSelected = voicing.quality === currentQuality;
-                // Dynamic sizing: smaller buttons when there are many voicings
-                const isCompact = voicings.length > 4 || isLandscapeMobile;
-                const isTiny = voicings.length >= 6;
+            {(() => {
+                // Dynamic sizing logic moved to component scope for visibility in all parts of the modal
+                const isCompact = (isMobile && voicings.length > 4) || isLandscapeMobile;
+                const isTiny = isMobile && voicings.length >= 6;
 
                 return (
-                    <button
-                        key={voicing.quality}
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            handleVoicingClick(voicing.quality);
-                        }}
-                        onTouchEnd={(e) => {
-                            e.stopPropagation();
-                            // Let onClick handle it for consistency
-                        }}
-                        className={clsx(
-                            "flex items-center justify-center rounded-lg transition-all shrink-0",
-                            isTiny
-                                ? "min-w-[32px] h-9 px-0.5"
-                                : isCompact
-                                    ? "min-w-[40px] h-10 px-1.5"
-                                    : "min-w-[48px] h-12 px-2",
-                            isSelected
-                                ? "bg-accent-primary text-white shadow-lg"
-                                : "text-text-secondary hover:text-text-primary hover:bg-bg-tertiary"
-                        )}
-                        title={`Tap to preview, double-tap to add ${chordRoot}${voicing.label}`}
-                    >
-                        <span className={clsx(
-                            "font-semibold",
-                            isTiny ? "text-[10px]" : isCompact ? "text-xs" : (isSelected ? "text-sm" : "text-xs")
+                    <>
+                        {/* Scrollable Voicings List */}
+                        <div className={clsx(
+                            "flex flex-row items-center overflow-x-auto no-scrollbar mask-linear-fade flex-1 min-w-0",
+                            (isMobile && voicings.length > 5) ? "gap-1" : "gap-2"
                         )}>
-                            {voicing.label || 'maj'}
-                        </span>
-                    </button>
+                            {voicings.map((voicing) => {
+                                const isSelected = voicing.quality === currentQuality;
+
+                                return (
+                                    <button
+                                        key={voicing.quality}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleVoicingClick(voicing.quality);
+                                        }}
+                                        onTouchStart={handleTouchStart}
+                                        onTouchEnd={(e) => {
+                                            e.stopPropagation();
+                                            handleTouchEnd(e, () => handleVoicingClick(voicing.quality));
+                                        }}
+                                        className={clsx(
+                                            "flex items-center justify-center rounded-lg transition-all shrink-0",
+                                            "active:scale-95", // Add visual feedback
+                                            isTiny
+                                                ? "min-w-[32px] h-9 px-0.5"
+                                                : isCompact
+                                                    ? "min-w-[40px] h-10 px-1.5"
+                                                    : "min-w-[48px] h-12 px-2",
+                                            isSelected
+                                                ? "bg-accent-primary text-white shadow-lg"
+                                                : "text-text-secondary hover:text-text-primary hover:bg-bg-tertiary"
+                                        )}
+                                        title={`Tap to preview, double-tap to add ${chordRoot}${voicing.label}`}
+                                    >
+                                        <span className={clsx(
+                                            "font-semibold whitespace-nowrap",
+                                            isTiny ? "text-[10px]" : isCompact ? "text-xs" : (isSelected ? "text-sm" : "text-xs")
+                                        )}>
+                                            {voicing.label || 'maj'}
+                                        </span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        {/* Fixed Action Buttons Container - Pushed to bottom right in wrapping layout or just inline if small */}
+                        <div className={clsx(
+                            "flex flex-row items-center shrink-0 border-l border-border-subtle pl-2 ml-1",
+                            "self-stretch" // Ensure separator spans full height
+                        )}>
+                            {/* Chord Details shortcut button */}
+                            {onOpenDetails && (
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onOpenDetails();
+                                        onClose();
+                                    }}
+                                    onTouchStart={handleTouchStart}
+                                    onTouchEnd={(e) => {
+                                        e.stopPropagation();
+                                        // Add slight prevention of ghost clicks if needed, but primary is to trigger action
+                                        handleTouchEnd(e, () => {
+                                            onOpenDetails();
+                                            onClose();
+                                        });
+                                    }}
+                                    className={clsx(
+                                        "flex items-center justify-center rounded-lg transition-all shrink-0",
+                                        "text-text-tertiary hover:text-text-secondary hover:bg-bg-tertiary",
+                                        isTiny
+                                            ? "w-7 h-9"
+                                            : isCompact
+                                                ? "w-8 h-10"
+                                                : "w-10 h-12"
+                                    )}
+                                    title="Open chord details"
+                                >
+                                    <Info size={isTiny ? 12 : (isCompact ? 14 : 16)} />
+                                </button>
+                            )}
+
+                            {/* Add to timeline button */}
+                            {onAddToTimeline && (
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        const qualityToAdd = currentQuality || selectedQuality || voicings[0]?.quality;
+                                        if (qualityToAdd) {
+                                            onAddToTimeline(qualityToAdd);
+                                            onClose();
+                                        }
+                                    }}
+                                    onTouchStart={handleTouchStart}
+                                    onTouchEnd={(e) => {
+                                        e.stopPropagation();
+                                        handleTouchEnd(e, () => {
+                                            const qualityToAdd = currentQuality || selectedQuality || voicings[0]?.quality;
+                                            if (qualityToAdd) {
+                                                onAddToTimeline(qualityToAdd);
+                                                onClose();
+                                            }
+                                        });
+                                    }}
+                                    className={clsx(
+                                        "flex items-center justify-center rounded-lg transition-all shrink-0",
+                                        "text-accent-primary hover:text-white hover:bg-accent-primary/20",
+                                        isTiny
+                                            ? "w-7 h-9"
+                                            : isCompact
+                                                ? "w-8 h-10"
+                                                : "w-10 h-12"
+                                    )}
+                                    title="Add to timeline"
+                                >
+                                    <Plus size={isTiny ? 14 : (isCompact ? 16 : 18)} />
+                                </button>
+                            )}
+
+                            {/* Instrument Selector */}
+                            <VoiceSelector
+                                variant={isTiny ? 'tiny' : (isCompact ? 'compact' : 'default')}
+                                showLabel={false}
+                                className="ml-1"
+                                onInteraction={resetFadeTimer}
+                            />
+                        </div>
+                    </>
                 );
-            })}
-            {/* Divider between voicing pills and action buttons - only show if there are voicings */}
-            {voicings.length > 0 && (
-                <div className="w-px bg-border-subtle self-stretch my-1 shrink-0" />
-            )}
-
-            {/* Action buttons - always visible */}
-            {/* Chord Details shortcut button */}
-            {onOpenDetails && (
-                <button
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        onOpenDetails();
-                        onClose();
-                    }}
-                    onTouchEnd={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        onOpenDetails();
-                        onClose();
-                    }}
-                    className={clsx(
-                        "flex items-center justify-center rounded-lg transition-all shrink-0",
-                        "text-text-tertiary hover:text-text-secondary hover:bg-bg-tertiary",
-                        voicings.length >= 6
-                            ? "w-7 h-9"
-                            : voicings.length > 4 || isLandscapeMobile
-                                ? "w-8 h-10"
-                                : "w-10 h-12"
-                    )}
-                    title="Open chord details"
-                >
-                    <Info size={voicings.length >= 6 ? 12 : (voicings.length > 4 || isLandscapeMobile ? 14 : 16)} />
-                </button>
-            )}
-
-            {/* Add to timeline button */}
-            {onAddToTimeline && (
-                <button
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        const qualityToAdd = currentQuality || selectedQuality || voicings[0]?.quality;
-                        if (qualityToAdd) {
-                            onAddToTimeline(qualityToAdd);
-                            onClose();
-                        }
-                    }}
-                    onTouchEnd={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        const qualityToAdd = currentQuality || selectedQuality || voicings[0]?.quality;
-                        if (qualityToAdd) {
-                            onAddToTimeline(qualityToAdd);
-                            onClose();
-                        }
-                    }}
-                    className={clsx(
-                        "flex items-center justify-center rounded-lg transition-all shrink-0",
-                        "text-accent-primary hover:text-white hover:bg-accent-primary/20",
-                        voicings.length >= 6
-                            ? "w-7 h-9"
-                            : voicings.length > 4 || isLandscapeMobile
-                                ? "w-8 h-10"
-                                : "w-10 h-12"
-                    )}
-                    title="Add to timeline"
-                >
-                    <Plus size={voicings.length >= 6 ? 14 : (voicings.length > 4 || isLandscapeMobile ? 16 : 18)} />
-                </button>
-            )}
+            })()}
         </div>,
         document.body
     );

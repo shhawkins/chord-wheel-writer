@@ -22,6 +22,9 @@ let instruments: Record<string, Tone.Sampler | Tone.PolySynth | null> = {
     'bass-electric': null,
     harmonica: null,
     choir: null,
+    ocarina: null,
+    'acoustic-archtop': null,
+    'nylon-string': null,
 };
 
 let currentInstrument: InstrumentName = 'piano';
@@ -234,6 +237,7 @@ export const initAudio = async () => {
                 "A4": "A4.mp3",
             },
             release: 1,
+            attack: 0.05,
             baseUrl,
         }).toDestination());
 
@@ -248,6 +252,7 @@ export const initAudio = async () => {
                 "C5": "electric-guitar-c5.m4a",
             },
             release: 2,
+            attack: 0.05,
             baseUrl: guitarBaseUrl,
         }).connect(limiter));
 
@@ -258,6 +263,7 @@ export const initAudio = async () => {
                 "C5": "electric-guitar-c5.m4a",
             },
             release: 2,
+            attack: 0.05,
             baseUrl: guitarBaseUrl,
         }).connect(limiter));
 
@@ -367,11 +373,12 @@ export const initAudio = async () => {
 
         safeCreate('bass-electric', () => new Tone.Sampler({
             urls: {
-                "C3": "bass-c3.aif",
-                "C4": "bass-c4.aif",
-                "C5": "bass-c5.aif",
+                "C3": "bass-c3.wav",
+                "C4": "bass-c4.wav",
+                "C5": "bass-c5.wav",
             },
             release: 2,
+            attack: 0.05,
             baseUrl: "/samples/",
         }).connect(ensureMasterLimiter()));
 
@@ -382,6 +389,7 @@ export const initAudio = async () => {
                 "C5": "harmonica-c5.mp3",
             },
             release: 2,
+            attack: 0.05,
             baseUrl: "/samples/",
         }).connect(ensureMasterLimiter()));
 
@@ -394,6 +402,39 @@ export const initAudio = async () => {
             oscillator: { type: "sine" },
             envelope: { attack: 0.8, decay: 0.3, sustain: 0.9, release: 1.8 }
         }).toDestination());
+
+        safeCreate('ocarina', () => new Tone.Sampler({
+            urls: {
+                "C3": "ocarina-c3.mp3",
+                "C4": "ocarina-c4.mp3",
+                "C5": "ocarina-c5.mp3",
+            },
+            release: 2,
+            attack: 0.05,
+            baseUrl: "/samples/",
+        }).connect(ensureMasterLimiter()));
+
+        safeCreate('acoustic-archtop', () => new Tone.Sampler({
+            urls: {
+                "C3": "acoustic-archtop-c3.mp3",
+                "C4": "acoustic-archtop-c4.mp3",
+                "C5": "acoustic-archtop-c5.mp3",
+            },
+            release: 2,
+            attack: 0.05,
+            baseUrl: "/samples/",
+        }).connect(ensureMasterLimiter()));
+
+        safeCreate('nylon-string', () => new Tone.Sampler({
+            urls: {
+                "C3": "guitalele-c3.mp3",
+                "C4": "guitalele-c4.mp3",
+                "C5": "guitalele-c5.mp3",
+            },
+            release: 2,
+            attack: 0.05,
+            baseUrl: "/samples/",
+        }).connect(ensureMasterLimiter()));
 
         // Load custom instruments
         reloadCustomInstruments();

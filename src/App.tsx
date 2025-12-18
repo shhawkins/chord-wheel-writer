@@ -22,6 +22,10 @@ import { OnboardingTooltip } from './components/OnboardingTooltip';
 import { SongInfoModal } from './components/SongInfoModal';
 import { KeySelectorModal } from './components/KeySelectorModal';
 import { InstrumentManagerModal } from './components/playback/InstrumentManagerModal';
+import { AuthModal } from './components/auth/AuthModal';
+import { useAuthStore } from './stores/authStore';
+import { User as UserIcon } from 'lucide-react';
+
 
 // Mobile Portrait Drawers Component - handles combined toggle bar with drag gesture
 interface MobilePortraitDrawersProps {
@@ -206,6 +210,31 @@ function App() {
 
   const [showHelp, setShowHelp] = useState(false);
   const [showKeySelector, setShowKeySelector] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+
+  const { user, initialize: initAuth } = useAuthStore();
+
+  useEffect(() => {
+    initAuth();
+  }, [initAuth]);
+
+  // Auto-close auth modal when user logs in, BUT NOT during password recovery
+  useEffect(() => {
+    if (user && !useAuthStore.getState().isPasswordRecovery) {
+      setShowAuthModal(false);
+    }
+  }, [user]);
+
+  // Force open auth modal if in password recovery mode
+  const isPasswordRecovery = useAuthStore(state => state.isPasswordRecovery);
+  useEffect(() => {
+    if (isPasswordRecovery) {
+      setShowAuthModal(true);
+    }
+  }, [isPasswordRecovery]);
+
+
+
 
   // Wheel zoom state - use different defaults for mobile vs desktop
   // Mobile needs higher zoom to fill screen width, desktop uses 1.0
@@ -442,7 +471,7 @@ function App() {
       // For desktop/tablet, compute wheel size based on actual available space
       if (!mobile) {
         // Get timeline height based on visibility
-        const timelineH = useSongStore.getState().timelineVisible ? 152 : 24;
+        const timelineH = useSongStore.getState().timelineVisible ? 152 : 48;
         // Available height = viewport - header(48) - footer(56) - timeline - padding(32)
         const availableHeight = height - 48 - 56 - timelineH - 32;
         // Available width = viewport - sidebar(380) - padding(40)
@@ -486,7 +515,7 @@ function App() {
     if (isMobile) return;
     const width = window.innerWidth;
     const height = window.innerHeight;
-    const timelineH = timelineVisible ? 152 : 24;
+    const timelineH = timelineVisible ? 152 : 48;
     const availableHeight = height - 48 - 56 - timelineH - 32;
     const availableWidth = width - 380 - 40;
     setComputedWheelSize(Math.max(300, Math.min(availableWidth, availableHeight)));
@@ -1195,6 +1224,18 @@ function App() {
 
         <div className={`flex items-center ${isMobile ? 'gap-3' : 'gap-4'} shrink-0 justify-self-end`}>
 
+          {/* Cloud/Account Button - Hidden for now
+          <button
+            onClick={() => setShowAuthModal(true)}
+            className={`flex items-center gap-2 p-[10px] ${isMobile ? 'text-xs' : 'text-[10px]'} text-text-muted hover:bg-bg-tertiary rounded-lg transition-colors touch-feedback`}
+            title={user ? `Logged in as ${user.email}` : "Sign In / Sign Up"}
+          >
+            <UserIcon size={isMobile ? 16 : 14} className={user ? "text-accent-primary" : ""} />
+            {!isMobile && <span className="font-bold uppercase hidden sm:inline">{user ? 'Account' : 'Login'}</span>}
+          </button>
+          */}
+
+
           {/* Song Duration (Task 33) - Hide on very small screens */}
           {!isMobile && (
             <div className="flex items-center gap-2 text-[10px] text-text-muted">
@@ -1467,7 +1508,7 @@ function App() {
               </>
             ) : (
               /* Collapsed timeline - thin bar with show button */
-              <div className="h-6 bg-bg-secondary border-t border-border-subtle flex items-center justify-center shrink-0">
+              <div className="h-12 bg-bg-secondary border-t border-border-subtle flex items-center justify-center shrink-0">
                 <button
                   onClick={toggleTimeline}
                   className="px-3 h-full flex items-center gap-1 text-[8px] text-text-muted hover:text-text-primary hover:bg-bg-tertiary transition-colors"
@@ -1621,6 +1662,12 @@ function App() {
       {instrumentManagerModalVisible && (
         <InstrumentManagerModal onClose={() => toggleInstrumentManagerModal(false)} />
       )}
+
+      {/* Auth Modal */}
+      <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
+
+
+
 
       {/* First-time Onboarding Tooltip */}
       <OnboardingTooltip onOpenHelp={() => setShowHelp(true)} />

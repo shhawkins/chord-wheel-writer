@@ -1,5 +1,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import path from 'path'
+
 
 // Detect Vercel deployment - Vercel sets VERCEL=1 env variable
 const isVercel = process.env.VERCEL === '1'
@@ -8,7 +10,14 @@ const isVercel = process.env.VERCEL === '1'
 export default defineConfig({
   // Base path: '/' for Vercel and local dev, '/songwriter-wheel/' for GitHub Pages
   base: isVercel ? '/' : (process.env.CI ? '/songwriter-wheel/' : '/'),
+  resolve: {
+    alias: {
+      react: path.resolve(__dirname, './node_modules/react'),
+      'react-dom': path.resolve(__dirname, './node_modules/react-dom'),
+    },
+  },
   plugins: [react()],
+
   server: {
     host: true, // Listen on all addresses including LAN
     port: 5173, // Default port
