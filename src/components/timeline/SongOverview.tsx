@@ -990,19 +990,41 @@ export const SongOverview: React.FC<SongOverviewProps> = ({ onSave, onExport }) 
                         onCopy={() => {
                             useSongStore.getState().duplicateSection(section.id);
                             // Auto switch to the new section (next one)
+                            // We don't reset editingSectionId here so the modal stays open,
+                            // but we switch it to the new section ID.
                             const nextIndex = sectionIndex + 1;
-                            if (nextIndex < useSongStore.getState().currentSong.sections.length) {
-                                // Wait a tick for store update
-                                setTimeout(() => {
-                                    const newSection = useSongStore.getState().currentSong.sections[nextIndex];
+                            // Wait a tick for store update then find the new section
+                            setTimeout(() => {
+                                const currentSections = useSongStore.getState().currentSong.sections;
+                                // The new section should be at nextIndex (inserted after current)
+                                if (nextIndex < currentSections.length) {
+                                    const newSection = currentSections[nextIndex];
                                     if (newSection) setEditingSectionId(newSection.id);
-                                }, 0);
-                            }
+                                }
+                            }, 50);
                         }}
                         onClear={() => useSongStore.getState().clearSection(section.id)}
                         onDelete={() => {
+                            // If we delete the section, we must close or switch.
+                            // User request: "Remove buttons... shouldn't close the modal"
+                            // But if it's gone, we can't show it.
+                            // We will try to switch to the *previous* section, or next if prev unavailable.
+                            // If it's the only section, we have to close.
+
+                            const sections = currentSong.sections;
+                            const nextIdToEdit = hasPrev
+                                ? sections[sectionIndex - 1].id
+                                : hasNext
+                                    ? sections[sectionIndex + 1].id
+                                    : null;
+
                             useSongStore.getState().removeSection(section.id);
-                            setEditingSectionId(null);
+
+                            if (nextIdToEdit) {
+                                setEditingSectionId(nextIdToEdit);
+                            } else {
+                                setEditingSectionId(null);
+                            }
                         }}
                         songTimeSignature={currentSong.timeSignature}
                         onNavigatePrev={() => {
@@ -1045,6 +1067,7 @@ export const SongOverview: React.FC<SongOverviewProps> = ({ onSave, onExport }) 
                                 const newSections = [...currentSong.sections];
                                 [newSections[sectionIndex - 1], newSections[sectionIndex]] = [newSections[sectionIndex], newSections[sectionIndex - 1]];
                                 reorderSections(newSections);
+                                // Keep modal open and tracking the moved section (id shouldn't change)
                             }
                         }}
                         onMoveDown={() => {
@@ -1052,6 +1075,7 @@ export const SongOverview: React.FC<SongOverviewProps> = ({ onSave, onExport }) 
                                 const newSections = [...currentSong.sections];
                                 [newSections[sectionIndex], newSections[sectionIndex + 1]] = [newSections[sectionIndex + 1], newSections[sectionIndex]];
                                 reorderSections(newSections);
+                                // Keep modal open and tracking the moved section
                             }
                         }}
                     />

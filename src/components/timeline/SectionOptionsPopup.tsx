@@ -163,6 +163,7 @@ export const SectionOptionsPopup: React.FC<SectionOptionsPopupProps> = ({
             {/* Centered Modal Card */}
             <div
                 ref={popupRef}
+                onClick={(e) => e.stopPropagation()}
                 className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[99999]
                            bg-bg-elevated border border-border-medium rounded-xl 
                            shadow-2xl shadow-black/50

@@ -1063,7 +1063,7 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
                                         setEditingSectionId(newSection.id);
                                         setActiveSectionIndex(nextIndex);
                                     }
-                                }, 0);
+                                }, 50);
                             }
                         }}
                         onClear={() => {
@@ -1135,6 +1135,7 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
                                 reorderSections(newSections);
                                 // Update the active section index to follow the moved section
                                 setActiveSectionIndex(currentEditIndex - 1);
+                                // Keep modal open (id hasn't changed, but index has, render will update)
                             }
                         }}
                         onMoveDown={() => {
@@ -1146,6 +1147,7 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
                                 reorderSections(newSections);
                                 // Update the active section index to follow the moved section
                                 setActiveSectionIndex(currentEditIndex + 1);
+                                // Keep modal open
                             }
                         }}
                     />
