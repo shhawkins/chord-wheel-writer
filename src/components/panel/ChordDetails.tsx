@@ -625,7 +625,7 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar',
             {/* Resize handle (sidebar only) - supports touch for mobile */}
             {!isDrawer && !isLandscapePanel && (
                 <div
-                    className={`w-3 flex items-center justify-center cursor-ew-resize hover:bg-bg-tertiary active:bg-accent-primary/20 transition-colors ${isResizing ? 'bg-accent-primary/20' : ''} relative z-[60] touch-none`}
+                    className={`w-3 flex items-center justify-center cursor-ew-resize hover:bg-bg-tertiary active:bg-accent-primary/20 transition-colors ${isResizing ? 'bg-accent-primary/20' : ''} relative z-40 touch-none`}
                     onMouseDown={handleResizeStart}
                     onTouchStart={handleResizeStart}
                 >

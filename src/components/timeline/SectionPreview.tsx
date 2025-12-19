@@ -8,7 +8,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import clsx from 'clsx';
-import { Play, Square } from 'lucide-react';
+import { Play, Square, Repeat } from 'lucide-react';
 import type { Section } from '../../types';
 import { getWheelColors, formatChordForDisplay } from '../../utils/musicTheory';
 import { playChord, initAudio } from '../../utils/audioEngine';
@@ -40,7 +40,7 @@ export const SectionPreview: React.FC<SectionPreviewProps> = ({
     className,
     onSlotClick
 }) => {
-    const { tempo } = useSongStore();
+    const { tempo, isLooping, toggleLoop } = useSongStore();
     const chordColors = getWheelColors();
     const theme = SECTION_THEMES[section.type] || SECTION_THEMES.custom;
     const timeSignature = section.timeSignature || songTimeSignature;
@@ -87,7 +87,7 @@ export const SectionPreview: React.FC<SectionPreviewProps> = ({
         };
     }, [section.id]);
 
-    // Play section chords once
+    // Play section chords once or loop
     const playSectionOnce = async () => {
         if (isPlaying) {
             stopPlayback();
@@ -109,42 +109,54 @@ export const SectionPreview: React.FC<SectionPreviewProps> = ({
         const beatsPerStep = beatsPerBar / stepsPerMeasure;
         const msPerStep = beatsPerStep * msPerBeat;
 
-        // Schedule highlighting and audio for each beat slot
-        let stepIndex = 0;
-        section.measures.forEach((measure) => {
-            measure.beats.forEach((beat) => {
-                const delayMs = stepIndex * msPerStep;
+        const runFullSection = () => {
+            // Schedule highlighting and audio for each beat slot
+            let stepIndex = 0;
+            section.measures.forEach((measure) => {
+                measure.beats.forEach((beat) => {
+                    const delayMs = stepIndex * msPerStep;
 
-                // Schedule highlighting for this beat (regardless of whether it has a chord)
-                const highlightTimeoutId = window.setTimeout(() => {
-                    setPlayingBeatId(beat.id);
-                }, delayMs);
-                timeoutIdsRef.current.push(highlightTimeoutId);
-
-                // Schedule audio if there's a chord
-                if (beat.chord && beat.chord.notes && beat.chord.notes.length > 0) {
-                    const audioTimeoutId = window.setTimeout(() => {
-                        // Calculate duration: use whole step duration, capped at 1 bar
-                        const durationBeats = Math.min(beatsPerStep, beatsPerBar);
-                        const noteValue = 4 / durationBeats;
-                        const durationStr = `${noteValue}n`;
-                        playChord(beat.chord!.notes, durationStr);
+                    // Schedule highlighting for this beat (regardless of whether it has a chord)
+                    const highlightTimeoutId = window.setTimeout(() => {
+                        setPlayingBeatId(beat.id);
                     }, delayMs);
-                    timeoutIdsRef.current.push(audioTimeoutId);
-                }
+                    timeoutIdsRef.current.push(highlightTimeoutId);
 
-                stepIndex++;
+                    // Schedule audio if there's a chord
+                    if (beat.chord && beat.chord.notes && beat.chord.notes.length > 0) {
+                        const audioTimeoutId = window.setTimeout(() => {
+                            // Calculate duration: use whole step duration, capped at 1 bar
+                            const durationBeats = Math.min(beatsPerStep, beatsPerBar);
+                            const noteValue = 4 / durationBeats;
+                            const durationStr = `${noteValue}n`;
+                            playChord(beat.chord!.notes, durationStr);
+                        }, delayMs);
+                        timeoutIdsRef.current.push(audioTimeoutId);
+                    }
+
+                    stepIndex++;
+                });
             });
-        });
 
-        // Schedule end
-        const totalSteps = section.measures.reduce((acc, m) => acc + m.beats.length, 0);
-        const endTimeoutId = window.setTimeout(() => {
-            setIsPlaying(false);
-            setPlayingBeatId(null);
-            timeoutIdsRef.current = [];
-        }, totalSteps * msPerStep);
-        timeoutIdsRef.current.push(endTimeoutId);
+            // Schedule end or loop
+            const totalSteps = section.measures.reduce((acc, m) => acc + m.beats.length, 0);
+            const sectionDurationMs = totalSteps * msPerStep;
+
+            const endTimeoutId = window.setTimeout(() => {
+                if (useSongStore.getState().isLooping) {
+                    // Loop: clear previous timeouts and restart
+                    timeoutIdsRef.current = [];
+                    runFullSection();
+                } else {
+                    setIsPlaying(false);
+                    setPlayingBeatId(null);
+                    timeoutIdsRef.current = [];
+                }
+            }, sectionDurationMs);
+            timeoutIdsRef.current.push(endTimeoutId);
+        };
+
+        runFullSection();
     };
 
     return (
@@ -303,20 +315,40 @@ export const SectionPreview: React.FC<SectionPreviewProps> = ({
 
                 {/* Footer info */}
                 <div className="px-2 py-1.5 bg-black/20 border-t border-white/5 flex items-center gap-2">
-                    {/* Play button */}
-                    <button
-                        onClick={playSectionOnce}
-                        className={clsx(
-                            "w-5 h-5 rounded-full flex items-center justify-center transition-all",
-                            "hover:scale-110 active:scale-95",
-                            isPlaying
-                                ? "bg-red-500/80 text-white"
-                                : "bg-accent-primary/20 text-accent-primary hover:bg-accent-primary/30"
-                        )}
-                        title={isPlaying ? "Stop" : "Play section once"}
-                    >
-                        {isPlaying ? <Square size={8} /> : <Play size={10} className="ml-0.5" />}
-                    </button>
+                    <div className="flex items-center gap-1">
+                        {/* Play button */}
+                        <button
+                            onClick={playSectionOnce}
+                            className={clsx(
+                                "w-6 h-6 rounded-full flex items-center justify-center transition-all",
+                                "hover:scale-110 active:scale-95",
+                                isPlaying
+                                    ? "bg-red-500/80 text-white"
+                                    : "bg-accent-primary/20 text-accent-primary hover:bg-accent-primary/30"
+                            )}
+                            title={isPlaying ? "Stop" : "Play section"}
+                        >
+                            {isPlaying ? <Square size={10} /> : <Play size={12} className="ml-0.5" />}
+                        </button>
+
+                        {/* Cycle toggle */}
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                toggleLoop();
+                            }}
+                            className={clsx(
+                                "w-6 h-6 rounded-full flex items-center justify-center transition-all",
+                                "hover:scale-110 active:scale-95",
+                                isLooping
+                                    ? "bg-accent-primary text-white shadow-lg shadow-accent-primary/20"
+                                    : "bg-white/5 text-white/30 hover:bg-white/10 hover:text-white/50"
+                            )}
+                            title={isLooping ? "Cycle Enabled" : "Cycle Disabled"}
+                        >
+                            <Repeat size={12} className={clsx(isLooping && "animate-pulse-subtle")} />
+                        </button>
+                    </div>
 
                     {/* Info centered in remaining space */}
                     <div className="flex-1 flex items-center justify-center gap-3">

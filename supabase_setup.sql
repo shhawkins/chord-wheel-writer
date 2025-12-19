@@ -58,18 +58,63 @@ create policy "Users can insert own instruments" on public.instruments for inser
 create policy "Users can update own instruments" on public.instruments for update using (auth.uid() = user_id);
 create policy "Users can delete own instruments" on public.instruments for delete using (auth.uid() = user_id);
 
+-- Enforce Max 5 Instruments Limit via Trigger
+create or replace function check_instrument_limit()
+returns trigger as $$
+begin
+  if (select count(*) from public.instruments where user_id = auth.uid()) >= 5 then
+    raise exception 'Maximum limit of 5 custom instruments reached.';
+  end if;
+  return new;
+end;
+$$ language plpgsql security definer;
+
+create trigger enforce_instrument_limit
+  before insert on public.instruments
+  for each row execute procedure check_instrument_limit();
+
 -- 4. STORAGE (Samples)
--- Requires creating a bucket named 'samples' in the dashboard first, or via API if enabled.
--- Policy below assumes the bucket exists.
+-- Create a bucket named 'samples' in the Supabase Dashboard > Storage
+-- We cannot create buckets via SQL in the standard editor usually, but we can set policies.
 
--- Allow public access to read samples (so other users can potentially hear shared songs? 
--- Or strictly private? User asked for 'save songs... save instruments'. For now, let's keep private-write, public-read if we want sharing later, or private-read for now.
--- Let's go with: Authenticated users can upload. Authenticated users can read their own?)
--- Actually, if I share a song with you, you need to hear my custom instrument. So 'Read' should probably be public or at least authenticated-global.
--- For now: Users own their files.
+-- Policy: "Give users access to their own folder"
+-- Path convention: user_id/filename.mp3
 
--- STORAGE POLICIES (You must create a bucket named 'samples' in the Supabase Dashboard Storage section)
--- Policy: "Give users access to their own folder 1uhoi_0"
--- logic: bucket_id = 'samples' AND (storage.foldername(name))[1] = auth.uid()::text
+-- Allow authenticated uploads
+create policy "Authenticated users can upload samples"
+on storage.objects for insert
+to authenticated
+with check (
+  bucket_id = 'samples' AND
+  (storage.foldername(name))[1] = auth.uid()::text
+);
 
--- We will instruct the user to create the bucket 'samples'.
+-- Allow authenticated users to update their own samples
+create policy "Users can update own samples"
+on storage.objects for update
+to authenticated
+using (
+  bucket_id = 'samples' AND
+  (storage.foldername(name))[1] = auth.uid()::text
+);
+
+-- Allow authenticated users to delete their own samples
+create policy "Users can delete own samples"
+on storage.objects for delete
+to authenticated
+using (
+  bucket_id = 'samples' AND
+  (storage.foldername(name))[1] = auth.uid()::text
+);
+
+-- Allow public read access (or authenticated only, but public is easier for playback)
+-- User wants "save their songs and instruments", implying private.
+-- But if we want to play them, we need to download them. 
+-- Authenticated read is safer.
+create policy "Users can view own samples"
+on storage.objects for select
+to authenticated
+using (
+  bucket_id = 'samples' AND
+  (storage.foldername(name))[1] = auth.uid()::text
+);

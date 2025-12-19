@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useSongStore } from '../../store/useSongStore';
-import { Play, Pause, SkipBack, SkipForward, Repeat, Volume2, VolumeX, ChevronLeft, ChevronRight, Loader2, Music, RefreshCw, Plus } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, Repeat, Volume2, VolumeX, ChevronLeft, ChevronRight, Loader2, Music, Plus } from 'lucide-react';
 import { playSong, pauseSong, skipToSection, scheduleSong, setTempo as setAudioTempo, toggleLoopMode, setInstrument as setAudioInstrument, unlockAudioForIOS, playChord } from '../../utils/audioEngine';
 import type { InstrumentType } from '../../types';
 import { useMobileLayout } from '../../hooks/useIsMobile';
@@ -96,26 +96,6 @@ export const PlaybackControls: React.FC = () => {
         toggleLoop();
     };
 
-    // Cycle to next section (selects first slot of next section)
-    const cycleSelectedSection = () => {
-        const sections = currentSong.sections;
-        if (sections.length === 0) return;
-
-        // Find current section index
-        const currentIndex = selectedSectionId
-            ? sections.findIndex((s: { id: string }) => s.id === selectedSectionId)
-            : -1;
-
-        // Cycle to next section (wrap around)
-        const nextIndex = currentIndex >= 0
-            ? (currentIndex + 1) % sections.length
-            : 0;
-
-        const nextSection = sections[nextIndex];
-        if (nextSection && nextSection.measures[0]?.beats[0]) {
-            setSelectedSlot(nextSection.id, nextSection.measures[0].beats[0].id);
-        }
-    };
 
     const instrumentOptions: { value: InstrumentType, label: string }[] = [
         { value: 'piano', label: 'Piano' },
@@ -275,22 +255,13 @@ export const PlaybackControls: React.FC = () => {
                     </button>
                     {/* Loop toggle - visible on mobile and desktop */}
                     {isMobile ? (
-                        <>
-                            <button
-                                onClick={cycleSelectedSection}
-                                className={`${isLandscape ? 'p-1' : 'p-1.5'} transition-colors text-text-secondary hover:text-text-primary touch-feedback`}
-                                title="Cycle to Next Section"
-                            >
-                                <RefreshCw size={isLandscape ? 12 : 14} />
-                            </button>
-                            <button
-                                onClick={handleLoopToggle}
-                                className={`${isLandscape ? 'p-1' : 'p-1.5'} transition-colors touch-feedback ${isLooping ? 'text-accent-primary' : 'text-text-secondary hover:text-text-primary'}`}
-                                title="Loop Section"
-                            >
-                                <Repeat size={isLandscape ? 12 : 14} />
-                            </button>
-                        </>
+                        <button
+                            onClick={handleLoopToggle}
+                            className={`${isLandscape ? 'p-1' : 'p-1.5'} transition-colors touch-feedback ${isLooping ? 'text-accent-primary' : 'text-text-secondary hover:text-text-primary'}`}
+                            title="Loop Section"
+                        >
+                            <Repeat size={isLandscape ? 12 : 14} />
+                        </button>
                     ) : (
                         <button
                             onClick={handleLoopToggle}

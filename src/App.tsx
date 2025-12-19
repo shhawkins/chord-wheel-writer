@@ -193,7 +193,7 @@ const MobilePortraitDrawers: React.FC<MobilePortraitDrawersProps> = ({
 
 
 function App() {
-  const { currentSong, selectedKey, timelineVisible, toggleTimeline, selectedSectionId, selectedSlotId, clearSlot, clearTimeline, setTitle, setArtist, setTags, setSongTimeSignature, loadSong: loadSongToStore, newSong, instrument, volume, isMuted, undo, redo, canUndo, canRedo, chordPanelVisible, isPlaying, songInfoModalVisible, toggleSongInfoModal, instrumentManagerModalVisible, toggleInstrumentManagerModal } = useSongStore();
+  const { currentSong, selectedKey, timelineVisible, toggleTimeline, selectedSectionId, selectedSlotId, clearSlot, clearTimeline, setTitle, setArtist, setTags, setSongTimeSignature, loadSong: loadSongToStore, newSong, instrument, volume, isMuted, undo, redo, canUndo, canRedo, chordPanelVisible, isPlaying, songInfoModalVisible, toggleSongInfoModal, instrumentManagerModalVisible, toggleInstrumentManagerModal, cloudSongs, loadCloudSongs, saveToCloud, deleteFromCloud, isLoadingCloud } = useSongStore();
 
   // Audio Sync Logic
   useEffect(() => {
@@ -210,28 +210,60 @@ function App() {
 
   const [showHelp, setShowHelp] = useState(false);
   const [showKeySelector, setShowKeySelector] = useState(false);
-  const [showAuthModal, setShowAuthModal] = useState(false);
 
   const { user, initialize: initAuth } = useAuthStore();
+
+
+  const [notification, setNotification] = useState<{ message: string; action?: { label: string; onClick: () => void } } | null>(null);
 
   useEffect(() => {
     initAuth();
   }, [initAuth]);
 
+  // Show notification when user logs in
+  useEffect(() => {
+    if (user?.email) {
+      setNotification({ message: `Successfully signed in as ${user.email}` });
+      const timer = setTimeout(() => setNotification(null), 2500); // Shorter duration
+      return () => clearTimeout(timer);
+    }
+  }, [user]);
+
   // Auto-close auth modal when user logs in, BUT NOT during password recovery
   useEffect(() => {
     if (user && !useAuthStore.getState().isPasswordRecovery) {
-      setShowAuthModal(false);
+      useAuthStore.getState().setAuthModalOpen(false);
     }
-  }, [user]);
+    if (user) {
+      loadCloudSongs();
+    }
+  }, [user, loadCloudSongs]);
 
   // Force open auth modal if in password recovery mode
   const isPasswordRecovery = useAuthStore(state => state.isPasswordRecovery);
   useEffect(() => {
     if (isPasswordRecovery) {
-      setShowAuthModal(true);
+      useAuthStore.getState().setAuthModalOpen(true);
     }
   }, [isPasswordRecovery]);
+
+  // Listen for custom auth toast events
+  useEffect(() => {
+    const handleAuthToast = (e: any) => {
+      setNotification({
+        message: e.detail.message || 'Sign in required',
+        action: {
+          label: 'Sign In',
+          onClick: () => useAuthStore.getState().setAuthModalOpen(true)
+        }
+      });
+      // Auto-dismiss after 4 seconds
+      const timer = setTimeout(() => setNotification(null), 4000);
+      return () => clearTimeout(timer);
+    };
+    window.addEventListener('show-auth-toast', handleAuthToast);
+    return () => window.removeEventListener('show-auth-toast', handleAuthToast);
+  }, []);
 
 
 
@@ -737,7 +769,19 @@ function App() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    // Auth Check
+    if (!user) {
+      setNotification({
+        message: 'Sign in to save your songs!',
+        action: {
+          label: 'Sign In',
+          onClick: () => useAuthStore.getState().setAuthModalOpen(true)
+        }
+      });
+      return;
+    }
+
     if (currentSong.title === 'Untitled Song' || !currentSong.title.trim()) {
       // If title is default or empty, prompt for a new one
       const newTitle = prompt('Please name your song:', currentSong.title);
@@ -749,11 +793,15 @@ function App() {
       // but strictly speaking we are using currentSong from closure. 
       // Actually, let's just save with the new title directly to avoid race conditions with state update
       const songToSave = { ...currentSong, title: finalTitle };
-      saveSong(songToSave);
+
+      // Cloud Only Save
+      await saveToCloud(songToSave);
+
     } else {
-      saveSong(currentSong);
+      // Cloud Only Save
+      await saveToCloud(currentSong);
     }
-    setSavedSongs(getSavedSongs());
+    setSavedSongs(getSavedSongs()); // Still update local list if we want to keep hybrid mode, but for now we focus on cloud
     setShowSaveMenu(false);
   };
 
@@ -791,7 +839,7 @@ function App() {
     });
   };
 
-  const handleDelete = (songId: string, songTitle: string, e: React.MouseEvent) => {
+  const handleDelete = async (songId: string, songTitle: string, isCloud: boolean, e: React.MouseEvent) => {
     e.stopPropagation();
     setConfirmDialog({
       isOpen: true,
@@ -799,9 +847,13 @@ function App() {
       message: `Are you sure you want to delete "${songTitle}"? This cannot be undone.`,
       confirmLabel: 'Delete',
       isDestructive: true,
-      onConfirm: () => {
-        deleteSong(songId);
-        setSavedSongs(getSavedSongs());
+      onConfirm: async () => {
+        if (isCloud) {
+          await deleteFromCloud(songId);
+        } else {
+          deleteSong(songId);
+          setSavedSongs(getSavedSongs());
+        }
       }
     });
   };
@@ -1224,16 +1276,15 @@ function App() {
 
         <div className={`flex items-center ${isMobile ? 'gap-3' : 'gap-4'} shrink-0 justify-self-end`}>
 
-          {/* Cloud/Account Button - Hidden for now
+          {/* Cloud/Account Button */}
           <button
-            onClick={() => setShowAuthModal(true)}
+            onClick={() => useAuthStore.getState().setAuthModalOpen(true)}
             className={`flex items-center gap-2 p-[10px] ${isMobile ? 'text-xs' : 'text-[10px]'} text-text-muted hover:bg-bg-tertiary rounded-lg transition-colors touch-feedback`}
             title={user ? `Logged in as ${user.email}` : "Sign In / Sign Up"}
           >
             <UserIcon size={isMobile ? 16 : 14} className={user ? "text-accent-primary" : ""} />
             {!isMobile && <span className="font-bold uppercase hidden sm:inline">{user ? 'Account' : 'Login'}</span>}
           </button>
-          */}
 
 
           {/* Song Duration (Task 33) - Hide on very small screens */}
@@ -1284,15 +1335,51 @@ function App() {
                 </div>
 
                 {/* Saved Songs List */}
-                <div className="max-h-48 overflow-y-auto bg-[#1a1a24]">
+                <div className="max-h-64 overflow-y-auto bg-[#1a1a24]">
+                  {/* Cloud Songs Section */}
+                  {user && (
+                    <div className="p-1.5 border-b border-border-subtle">
+                      <div className="flex items-center justify-between px-2 py-1 mb-1">
+                        <p className="text-[9px] text-accent-primary uppercase tracking-wider font-bold">Saved Songs</p>
+                        {isLoadingCloud && <div className="w-2 h-2 rounded-full bg-accent-primary animate-pulse" />}
+                      </div>
+                      {cloudSongs.length === 0 ? (
+                        <p className="px-3 py-2 text-[10px] text-gray-500 italic">No cloud songs</p>
+                      ) : (
+                        cloudSongs.map((song) => (
+                          <div
+                            key={'cloud-' + song.id}
+                            onClick={() => handleLoad(song)}
+                            className={`flex items-center justify-between px-3 py-2 text-xs rounded cursor-pointer transition-colors ${song.id === currentSong.id
+                              ? 'bg-accent-primary/20 text-accent-primary'
+                              : 'text-gray-300 hover:bg-[#2a2a3a]'
+                              }`}
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <div className="text-accent-primary"><FolderOpen size={12} className="shrink-0" /></div>
+                              <span className="truncate">{song.title}</span>
+                            </div>
+                            <button
+                              onClick={(e) => handleDelete(song.id, song.title, true, e)}
+                              className="p-1 hover:bg-red-500/20 rounded text-gray-500 hover:text-red-400 shrink-0"
+                            >
+                              <Trash2 size={10} />
+                            </button>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  )}
+
+                  {/* Local Songs Section */}
                   {savedSongs.length === 0 ? (
-                    <p className="px-3 py-4 text-[10px] text-gray-500 text-center">No saved songs yet</p>
+                    <p className="px-3 py-4 text-[10px] text-gray-500 text-center">No saved songs</p>
                   ) : (
                     <div className="p-1.5">
-                      <p className="px-2 py-1 text-[9px] text-gray-500 uppercase tracking-wider">Saved Songs</p>
+                      <p className="px-2 py-1 text-[9px] text-gray-500 uppercase tracking-wider">Current Song</p>
                       {savedSongs.map((song) => (
                         <div
-                          key={song.id}
+                          key={'local-' + song.id}
                           onClick={() => handleLoad(song)}
                           className={`flex items-center justify-between px-3 py-2 text-xs rounded cursor-pointer transition-colors ${song.id === currentSong.id
                             ? 'bg-accent-primary/20 text-accent-primary'
@@ -1304,7 +1391,7 @@ function App() {
                             <span className="truncate">{song.title}</span>
                           </div>
                           <button
-                            onClick={(e) => handleDelete(song.id, song.title, e)}
+                            onClick={(e) => handleDelete(song.id, song.title, false, e)}
                             className="p-1 hover:bg-red-500/20 rounded text-gray-500 hover:text-red-400 shrink-0"
                           >
                             <Trash2 size={10} />
@@ -1663,8 +1750,29 @@ function App() {
         <InstrumentManagerModal onClose={() => toggleInstrumentManagerModal(false)} />
       )}
 
+      {/* Toast Notification */}
+      {notification && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[60] px-4 py-2 bg-stone-800 border border-stone-700 text-white text-sm font-medium rounded-full shadow-xl animate-in fade-in slide-in-from-top-4 duration-300 flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-green-500" />
+            {notification.message}
+          </div>
+          {notification.action && (
+            <button
+              onClick={() => {
+                notification.action?.onClick();
+                setNotification(null);
+              }}
+              className="text-accent-primary hover:text-white font-bold text-xs uppercase tracking-wide border-l border-white/20 pl-3 ml-1"
+            >
+              {notification.action.label}
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Auth Modal */}
-      <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
+      <AuthModal isOpen={useAuthStore(s => s.isAuthModalOpen)} onClose={() => useAuthStore.getState().setAuthModalOpen(false)} />
 
 
 

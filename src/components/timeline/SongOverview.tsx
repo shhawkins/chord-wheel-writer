@@ -13,7 +13,6 @@ import {
     SkipForward,
     Save,
     Download,
-    Music,
     Trash
 } from 'lucide-react';
 import clsx from 'clsx';
@@ -40,7 +39,7 @@ import {
     useSortable
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { getSectionDisplayName, type Section, type InstrumentType } from '../../types';
+import { getSectionDisplayName, type Section } from '../../types';
 import { SongTimeline } from './SongTimeline';
 import { SectionOptionsPopup } from './SectionOptionsPopup';
 
@@ -606,7 +605,6 @@ const ChordDetailPanel: React.FC<ChordDetailPanelProps> = ({
 };
 
 export const SongOverview: React.FC<SongOverviewProps> = ({ onSave, onExport }) => {
-    const { isMobile, isLandscape } = useMobileLayout();
 
     const {
         currentSong,
@@ -1218,60 +1216,28 @@ export const SongOverview: React.FC<SongOverviewProps> = ({ onSave, onExport }) 
                     </div>
                 </div>
 
-                {/* Row 2: Main Playback Controls */}
-                <div className="flex items-center justify-center gap-8 px-6 py-4">
-                    {/* Tempo - Interactive */}
-                    <div className="flex flex-col items-center gap-1">
-                        <span className="text-[10px] uppercase tracking-wider text-white/30 font-bold">BPM</span>
-                        {isEditingBpm ? (
-                            <input
-                                ref={bpmInputRef}
-                                type="number"
-                                inputMode="numeric"
-                                value={bpmInputValue}
-                                onChange={(e) => setBpmInputValue(e.target.value)}
-                                onBlur={handleBpmSave}
-                                onKeyDown={handleBpmKeyDown}
-                                className="w-16 text-lg bg-bg-tertiary border border-accent-primary rounded px-2 py-1 text-center text-white font-mono font-medium focus:outline-none"
-                                min={40}
-                                max={240}
-                            />
-                        ) : (
-                            <div
-                                onTouchStart={handleBpmTouchStart}
-                                onTouchMove={handleBpmTouchMove}
-                                onTouchEnd={handleBpmTouchEnd}
-                                onClick={handleBpmTap}
-                                className={clsx(
-                                    "text-lg font-mono font-medium cursor-ew-resize select-none px-3 py-1 rounded transition-colors",
-                                    isSwiping ? "text-accent-primary bg-accent-primary/10" : "text-accent-primary hover:bg-white/5"
-                                )}
-                            >
-                                {tempo}
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Transport */}
-                    <div className="flex items-center gap-6">
+                {/* Row 2: Main Playback Controls - Stacked Vertically */}
+                <div className="flex flex-col items-center gap-6 px-6 py-6 max-w-sm mx-auto">
+                    {/* Transport - Primary Action */}
+                    <div className="flex items-center justify-center gap-8 w-full order-1">
                         <button
                             onClick={() => handleSkip('prev')}
                             className="text-accent-primary/80 hover:text-accent-primary transition-colors p-2 active:scale-95"
                         >
-                            <SkipBack size={22} fill="currentColor" />
+                            <SkipBack size={26} fill="currentColor" />
                         </button>
 
                         <button
                             onClick={handlePlayPause}
                             className={clsx(
-                                "w-14 h-14 rounded-full flex items-center justify-center shadow-xl transition-all active:scale-95",
+                                "w-16 h-16 rounded-full flex items-center justify-center shadow-xl transition-all active:scale-95",
                                 isPlaying ? "bg-accent-primary text-white shadow-accent-primary/30" : "bg-accent-primary/20 text-accent-primary border-2 border-accent-primary"
                             )}
                         >
                             {isPlaying ? (
-                                <Pause size={24} fill="currentColor" />
+                                <Pause size={30} fill="currentColor" />
                             ) : (
-                                <Play size={24} fill="currentColor" className="ml-1" />
+                                <Play size={30} fill="currentColor" className="ml-1" />
                             )}
                         </button>
 
@@ -1279,20 +1245,51 @@ export const SongOverview: React.FC<SongOverviewProps> = ({ onSave, onExport }) 
                             onClick={() => handleSkip('next')}
                             className="text-accent-primary/80 hover:text-accent-primary transition-colors p-2 active:scale-95"
                         >
-                            <SkipForward size={22} fill="currentColor" />
+                            <SkipForward size={26} fill="currentColor" />
                         </button>
                     </div>
 
-                    {/* Voice Selector */}
-                    <div className="flex flex-col items-center gap-1">
-                        <span className="text-[10px] uppercase tracking-wider text-white/30 font-bold flex items-center gap-1">
-                            <Music size={10} />
-                            Voice
-                        </span>
-                        <VoiceSelector
-                            variant="compact"
-                            className="z-10"
-                        />
+                    {/* Secondary Controls Row (BPM and Voice) */}
+                    <div className="flex items-center justify-between w-full order-2 pt-2 border-t border-white/5">
+                        {/* Tempo - Interactive */}
+                        <div className="flex flex-col items-start gap-1">
+                            <span className="text-[10px] uppercase tracking-wider text-white/30 font-bold">Tempo</span>
+                            {isEditingBpm ? (
+                                <input
+                                    ref={bpmInputRef}
+                                    type="number"
+                                    inputMode="numeric"
+                                    value={bpmInputValue}
+                                    onChange={(e) => setBpmInputValue(e.target.value)}
+                                    onBlur={handleBpmSave}
+                                    onKeyDown={handleBpmKeyDown}
+                                    className="w-16 h-9 bg-bg-tertiary border border-accent-primary rounded px-2 py-1 text-center text-white font-mono font-medium focus:outline-none"
+                                    min={40}
+                                    max={240}
+                                />
+                            ) : (
+                                <div
+                                    onTouchStart={handleBpmTouchStart}
+                                    onTouchMove={handleBpmTouchMove}
+                                    onTouchEnd={handleBpmTouchEnd}
+                                    onClick={handleBpmTap}
+                                    className={clsx(
+                                        "h-9 flex items-center justify-center min-w-[60px] text-lg font-mono font-medium cursor-ew-resize select-none px-3 rounded transition-colors",
+                                        isSwiping ? "text-accent-primary bg-accent-primary/10" : "text-accent-primary hover:bg-white/5"
+                                    )}
+                                >
+                                    {tempo}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Voice Selector */}
+                        <div className="flex flex-col items-end gap-1">
+                            <VoiceSelector
+                                variant="compact"
+                                className="z-10"
+                            />
+                        </div>
                     </div>
                 </div>
             </div>

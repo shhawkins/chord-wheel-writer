@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useSongStore } from '../../store/useSongStore';
+import { useAuthStore } from '../../stores/authStore';
 import { X, Mic, Upload, Trash2, Play, Square, Check, AlertCircle } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import type { CustomInstrument } from '../../types';
@@ -132,6 +133,23 @@ export const InstrumentManagerModal: React.FC<InstrumentManagerModalProps> = ({ 
     const [view, setView] = useState<'list' | 'create'>('list');
     const [isSaving, setIsSaving] = useState(false);
 
+    // Auth Check Effect for Create View
+    React.useEffect(() => {
+        if (view === 'create' && !useAuthStore.getState().user) {
+            const timer = setTimeout(() => {
+                // We need to trigger the toast in App.tsx. 
+                // Since this component is inside App, we can dispatch a custom event or use a global store for notifications.
+                // For simplicity/speed, let's use a custom event that App.tsx listens to, OR just trigger the modal directly?
+                // The user said: "show the toast message to prompt for sign-in/sign-up".
+                // Since `setNotification` is local to App.tsx, we can dispatch an event.
+                window.dispatchEvent(new CustomEvent('show-auth-toast', {
+                    detail: { message: 'Sign in to save custom instruments!' }
+                }));
+            }, 800);
+            return () => clearTimeout(timer);
+        }
+    }, [view]);
+
 
     // Creation State
     const [name, setName] = useState('');
@@ -200,6 +218,10 @@ export const InstrumentManagerModal: React.FC<InstrumentManagerModalProps> = ({ 
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, note: string) => {
         const file = e.target.files?.[0];
         if (file) {
+            if (file.size > 1024 * 1024) {
+                alert(`File "${file.name}" is too large (${(file.size / 1024 / 1024).toFixed(2)}MB). Max size is 1MB.`);
+                return;
+            }
             const reader = new FileReader();
             reader.onloadend = () => {
                 setSamples(prev => ({ ...prev, [note]: reader.result as string }));
@@ -209,6 +231,13 @@ export const InstrumentManagerModal: React.FC<InstrumentManagerModalProps> = ({ 
     };
 
     const handleSave = async () => {
+        if (!useAuthStore.getState().user) {
+            window.dispatchEvent(new CustomEvent('show-auth-toast', {
+                detail: { message: 'Sign in to save custom instruments!' }
+            }));
+            return;
+        }
+
         if (!name.trim()) return;
         if (Object.keys(samples).length === 0) {
             alert("Please add at least one sample.");

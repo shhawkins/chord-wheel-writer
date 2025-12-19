@@ -63,8 +63,8 @@ const SortableSectionTab: React.FC<SortableSectionTabProps> = ({
         transition,
     };
 
-    const displayName = getSectionDisplayName(section, allSections);
-    const firstLetter = displayName.charAt(0).toUpperCase();
+    const displayName = getSectionDisplayName(section, allSections) || '?';
+    const firstLetter = (displayName && displayName.length > 0) ? displayName.charAt(0).toUpperCase() : '?';
 
     return (
         <div
