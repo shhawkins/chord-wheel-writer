@@ -1717,6 +1717,15 @@ function App() {
           className="shrink-0 z-30 relative bg-bg-elevated transition-all duration-300"
         >
           <PlaybackControls />
+          {/* Unobtrusive privacy link for Google verification */}
+          <a
+            href="/privacy.html"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="absolute bottom-1 right-2 text-[8px] text-text-muted/40 hover:text-text-muted/70 transition-colors"
+          >
+            Privacy
+          </a>
         </div>
       )}
       {/* Confirmation Dialog */}
