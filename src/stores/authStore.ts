@@ -10,6 +10,7 @@ interface AuthState {
     loading: boolean;
     isPasswordRecovery: boolean;
     wasPasswordJustUpdated: boolean;
+    isNewUser: boolean;
     isAuthModalOpen: boolean;
     authDefaultView: AuthView;
     authError: string | null;
@@ -19,6 +20,7 @@ interface AuthState {
     setAuthModalOpen: (open: boolean) => void;
     setAuthDefaultView: (view: AuthView) => void;
     clearPasswordUpdatedFlag: () => void;
+    clearIsNewUserFlag: () => void;
     checkEmailExists: (email: string) => Promise<boolean>;
     setAuthError: (error: string | null) => void;
 }
@@ -30,6 +32,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     loading: true,
     isPasswordRecovery: false,
     wasPasswordJustUpdated: false,
+    isNewUser: false,
     isAuthModalOpen: false,
     authDefaultView: 'sign_in',
     authError: null,
@@ -95,14 +98,22 @@ export const useAuthStore = create<AuthState>((set) => ({
                         };
                     }
 
-                    // NORMAL SIGN IN: Welcome toast for new users
+                    // NORMAL SIGN IN: Check for new user
                     if (event === 'SIGNED_IN' && session?.user && !state.isPasswordRecovery) {
                         const createdAt = new Date(session.user.created_at || 0);
                         const now = new Date();
-                        if ((now.getTime() - createdAt.getTime()) < 60000) {
-                            window.dispatchEvent(new CustomEvent('show-welcome-toast', {
-                                detail: { email: session.user.email }
-                            }));
+                        const isRecentlyCreated = (now.getTime() - createdAt.getTime()) < 60000;
+
+                        if (isRecentlyCreated) {
+                            return {
+                                session,
+                                user: session?.user ?? null,
+                                loading: false,
+                                isPasswordRecovery: state.isPasswordRecovery,
+                                isNewUser: true,
+                                isAuthModalOpen: state.isAuthModalOpen,
+                                authDefaultView: state.authDefaultView
+                            };
                         }
                     }
 
@@ -156,6 +167,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     })),
     setAuthDefaultView: (view) => set({ authDefaultView: view, authError: null }),
     clearPasswordUpdatedFlag: () => set({ wasPasswordJustUpdated: false }),
+    clearIsNewUserFlag: () => set({ isNewUser: false }),
     setAuthError: (error) => set({ authError: error }),
     checkEmailExists: async (email: string) => {
         try {

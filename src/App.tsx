@@ -220,10 +220,12 @@ function App() {
   const user = useAuthStore(s => s.user);
   const isPasswordRecovery = useAuthStore(s => s.isPasswordRecovery);
   const wasPasswordJustUpdated = useAuthStore(s => s.wasPasswordJustUpdated);
+  const isNewUser = useAuthStore(s => s.isNewUser);
   const authLoading = useAuthStore(s => s.loading);
   const isAuthModalOpen = useAuthStore(s => s.isAuthModalOpen);
   const initAuth = useAuthStore(s => s.initialize);
   const clearPasswordUpdatedFlag = useAuthStore(s => s.clearPasswordUpdatedFlag);
+  const clearIsNewUserFlag = useAuthStore(s => s.clearIsNewUserFlag);
 
   const prevUserRef = useRef<typeof user>(null);
 
@@ -248,16 +250,22 @@ function App() {
       setNotification({ message: '✓ Password updated successfully!' });
       justShowedPasswordUpdateRef.current = true;
       clearPasswordUpdatedFlag();
-      const timer = setTimeout(() => setNotification(null), 3000);
+      const timer = setTimeout(() => setNotification(null), 3500);
+      return () => clearTimeout(timer);
+    } else if (isNewUser && user?.email) {
+      // New account confirmation/signup
+      setNotification({ message: `🎉 Welcome to Songwriter Wheel!\nSigned up as ${user.email}` });
+      justShowedPasswordUpdateRef.current = true;
+      clearIsNewUserFlag();
+      const timer = setTimeout(() => setNotification(null), 5000);
       return () => clearTimeout(timer);
     } else if (user?.email && !prevUserRef.current?.email && !justShowedPasswordUpdateRef.current) {
       // Regular sign-in (transitioned from no user to user)
-      // Skip if we just showed password updated message
       setNotification({ message: `Successfully signed in as ${user.email}` });
-      const timer = setTimeout(() => setNotification(null), 2500);
+      const timer = setTimeout(() => setNotification(null), 3000);
       return () => clearTimeout(timer);
     }
-  }, [user, wasPasswordJustUpdated, clearPasswordUpdatedFlag]);
+  }, [user, wasPasswordJustUpdated, isNewUser, clearPasswordUpdatedFlag, clearIsNewUserFlag]);
 
   // Auto-close auth modal ONLY on a fresh sign-in, and NEVER during recovery
   useEffect(() => {
@@ -309,20 +317,11 @@ function App() {
       setTimeout(() => setNotification(null), 5000);
     };
 
-    const handleWelcomeToast = (e: any) => {
-      setNotification({
-        message: `🎉 Welcome to Songwriter Wheel! Signed in as ${e.detail.email}`
-      });
-      setTimeout(() => setNotification(null), 5000);
-    };
-
     window.addEventListener('show-auth-toast', handleAuthToast);
     window.addEventListener('show-auth-error', handleAuthError);
-    window.addEventListener('show-welcome-toast', handleWelcomeToast);
     return () => {
       window.removeEventListener('show-auth-toast', handleAuthToast);
       window.removeEventListener('show-auth-error', handleAuthError);
-      window.removeEventListener('show-welcome-toast', handleWelcomeToast);
     };
   }, []);
 
@@ -731,7 +730,6 @@ function App() {
       // Auto-dismiss after 3 seconds
       setTimeout(() => setNotification(null), 3000);
     } else {
-      // User is not signed in - show toast prompting sign in with "No" option
       setNotification({
         message: 'Save to cloud?',
         action: {
@@ -747,8 +745,8 @@ function App() {
         },
         dismissAction: { label: 'No Thanks' }
       });
-      // Auto-dismiss after 8 seconds (longer since user has 3 options to consider)
-      setTimeout(() => setNotification(null), 8000);
+      // Auto-dismiss after 5 seconds
+      setTimeout(() => setNotification(null), 5000);
     }
   };
 
@@ -870,7 +868,7 @@ function App() {
     // Auth Check
     if (!user) {
       setNotification({
-        message: 'Sign in or sign up for free to save your songs to the cloud!',
+        message: 'Save to cloud?',
         action: {
           label: 'Sign In',
           onClick: () => useAuthStore.getState().setAuthModalOpen(true)
@@ -881,8 +879,11 @@ function App() {
             useAuthStore.getState().setAuthDefaultView('sign_up');
             useAuthStore.getState().setAuthModalOpen(true);
           }
-        }
+        },
+        dismissAction: { label: 'No Thanks' }
       });
+      // Auto-dismiss after 5 seconds
+      setTimeout(() => setNotification(null), 5000);
       return;
     }
 
@@ -897,6 +898,7 @@ function App() {
           const songToSave = { ...currentSong, title: finalTitle };
           await saveToCloud(songToSave);
           setNotification({ message: `"${finalTitle}" saved to cloud!` });
+          setTimeout(() => setNotification(null), 3000);
           setShowSaveMenu(false);
           setSongTitleInput({ isOpen: false, value: '', onSubmit: () => { } });
         }
@@ -907,6 +909,7 @@ function App() {
     // Song already has a title, save directly
     await saveToCloud(currentSong);
     setNotification({ message: `"${currentSong.title}" has been saved!` });
+    setTimeout(() => setNotification(null), 3000);
     setShowSaveMenu(false);
   };
 
