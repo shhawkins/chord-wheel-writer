@@ -95,7 +95,6 @@ export type InstrumentType =
     | 'bell'
     | 'lead'
     | 'bass'
-    | 'bass-electric'
     | 'harmonica'
     | 'choir'
     | 'ocarina'

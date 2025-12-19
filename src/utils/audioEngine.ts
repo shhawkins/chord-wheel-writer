@@ -19,7 +19,6 @@ let instruments: Record<string, Tone.Sampler | Tone.PolySynth | null> = {
     bell: null,
     lead: null,
     bass: null,
-    'bass-electric': null,
     harmonica: null,
     choir: null,
     ocarina: null,
@@ -373,16 +372,6 @@ export const initAudio = async () => {
             filterEnvelope: { attack: 0.001, decay: 0.15, sustain: 0.4, release: 0.2, baseFrequency: 80, octaves: 3 }
         }).toDestination());
 
-        safeCreate('bass-electric', () => new Tone.Sampler({
-            urls: {
-                "C3": "bass-c3.wav",
-                "C4": "bass-c4.wav",
-                "C5": "bass-c5.wav",
-            },
-            release: 2,
-            attack: 0.05,
-            baseUrl: "/samples/",
-        }).connect(ensureMasterLimiter()));
 
         safeCreate('harmonica', () => new Tone.Sampler({
             urls: {

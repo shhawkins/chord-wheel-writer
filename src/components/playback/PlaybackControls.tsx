@@ -103,7 +103,6 @@ export const PlaybackControls: React.FC = () => {
         { value: 'acoustic-archtop', label: 'Acoustic Archtop' },
         { value: 'nylon-string', label: 'Nylon String' },
         { value: 'ocarina', label: 'Ocarina' },
-        { value: 'bass-electric', label: 'Electric Bass' },
         { value: 'harmonica', label: 'Harmonica' },
         { value: 'melodica', label: 'Melodica' },
         { value: 'wine-glass', label: 'Wine Glass' },
