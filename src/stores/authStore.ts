@@ -30,45 +30,43 @@ export const useAuthStore = create<AuthState>((set) => ({
     isAuthModalOpen: false,
     authDefaultView: 'sign_in',
     initialize: async () => {
-
         try {
             // Check for recovery mode in URL hash explicitly BEFORE other async calls might clear it
             const isRecoveryFromHash = typeof window !== 'undefined' && window.location.hash && window.location.hash.includes('type=recovery');
-
-            // Check for error in URL hash (e.g., expired verification link)
             const hasErrorInHash = typeof window !== 'undefined' && window.location.hash && window.location.hash.includes('error=');
 
-            // Handle error in hash (e.g., "otp_expired") - show error toast but don't set state yet
+            // 1. If recovery detected, set state IMMEDIATELY so listeners/effects see it
+            if (isRecoveryFromHash) {
+                console.log('[Auth] Recovery link detected in URL');
+                set({
+                    isPasswordRecovery: true,
+                    isAuthModalOpen: true,
+                    authDefaultView: 'update_password'
+                });
+            }
+
+            // Handle error in hash (e.g., "otp_expired")
             if (hasErrorInHash) {
                 const errorMatch = window.location.hash.match(/error_description=([^&]+)/);
                 if (errorMatch) {
                     const errorMessage = decodeURIComponent(errorMatch[1].replace(/\+/g, ' '));
-                    // Dispatch event for App to show toast
+                    console.log('[Auth] Error in hash:', errorMessage);
                     window.dispatchEvent(new CustomEvent('show-auth-error', {
                         detail: { message: errorMessage }
                     }));
                 }
-                // Clean up the error from URL
                 window.history.replaceState(null, '', window.location.pathname);
             }
 
-            // Track if listener has already handled the state update
-            let listenerHasUpdated = false;
-
-            // 1. Set up listener FIRST to capture any immediate events from URL parsing
+            // 2. Set up listener
             const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-                const isPasswordRecoveryEvent = event === 'PASSWORD_RECOVERY';
-                listenerHasUpdated = true;
+                console.log(`[Auth] Listener event: ${event}`, { hasSession: !!session });
 
                 set(state => {
-                    // Only remain in recovery if it's a PASSWORD_RECOVERY event specifically
-                    // Don't persist recovery state on normal SIGNED_IN events
-                    const shouldBeInRecovery = isPasswordRecoveryEvent;
-
-                    // If the user updated their profile (e.g. password set) or signed out, we exit recovery mode
+                    // EXIT RECOVERY: Only on successful update or sign out
                     if (event === 'USER_UPDATED' || event === 'SIGNED_OUT') {
-                        // Track if this was a password update during recovery
                         const wasPasswordUpdate = event === 'USER_UPDATED' && state.isPasswordRecovery;
+                        console.log(`[Auth] Exiting recovery mode. Was update: ${wasPasswordUpdate}`);
                         return {
                             session,
                             user: session?.user ?? null,
@@ -80,48 +78,57 @@ export const useAuthStore = create<AuthState>((set) => ({
                         };
                     }
 
-                    // On successful sign-in, show welcome message for new users
-                    if (event === 'SIGNED_IN' && session?.user) {
-                        // Check if user was just created (created_at is very recent)
+                    // ENTER RECOVERY: Explicit recovery event
+                    if (event === 'PASSWORD_RECOVERY') {
+                        console.log('[Auth] PASSWORD_RECOVERY event received');
+                        return {
+                            session,
+                            user: session?.user ?? null,
+                            loading: false,
+                            isPasswordRecovery: true,
+                            isAuthModalOpen: true,
+                            authDefaultView: 'update_password'
+                        };
+                    }
+
+                    // NORMAL SIGN IN: Welcome toast for new users
+                    if (event === 'SIGNED_IN' && session?.user && !state.isPasswordRecovery) {
                         const createdAt = new Date(session.user.created_at || 0);
                         const now = new Date();
-                        const isNewUser = (now.getTime() - createdAt.getTime()) < 60000; // Within 1 minute
-
-                        if (isNewUser) {
+                        if ((now.getTime() - createdAt.getTime()) < 60000) {
                             window.dispatchEvent(new CustomEvent('show-welcome-toast', {
                                 detail: { email: session.user.email }
                             }));
                         }
                     }
 
+                    // GENERAL UPDATE: Preserve existing recovery state for other events (TOKEN_REFRESHED, etc.)
+                    const shouldBeInRecovery = state.isPasswordRecovery;
                     return {
                         session,
                         user: session?.user ?? null,
                         loading: false,
                         isPasswordRecovery: shouldBeInRecovery,
-                        isAuthModalOpen: shouldBeInRecovery ? true : state.isAuthModalOpen,
+                        isAuthModalOpen: shouldBeInRecovery || state.isAuthModalOpen,
                         authDefaultView: shouldBeInRecovery ? 'update_password' : state.authDefaultView
                     };
                 });
             });
 
-            // 2. Then check session (which might trigger URL parsing and events)
+            // 3. Final session check
             const { data: { session } } = await supabase.auth.getSession();
+            console.log('[Auth] getSession result:', { hasSession: !!session });
 
-            // Only update state if the listener hasn't already handled it
-            // This prevents the "double update" that causes flashing
-            if (!listenerHasUpdated) {
-                set({
-                    session,
-                    user: session?.user ?? null,
-                    loading: false,
-                    isPasswordRecovery: isRecoveryFromHash,
-                    isAuthModalOpen: isRecoveryFromHash,
-                    authDefaultView: isRecoveryFromHash ? 'update_password' : 'sign_in'
-                });
-            }
+            set(state => ({
+                session,
+                user: session?.user ?? null,
+                loading: false,
+                // Ensure we don't accidentally clear recovery state if it was set by hash or listener
+                isPasswordRecovery: state.isPasswordRecovery || !!isRecoveryFromHash,
+                isAuthModalOpen: state.isPasswordRecovery || state.isAuthModalOpen || !!isRecoveryFromHash,
+                authDefaultView: (state.isPasswordRecovery || isRecoveryFromHash) ? 'update_password' : state.authDefaultView
+            }));
 
-            // Clean up the URL hash if we have a session (removes access_token, etc.)
             if (session && window.location.hash && window.location.hash.includes('access_token')) {
                 window.history.replaceState(null, '', window.location.pathname);
             }

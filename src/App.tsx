@@ -216,8 +216,16 @@ function App() {
     onSubmit: () => { }
   });
 
-  const { user, initialize: initAuth, isPasswordRecovery, wasPasswordJustUpdated, clearPasswordUpdatedFlag, loading: authLoading, isAuthModalOpen } = useAuthStore();
+  // Auth state with selectors for performance and to avoid unnecessary re-renders
+  const user = useAuthStore(s => s.user);
+  const isPasswordRecovery = useAuthStore(s => s.isPasswordRecovery);
+  const wasPasswordJustUpdated = useAuthStore(s => s.wasPasswordJustUpdated);
+  const authLoading = useAuthStore(s => s.loading);
+  const isAuthModalOpen = useAuthStore(s => s.isAuthModalOpen);
+  const initAuth = useAuthStore(s => s.initialize);
+  const clearPasswordUpdatedFlag = useAuthStore(s => s.clearPasswordUpdatedFlag);
 
+  const prevUserRef = useRef<typeof user>(null);
 
   const [notification, setNotification] = useState<{
     message: string;
@@ -242,30 +250,28 @@ function App() {
       clearPasswordUpdatedFlag();
       const timer = setTimeout(() => setNotification(null), 3000);
       return () => clearTimeout(timer);
-    } else if (user?.email && !justShowedPasswordUpdateRef.current) {
-      // Regular sign-in (but skip if we just showed password updated message)
+    } else if (user?.email && !prevUserRef.current?.email && !justShowedPasswordUpdateRef.current) {
+      // Regular sign-in (transitioned from no user to user)
+      // Skip if we just showed password updated message
       setNotification({ message: `Successfully signed in as ${user.email}` });
       const timer = setTimeout(() => setNotification(null), 2500);
       return () => clearTimeout(timer);
     }
-    // Reset the flag after a short delay to allow future sign-in toasts
-    if (justShowedPasswordUpdateRef.current) {
-      const resetTimer = setTimeout(() => {
-        justShowedPasswordUpdateRef.current = false;
-      }, 100);
-      return () => clearTimeout(resetTimer);
-    }
   }, [user, wasPasswordJustUpdated, clearPasswordUpdatedFlag]);
 
-  // Auto-close auth modal when user logs in, BUT NOT during password recovery
+  // Auto-close auth modal ONLY on a fresh sign-in, and NEVER during recovery
   useEffect(() => {
-    // Only close if user exists and we are strictly NOT in recovery mode
-    if (user && !isPasswordRecovery) {
+    const userJustLoggedIn = user && !prevUserRef.current;
+
+    if (userJustLoggedIn && !isPasswordRecovery) {
       useAuthStore.getState().setAuthModalOpen(false);
     }
+
     if (user) {
       loadCloudSongs();
     }
+
+    prevUserRef.current = user;
   }, [user, isPasswordRecovery, loadCloudSongs]);
 
   // Force open auth modal if in password recovery mode
