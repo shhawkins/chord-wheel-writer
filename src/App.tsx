@@ -1378,7 +1378,7 @@ function App() {
               <Logo size={isMobile ? 32 : 24} />
 
             </div>
-            <span className={`font-bold ${isMobile ? 'text-xs' : 'text-sm'} tracking-tight hidden sm:block text-text-muted`}>Songwriter Wheel</span>
+            <span className={`font-bold ${isMobile ? 'text-xs' : 'text-sm'} tracking-tight hidden sm:block text-white/90`}>Songwriter Wheel</span>
           </div>
         </div>
 
