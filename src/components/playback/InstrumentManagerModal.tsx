@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useSongStore } from '../../store/useSongStore';
 import { useAuthStore } from '../../stores/authStore';
-import { X, Mic, Upload, Trash2, Play, Square, Check, AlertCircle } from 'lucide-react';
+import { X, Mic, Upload, Trash2, Play, Check, AlertCircle } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import type { CustomInstrument } from '../../types';
 import { playChord, setInstrument as setAudioInstrument } from '../../utils/audioEngine';
@@ -42,7 +42,6 @@ const trimSilence = async (audioBlob: Blob): Promise<Blob> => {
     }
 
     // Create new buffer with trimmed audio
-    const duration = (end - start) / sampleRate;
     const trimmedBuffer = audioContext.createBuffer(
         audioBuffer.numberOfChannels,
         end - start,
@@ -129,8 +128,8 @@ const base64ToBlob = async (base64: string): Promise<Blob> => {
 
 
 export const InstrumentManagerModal: React.FC<InstrumentManagerModalProps> = ({ onClose }) => {
-    const { customInstruments, addCustomInstrument, removeCustomInstrument, setInstrument, uploadSample, saveInstrumentToCloud } = useSongStore();
-    const [view, setView] = useState<'list' | 'create'>('list');
+    const { customInstruments, addCustomInstrument, removeCustomInstrument, setInstrument, uploadSample, saveInstrumentToCloud, instrumentManagerInitialView } = useSongStore();
+    const [view, setView] = useState<'list' | 'create'>(instrumentManagerInitialView);
     const [isSaving, setIsSaving] = useState(false);
     const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -163,59 +162,6 @@ export const InstrumentManagerModal: React.FC<InstrumentManagerModalProps> = ({ 
 
     const NOTES_TO_SAMPLE = ['C3', 'C4', 'C5']; // Minimal set for good coverage
 
-    const handleStartRecording = async (note: string) => {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            const mediaRecorder = new MediaRecorder(stream);
-            mediaRecorderRef.current = mediaRecorder;
-            audioChunksRef.current = [];
-
-            mediaRecorder.ondataavailable = (event) => {
-                audioChunksRef.current.push(event.data);
-            };
-
-            mediaRecorder.onstop = async () => {
-                const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-
-                // Trim silence from the recording
-                try {
-                    const trimmedBlob = await trimSilence(audioBlob);
-                    const reader = new FileReader();
-                    reader.readAsDataURL(trimmedBlob);
-                    reader.onloadend = () => {
-                        const base64data = reader.result as string;
-                        setSamples(prev => ({ ...prev, [note]: base64data }));
-                    };
-                } catch (err) {
-                    console.error("Error trimming audio:", err);
-                    // Fallback to original if trimming fails
-                    const reader = new FileReader();
-                    reader.readAsDataURL(audioBlob);
-                    reader.onloadend = () => {
-                        const base64data = reader.result as string;
-                        setSamples(prev => ({ ...prev, [note]: base64data }));
-                    };
-                }
-
-                stream.getTracks().forEach(track => track.stop());
-            };
-
-            mediaRecorder.start();
-            setIsRecording(true);
-            setRecordingNote(note);
-        } catch (err) {
-            console.error("Error accessing microphone:", err);
-            alert("Could not access microphone. Please allow permissions.");
-        }
-    };
-
-    const handleStopRecording = () => {
-        if (mediaRecorderRef.current && isRecording) {
-            mediaRecorderRef.current.stop();
-            setIsRecording(false);
-            setRecordingNote(null);
-        }
-    };
 
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, note: string) => {
         const file = e.target.files?.[0];

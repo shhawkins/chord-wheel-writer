@@ -5,7 +5,7 @@ import { ThemeSupa } from '@supabase/auth-ui-shared';
 import { supabase } from '../../lib/supabase';
 import { useAuthStore } from '../../stores/authStore';
 import { useSongStore } from '../../store/useSongStore';
-import { X, Music, Mic2, Trash2 } from 'lucide-react';
+import { X, Music, Mic2, Trash2, Plus } from 'lucide-react';
 import { playChord, setInstrument } from '../../utils/audioEngine';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 
@@ -193,9 +193,21 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
                             {/* Custom Instruments */}
                             <div>
-                                <div className="flex items-center gap-2 mb-2">
-                                    <Mic2 size={14} className="text-indigo-500" />
-                                    <h3 className="text-xs font-semibold text-stone-400 uppercase tracking-wider">Custom Instruments ({customInstruments.length})</h3>
+                                <div className="flex items-center justify-between mb-2">
+                                    <div className="flex items-center gap-2">
+                                        <Mic2 size={14} className="text-indigo-500" />
+                                        <h3 className="text-xs font-semibold text-stone-400 uppercase tracking-wider">Custom Instruments ({customInstruments.length})</h3>
+                                    </div>
+                                    <button
+                                        onClick={() => {
+                                            useSongStore.getState().toggleInstrumentManagerModal(true, 'create');
+                                            onClose();
+                                        }}
+                                        className="p-1 text-stone-400 hover:text-indigo-400 hover:bg-indigo-500/10 rounded-md transition-all flex items-center gap-1 group"
+                                        title="Create New Instrument"
+                                    >
+                                        <Plus size={16} />
+                                    </button>
                                 </div>
                                 {customInstruments.length > 0 ? (
                                     <div className="space-y-1 max-h-32 overflow-y-auto">

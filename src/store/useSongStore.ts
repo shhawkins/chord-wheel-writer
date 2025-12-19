@@ -125,6 +125,7 @@ interface SongState {
     songMapVisible: boolean;      // Toggle Song Map visibility
     songInfoModalVisible: boolean; // Toggle Song Info Modal visibility
     instrumentManagerModalVisible: boolean; // Toggle Instrument Manager Modal visibility
+    instrumentManagerInitialView: 'list' | 'create'; // Initial view for Instrument Manager Modal
     collapsedSections: Record<string, boolean>; // Per-section collapsed UI state
 
     // Chord panel sections state (for portrait mode voicing picker logic)
@@ -159,7 +160,7 @@ interface SongState {
     openTimeline: () => void;  // Opens timeline if not already open (for double-tap from wheel/details)
     toggleSongMap: (force?: boolean) => void;
     toggleSongInfoModal: (force?: boolean) => void;
-    toggleInstrumentManagerModal: (force?: boolean) => void;
+    toggleInstrumentManagerModal: (force?: boolean, view?: 'list' | 'create') => void;
     toggleSectionCollapsed: (sectionId: string) => void;
     setChordPanelGuitarExpanded: (expanded: boolean) => void;
     setChordPanelVoicingsExpanded: (expanded: boolean) => void;
@@ -458,6 +459,7 @@ export const useSongStore = create<SongState>()(
             songMapVisible: false,
             songInfoModalVisible: false,
             instrumentManagerModalVisible: false,
+            instrumentManagerInitialView: 'list',
             collapsedSections: {},
             chordPanelGuitarExpanded: false,  // Collapsed by default on mobile
             chordPanelVoicingsExpanded: false, // Collapsed by default
@@ -822,8 +824,9 @@ export const useSongStore = create<SongState>()(
             toggleSongInfoModal: (force?: boolean) => set((state) => ({
                 songInfoModalVisible: force !== undefined ? force : !state.songInfoModalVisible
             })),
-            toggleInstrumentManagerModal: (force?: boolean) => set((state) => ({
-                instrumentManagerModalVisible: force !== undefined ? force : !state.instrumentManagerModalVisible
+            toggleInstrumentManagerModal: (force, view) => set((state) => ({
+                instrumentManagerModalVisible: force !== undefined ? force : !state.instrumentManagerModalVisible,
+                instrumentManagerInitialView: view || 'list'
             })),
             toggleSectionCollapsed: (sectionId) => set((state) => {
                 const next = { ...state.collapsedSections, [sectionId]: !state.collapsedSections?.[sectionId] };

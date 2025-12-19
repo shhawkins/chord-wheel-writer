@@ -18,11 +18,11 @@ export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
     onNotePlay
 }) => {
     const whiteKeys = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
-    
+
     // Glissando state
     const containerRef = useRef<HTMLDivElement>(null);
     const isGlissandoActive = useRef(false);
-    const playedNotesInGlissando = useRef<Set<string>>(new Set());
+    const lastPlayedNoteKey = useRef<string | null>(null);
     const [activeKey, setActiveKey] = useState<string | null>(null);
 
     // Convert note name to pitch class (0-11) for accurate comparison
@@ -64,39 +64,39 @@ export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
         return noteToPitchClass(note) === bassPitchClass;
     };
 
-    // Glissando: play note if not already played in this drag
+    // Glissando: play note if it's different from the last one played in this drag
     const playNoteInGlissando = useCallback((note: string, keyOctave: number) => {
         const noteKey = `${note}-${keyOctave}`;
-        if (!playedNotesInGlissando.current.has(noteKey)) {
-            playedNotesInGlissando.current.add(noteKey);
+        if (lastPlayedNoteKey.current !== noteKey) {
+            lastPlayedNoteKey.current = noteKey;
             setActiveKey(noteKey);
             if (onNotePlay) {
                 onNotePlay(note, keyOctave);
             }
         }
     }, [onNotePlay]);
-    
+
     // Get note info from a point on the keyboard
     const getNoteFromPoint = useCallback((clientX: number, clientY: number): { note: string; octave: number } | null => {
         if (!containerRef.current) return null;
-        
+
         const rect = containerRef.current.getBoundingClientRect();
         const x = clientX - rect.left;
         const y = clientY - rect.top;
         const width = rect.width;
         const height = rect.height;
-        
+
         // Padding adjustments (3px 2px 2px 2px)
         const paddingTop = 3;
         const paddingLeft = 2;
         const paddingRight = 2;
         const innerWidth = width - paddingLeft - paddingRight;
         const innerX = x - paddingLeft;
-        
+
         // Check if we're in the black key zone (top 58% of height)
         const blackKeyHeight = (height - paddingTop) * 0.58;
         const isInBlackKeyZone = y - paddingTop < blackKeyHeight;
-        
+
         // Black key positions (percentage of octave width)
         const blackKeyPositions = [
             { note: 'C#', offset: 7.14 },
@@ -105,10 +105,10 @@ export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
             { note: 'G#', offset: 35.71 },
             { note: 'A#', offset: 42.85 },
         ];
-        
+
         const percentX = (innerX / innerWidth) * 100;
         const blackKeyWidth = 5.5; // percentage width of black key
-        
+
         // Check black keys first if in black key zone
         if (isInBlackKeyZone) {
             for (let oct = 0; oct < 2; oct++) {
@@ -116,60 +116,60 @@ export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
                 for (const { note, offset } of blackKeyPositions) {
                     const leftPos = octaveOffset + offset;
                     // Black keys are centered, so check half width on each side
-                    if (percentX >= leftPos - blackKeyWidth/2 && percentX <= leftPos + blackKeyWidth/2) {
+                    if (percentX >= leftPos - blackKeyWidth / 2 && percentX <= leftPos + blackKeyWidth / 2) {
                         return { note, octave: octave + oct };
                     }
                 }
             }
         }
-        
+
         // Check white keys
         const totalWhiteKeys = 14;
         const whiteKeyWidth = 100 / totalWhiteKeys;
         const whiteKeyIndex = Math.floor(percentX / whiteKeyWidth);
-        
+
         if (whiteKeyIndex >= 0 && whiteKeyIndex < totalWhiteKeys) {
             const octIndex = Math.floor(whiteKeyIndex / 7);
             const noteIndex = whiteKeyIndex % 7;
             return { note: whiteKeys[noteIndex], octave: octave + octIndex };
         }
-        
+
         return null;
     }, [octave, whiteKeys]);
-    
+
     // Handle pointer/touch events for glissando
     const handlePointerDown = useCallback((e: React.PointerEvent) => {
         isGlissandoActive.current = true;
-        playedNotesInGlissando.current.clear();
-        
+        lastPlayedNoteKey.current = null;
+
         const noteInfo = getNoteFromPoint(e.clientX, e.clientY);
         if (noteInfo) {
             playNoteInGlissando(noteInfo.note, noteInfo.octave);
         }
-        
+
         // Capture pointer for smooth dragging
         (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
     }, [getNoteFromPoint, playNoteInGlissando]);
-    
+
     const handlePointerMove = useCallback((e: React.PointerEvent) => {
         if (!isGlissandoActive.current) return;
-        
+
         const noteInfo = getNoteFromPoint(e.clientX, e.clientY);
         if (noteInfo) {
             playNoteInGlissando(noteInfo.note, noteInfo.octave);
         }
     }, [getNoteFromPoint, playNoteInGlissando]);
-    
+
     const handlePointerUp = useCallback(() => {
         isGlissandoActive.current = false;
-        playedNotesInGlissando.current.clear();
+        lastPlayedNoteKey.current = null;
         setActiveKey(null);
     }, []);
-    
+
     const handlePointerLeave = useCallback(() => {
         if (isGlissandoActive.current) {
             isGlissandoActive.current = false;
-            playedNotesInGlissando.current.clear();
+            lastPlayedNoteKey.current = null;
             setActiveKey(null);
         }
     }, []);
@@ -195,7 +195,7 @@ export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
                         className="h-full rounded-b-md relative border-x border-b border-gray-400 cursor-pointer transition-all"
                         style={{
                             width: `${100 / totalWhiteKeys}%`,
-                            background: isActive 
+                            background: isActive
                                 ? 'linear-gradient(180deg, #d0d0d0 0%, #c0c0c0 70%, #b0b0b0 100%)'
                                 : 'linear-gradient(180deg, #fafafa 0%, #e8e8e8 70%, #d0d0d0 100%)',
                             boxShadow: isActive
