@@ -12,12 +12,15 @@ interface AuthState {
     wasPasswordJustUpdated: boolean;
     isAuthModalOpen: boolean;
     authDefaultView: AuthView;
+    authError: string | null;
     initialize: () => Promise<void>;
     signOut: () => Promise<void>;
     resetPasswordRecovery: () => void;
     setAuthModalOpen: (open: boolean) => void;
     setAuthDefaultView: (view: AuthView) => void;
     clearPasswordUpdatedFlag: () => void;
+    checkEmailExists: (email: string) => Promise<boolean>;
+    setAuthError: (error: string | null) => void;
 }
 
 
@@ -29,6 +32,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     wasPasswordJustUpdated: false,
     isAuthModalOpen: false,
     authDefaultView: 'sign_in',
+    authError: null,
     initialize: async () => {
         try {
             // Check for recovery mode in URL hash explicitly BEFORE other async calls might clear it
@@ -150,6 +154,26 @@ export const useAuthStore = create<AuthState>((set) => ({
         // Reset default view to sign_in when closing modal
         authDefaultView: open ? state.authDefaultView : 'sign_in'
     })),
-    setAuthDefaultView: (view) => set({ authDefaultView: view }),
+    setAuthDefaultView: (view) => set({ authDefaultView: view, authError: null }),
     clearPasswordUpdatedFlag: () => set({ wasPasswordJustUpdated: false }),
+    setAuthError: (error) => set({ authError: error }),
+    checkEmailExists: async (email: string) => {
+        try {
+            // We use the profiles table which we just updated to be public for this check
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('id')
+                .eq('email', email)
+                .maybeSingle();
+
+            if (error) {
+                console.error('Error checking email exists:', error);
+                return false;
+            }
+            return !!data;
+        } catch (e) {
+            console.error('Exception checking email:', e);
+            return false;
+        }
+    }
 }));
