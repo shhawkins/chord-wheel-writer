@@ -1286,7 +1286,7 @@ function App() {
               <Logo size={isMobile ? 32 : 24} />
 
             </div>
-            <span className={`font-bold ${isMobile ? 'text-xs' : 'text-sm'} tracking-tight hidden sm:block text-text-muted`}>Songwriter Wheel</span>
+            <span className={`font-bold ${isMobile ? 'text-sm' : 'text-base'} tracking-tight hidden sm:block text-amber-500`}>Songwriter Wheel</span>
           </div>
         </div>
 
@@ -1717,14 +1717,15 @@ function App() {
           className="shrink-0 z-30 relative bg-bg-elevated transition-all duration-300"
         >
           <PlaybackControls />
-          {/* Unobtrusive privacy link for Google verification */}
+          {/* Privacy link for Google verification */}
           <a
             href="/privacy.html"
             target="_blank"
             rel="noopener noreferrer"
-            className="absolute bottom-1 right-2 text-[8px] text-text-muted/40 hover:text-text-muted/70 transition-colors"
+            className="absolute bottom-1 right-2 text-xs text-amber-600 hover:text-amber-500 transition-colors z-50 cursor-pointer"
+            onClick={(e) => e.stopPropagation()}
           >
-            Privacy
+            Privacy Policy
           </a>
         </div>
       )}
