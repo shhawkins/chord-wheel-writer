@@ -121,7 +121,10 @@ export const SectionOptionsPopup: React.FC<SectionOptionsPopupProps> = ({
             {/* Navigation Arrows - positioned beside modal */}
             {onNavigatePrev && (
                 <button
-                    onClick={onNavigatePrev}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onNavigatePrev();
+                    }}
                     disabled={!hasPrev}
                     className={clsx(
                         "fixed top-1/2 -translate-y-1/2 z-[100000]",
@@ -142,7 +145,10 @@ export const SectionOptionsPopup: React.FC<SectionOptionsPopupProps> = ({
             )}
             {onNavigateNext && (
                 <button
-                    onClick={onNavigateNext}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onNavigateNext();
+                    }}
                     disabled={!hasNext}
                     className={clsx(
                         "fixed top-1/2 -translate-y-1/2 z-[100000]",

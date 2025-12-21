@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { X, Hand, MousePointer2, RotateCw, ListMusic, Sparkles, HelpCircle, Map, Download, Volume2 } from 'lucide-react';
+import { X, Hand, MousePointer2, RotateCw, ListMusic, Sparkles, HelpCircle, Map, Download } from 'lucide-react';
 
 const ONBOARDING_STORAGE_KEY = 'chordwheel_onboarding_seen';
 
@@ -54,15 +54,15 @@ export const OnboardingTooltip: React.FC<OnboardingTooltipProps> = ({ onDismiss,
 
             {/* Modal */}
             <div
-                className={`relative max-w-md w-full bg-gradient-to-b from-[#1e1e2a] to-[#151520] border border-white/10 rounded-2xl shadow-2xl overflow-hidden transition-all duration-300 ${isAnimatingOut ? 'scale-95 opacity-0' : 'scale-100 opacity-100'
+                className={`relative max-w-md w-full max-h-[85vh] flex flex-col bg-gradient-to-b from-[#1e1e2a] to-[#151520] border border-white/10 rounded-2xl shadow-2xl overflow-hidden transition-all duration-300 ${isAnimatingOut ? 'scale-95 opacity-0' : 'scale-100 opacity-100'
                     }`}
             >
                 {/* Decorative gradient glow */}
                 <div className="absolute -top-20 -left-20 w-40 h-40 bg-accent-primary/30 rounded-full blur-3xl pointer-events-none" />
                 <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-purple-500/20 rounded-full blur-3xl pointer-events-none" />
 
-                {/* Header */}
-                <div className="relative px-6 pt-6 pb-4 flex items-center justify-between border-b border-white/5">
+                {/* Header - Fixed */}
+                <div className="relative shrink-0 px-6 pt-6 pb-4 flex items-center justify-between border-b border-white/5">
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-accent-primary to-purple-600 flex items-center justify-center shadow-lg shadow-accent-primary/25">
                             <Sparkles size={20} className="text-white" />
@@ -80,8 +80,8 @@ export const OnboardingTooltip: React.FC<OnboardingTooltipProps> = ({ onDismiss,
                     </button>
                 </div>
 
-                {/* Content */}
-                <div className="relative px-6 py-5 space-y-4">
+                {/* Content - Scrollable */}
+                <div className="relative flex-1 overflow-y-auto px-6 py-5 space-y-4">
                     {/* Step 1 */}
                     <div className="flex items-start gap-4 group">
                         <div className="shrink-0 w-10 h-10 rounded-xl bg-accent-primary/10 border border-accent-primary/20 flex items-center justify-center group-hover:bg-accent-primary/20 transition-colors">
@@ -108,20 +108,7 @@ export const OnboardingTooltip: React.FC<OnboardingTooltipProps> = ({ onDismiss,
                         </div>
                     </div>
 
-                    {/* Step 3 - Voice Selection */}
-                    <div className="flex items-start gap-4 group">
-                        <div className="shrink-0 w-10 h-10 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center group-hover:bg-violet-500/20 transition-colors">
-                            <Volume2 size={18} className="text-violet-400" />
-                        </div>
-                        <div className="pt-0.5">
-                            <h3 className="text-sm font-semibold text-white mb-1">Play chords with real instruments</h3>
-                            <p className="text-xs text-gray-400 leading-relaxed">
-                                Choose from <strong className="text-gray-300">piano, guitars, bass, harmonica, ocarina, melodica, wine glass,</strong> and more.
-                            </p>
-                        </div>
-                    </div>
-
-                    {/* Step 4 */}
+                    {/* Step 3 */}
                     <div className="flex items-start gap-4 group">
                         <div className="shrink-0 w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center group-hover:bg-emerald-500/20 transition-colors">
                             <ListMusic size={18} className="text-emerald-400" />
@@ -134,7 +121,7 @@ export const OnboardingTooltip: React.FC<OnboardingTooltipProps> = ({ onDismiss,
                         </div>
                     </div>
 
-                    {/* Step 5 */}
+                    {/* Step 4 */}
                     <div className="flex items-start gap-4 group">
                         <div className="shrink-0 w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center group-hover:bg-amber-500/20 transition-colors">
                             <Map size={18} className="text-amber-400" />
@@ -147,7 +134,7 @@ export const OnboardingTooltip: React.FC<OnboardingTooltipProps> = ({ onDismiss,
                         </div>
                     </div>
 
-                    {/* Step 6 */}
+                    {/* Step 5 */}
                     <div className="flex items-start gap-4 group">
                         <div className="shrink-0 w-10 h-10 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center group-hover:bg-sky-500/20 transition-colors">
                             <Download size={18} className="text-sky-400" />
@@ -248,8 +235,8 @@ export const OnboardingTooltip: React.FC<OnboardingTooltipProps> = ({ onDismiss,
                     </div>
                 </div>
 
-                {/* Footer */}
-                <div className="relative px-6 pb-6">
+                {/* Footer - Fixed */}
+                <div className="relative shrink-0 px-6 pb-6 pt-4">
                     <button
                         onClick={handleDismiss}
                         className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-accent-primary to-purple-600 text-white font-semibold text-sm hover:opacity-90 transition-opacity shadow-lg shadow-accent-primary/25 active:scale-[0.98]"
