@@ -16,31 +16,44 @@ async function generateFavicons() {
     const sizes = [16, 32, 48, 180, 192, 512];
     const pngBuffers = {};
 
+    // Standard scale is 0.8 (from favicon.svg)
+    // For app icons (iOS/PWA), we want it 20% smaller (0.8 * 0.8 = 0.64)
+    const smallSvgString = svgBuffer.toString().replace('scale(0.8)', 'scale(0.64)');
+    const smallSvgBuffer = Buffer.from(smallSvgString);
+
     for (const size of sizes) {
-        const pngBuffer = await sharp(svgBuffer)
+        // Use standard buffer for browser icons (16, 32, 48)
+        // Use small buffer for app icons (180, 192, 512)
+        const activeBuffer = size > 48 ? smallSvgBuffer : svgBuffer;
+
+        const pngBuffer = await sharp(activeBuffer)
             .resize(size, size)
             .png()
             .toBuffer();
         pngBuffers[size] = pngBuffer;
-        console.log(`  ✓ Generated ${size}x${size} PNG`);
+        console.log(`  ✓ Generated ${size}x${size} PNG (${size > 48 ? 'scaled down' : 'standard size'})`);
     }
 
-    // Save apple-touch-icon (180x180)
+    // Save favicon-32.png
+    writeFileSync(join(__dirname, '../public/favicon-32.png'), pngBuffers[32]);
+    console.log('  ✓ Saved favicon-32.png');
+
+    // Save apple-touch-icon (180x180) - uses scaled down version
     writeFileSync(join(__dirname, '../public/apple-touch-icon.png'), pngBuffers[180]);
-    console.log('  ✓ Saved apple-touch-icon.png');
+    console.log('  ✓ Saved apple-touch-icon.png (smaller for iOS)');
 
-    // Save icon-192 for PWA
+    // Save icon-192 for PWA - uses scaled down version
     writeFileSync(join(__dirname, '../public/icon-192.png'), pngBuffers[192]);
-    console.log('  ✓ Saved icon-192.png');
+    console.log('  ✓ Saved icon-192.png (smaller for PWA)');
 
-    // Save icon-512 for PWA
+    // Save icon-512 for PWA - uses scaled down version
     writeFileSync(join(__dirname, '../public/icon-512.png'), pngBuffers[512]);
-    console.log('  ✓ Saved icon-512.png');
+    console.log('  ✓ Saved icon-512.png (smaller for PWA)');
 
-    // Generate ICO file (contains 16, 32, 48)
+    // Generate ICO file (contains 16, 32, 48 - standard size)
     const icoBuffer = await pngToIco([pngBuffers[16], pngBuffers[32], pngBuffers[48]]);
     writeFileSync(join(__dirname, '../public/favicon.ico'), icoBuffer);
-    console.log('  ✓ Saved favicon.ico');
+    console.log('  ✓ Saved favicon.ico (standard size)');
 
     console.log('\n✅ All favicons generated successfully!');
 }
