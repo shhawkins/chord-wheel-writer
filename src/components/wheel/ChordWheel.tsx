@@ -9,6 +9,7 @@ import {
     formatChordForDisplay,
     getQualitySymbol,
     getChordSymbolWithInversion,
+    getVoicingSuggestion,
     type Chord
 } from '../../utils/musicTheory';
 import { WheelSegment } from './WheelSegment';
@@ -627,28 +628,6 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({
     };
 
     // Get voicing suggestions for diatonic chords (matching physical wheel)
-    const getVoicingSuggestion = (posIndex: number, type: 'major' | 'ii' | 'iii' | 'dim'): string => {
-        const relPos = getRelativePosition(posIndex);
-
-        if (type === 'major') {
-            if (relPos === 0) return 'maj7, maj9, maj13 or 6';  // I
-            if (relPos === 1) return '7, 9, 11, sus4, 13';       // V
-            if (relPos === 11) return 'maj7, maj9, maj13 or 6'; // IV
-            if (relPos === 2) return '7, sus4';  // II (V/V) - secondary dominant
-            if (relPos === 4) return '7, sus4';  // III (V/vi) - secondary dominant
-        }
-        if (type === 'ii') {
-            if (relPos === 0) return 'm7, m9, m11, m6';  // ii
-            if (relPos === 1) return 'm7, m9, m11';      // vi
-        }
-        if (type === 'iii') {
-            if (relPos === 0) return 'm7';  // iii
-        }
-        if (type === 'dim') {
-            if (relPos === 0) return 'm7♭5 (ø7)';  // vii°
-        }
-        return '';
-    };
 
     // Zoom controls are handled via touch/scroll events
 
@@ -1160,6 +1139,20 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({
                 chordRoot={voicingPickerState.chord?.root || 'C'}
                 voicings={parseVoicingSuggestions(voicingPickerState.voicingSuggestion, voicingPickerState.baseQuality)}
                 selectedQuality={voicingPickerState.chord?.quality}
+                onChangeChord={(chord, suggestion, quality) => {
+                    setVoicingPickerState({
+                        ...voicingPickerState,
+                        chord: chord as WheelChord,
+                        voicingSuggestion: suggestion,
+                        baseQuality: quality
+                    });
+                    setSelectedChord(chord);
+                    setChordInversion(0);
+                    // Also update segment selection if possible
+                    if ((chord as WheelChord).segmentId) {
+                        setSelectedSegmentId((chord as WheelChord).segmentId);
+                    }
+                }}
                 portraitWithPanel={isMobile && !isLandscape && chordPanelVisible && !chordPanelGuitarExpanded && !chordPanelVoicingsExpanded}
             />
 

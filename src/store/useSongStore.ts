@@ -139,6 +139,7 @@ interface SongState {
     selectedSlotId: string | null;
     selectedSlots: SelectionSlot[];
     selectionAnchor: SelectionSlot | null;
+    chordPanelScrollTarget: 'voicings' | 'guitar' | 'scales' | 'theory' | null;
 
     // Playback state
     isPlaying: boolean;
@@ -153,6 +154,7 @@ interface SongState {
 
     chordInversion: number;
     setChordInversion: (inversion: number) => void;
+    setChordPanelScrollTarget: (target: 'voicings' | 'guitar' | 'scales' | 'theory' | null) => void;
 
     // Actions
     setKey: (key: string, options?: { skipRotation?: boolean }) => void;
@@ -465,6 +467,7 @@ export const useSongStore = create<SongState>()(
             instrumentManagerInitialView: 'list',
             collapsedSections: {},
             chordPanelGuitarExpanded: false,  // Collapsed by default on mobile
+            chordPanelScrollTarget: null as SongState['chordPanelScrollTarget'],
             chordPanelVoicingsExpanded: false, // Collapsed by default
             chordPanelAttention: false,  // Attention animation trigger
             selectedChord: DEFAULT_C_CHORD as Chord | null,
@@ -846,6 +849,7 @@ export const useSongStore = create<SongState>()(
             }),
             setChordPanelGuitarExpanded: (expanded) => set({ chordPanelGuitarExpanded: expanded }),
             setChordPanelVoicingsExpanded: (expanded) => set({ chordPanelVoicingsExpanded: expanded }),
+            setChordPanelScrollTarget: (target) => set({ chordPanelScrollTarget: target }),
             pulseChordPanel: () => {
                 set({ chordPanelAttention: true });
                 // Auto-reset after animation duration

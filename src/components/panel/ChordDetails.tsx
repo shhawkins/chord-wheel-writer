@@ -32,7 +32,9 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar',
         setChordPanelVoicingsExpanded,
         chordPanelAttention,
         chordInversion,
-        setChordInversion
+        setChordInversion,
+        chordPanelScrollTarget,
+        setChordPanelScrollTarget
     } = useSongStore();
     const colors = getWheelColors();
     const [previewVariant, setPreviewVariant] = useState<string | null>(null);
@@ -336,6 +338,37 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar',
             }, 100);
         }
     }, [isLandscapeVariant, showGuitar]); // Only run when switching to landscape or when section opens
+
+    // Auto-scroll to specific target from store (e.g., from VoicingQuickPicker)
+    useEffect(() => {
+        if (chordPanelScrollTarget === 'voicings') {
+            // Expand the section first if collapsed
+            if (!showVariations) {
+                setShowVariations(true);
+            }
+
+            // Wait for expansion animation/mount
+            setTimeout(() => {
+                scrollSectionIntoView(voicingsSectionRef);
+                // Reset the target so it doesn't trigger again
+                setChordPanelScrollTarget(null);
+            }, 100);
+        } else if (chordPanelScrollTarget) {
+            // Generic scroll for other targets if needed
+            const refs: Record<string, React.RefObject<HTMLDivElement | null>> = {
+                'guitar': guitarSectionRef,
+                'voicings': voicingsSectionRef,
+                'scales': scalesSectionRef,
+                'theory': theorySectionRef
+            };
+
+            const targetRef = refs[chordPanelScrollTarget];
+            if (targetRef) {
+                scrollSectionIntoView(targetRef);
+                setChordPanelScrollTarget(null);
+            }
+        }
+    }, [chordPanelScrollTarget, showVariations, setChordPanelScrollTarget]);
 
     // Detect scroll to bottom for footer visibility
     useEffect(() => {
