@@ -3,8 +3,9 @@ import { useDraggable, useDroppable } from '@dnd-kit/core';
 import type { ChordSlot as IChordSlot } from '../../types';
 import clsx from 'clsx';
 import { useSongStore } from '../../store/useSongStore';
-import { getWheelColors, normalizeNote, formatChordForDisplay } from '../../utils/musicTheory';
+import { getWheelColors, normalizeNote, formatChordForDisplay, getVoicingSuggestion } from '../../utils/musicTheory';
 import { playChord } from '../../utils/audioEngine';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 interface ChordSlotProps {
     slot: IChordSlot;
@@ -28,8 +29,11 @@ export const ChordSlot: React.FC<ChordSlotProps> = ({ slot, sectionId, size = 48
         isPlaying: isGloballyPlaying,
         selectedChord,
         addChordToSlot,
-        clearSlot
+        clearSlot,
+        chordPanelVisible,
+        setVoicingPickerState
     } = useSongStore();
+    const isMobile = useIsMobile();
     const colors = getWheelColors();
     const resolvedWidth = width ?? size;
 
@@ -125,10 +129,17 @@ export const ChordSlot: React.FC<ChordSlotProps> = ({ slot, sectionId, size = 48
             playChord(slot.chord.notes);
         }
 
-        // Only update global chord selection on SECOND click (when slot was already selected)
         const isCurrentlySelected = selectedSectionId === sectionId && selectedSlotId === slot.id;
-        if (isCurrentlySelected) {
+
+        // Open voicing picker if on desktop (first click) OR if on mobile and already selected (second click) + panel closed
+        if (!isMobile || (isCurrentlySelected && !chordPanelVisible)) {
             setSelectedChord(slot.chord);
+            setVoicingPickerState({
+                isOpen: true,
+                chord: slot.chord,
+                voicingSuggestion: getVoicingSuggestion(0, slot.chord.quality.includes('minor') ? 'ii' : 'major'), // Basic heuristic
+                baseQuality: slot.chord.quality
+            });
         }
     };
 

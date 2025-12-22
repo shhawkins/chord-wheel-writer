@@ -1,10 +1,10 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { useSongStore } from '../../store/useSongStore';
-import { getWheelColors, normalizeNote, formatChordForDisplay } from '../../utils/musicTheory';
+import { getWheelColors, normalizeNote, formatChordForDisplay, getVoicingSuggestion } from '../../utils/musicTheory';
 import { playChord } from '../../utils/audioEngine';
 import { Plus, Play, ChevronLeft, ChevronRight, Map, Settings2, RotateCcw, RotateCw, X } from 'lucide-react';
 import { SectionOptionsPopup } from './SectionOptionsPopup';
-import { useMobileLayout } from '../../hooks/useIsMobile';
+import { useMobileLayout, useIsMobile } from '../../hooks/useIsMobile';
 import { NoteValueSelector } from './NoteValueSelector';
 import { getSectionDisplayName, type Section } from '../../types';
 import clsx from 'clsx';
@@ -219,7 +219,9 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
         canUndo,
         canRedo,
         clearSlot,
-        reorderSections
+        reorderSections,
+        chordPanelVisible,
+        setVoicingPickerState
     } = useSongStore();
 
     const songTimeSignature = currentSong.timeSignature;
@@ -477,13 +479,18 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
                 playChord(chord.notes);
             }
 
-            // On SECOND tap (when slot was already selected), update global chord selection
-            if (isCurrentlySelected) {
-                setSelectedChord(chord);
-            } else {
-                // First tap: select slot only (don't change global chord)
-                selectSlotOnly(sectionId, slotId);
+            // Open voicing picker if on desktop (first tap) OR if on mobile and already selected (second tap) + panel closed
+            if (!isMobile || (isCurrentlySelected && !chordPanelVisible)) {
+                setVoicingPickerState({
+                    isOpen: true,
+                    chord: chord,
+                    voicingSuggestion: getVoicingSuggestion(0, chord.quality.includes('minor') ? 'ii' : 'major'), // Basic heuristic
+                    baseQuality: chord.quality
+                });
             }
+
+            // select slot
+            selectSlotOnly(sectionId, slotId);
 
             // Record tap time for double-tap detection (only for filled slots)
             lastTapTimeRef.current = { slotId, time: now };
@@ -753,7 +760,7 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
                         <div
                             ref={sectionTabsRef}
                             className={clsx(
-                                "flex-1 flex items-center overflow-x-auto scrollbar-hide px-1 mx-1",
+                                "flex-1 flex items-center overflow-x-auto scrollbar-hide no-scrollbar px-1 mx-1",
                                 isDesktop ? "gap-2" : "gap-1.5"
                             )}
                         >
@@ -836,8 +843,8 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
                     "flex-1",
                     isDesktop ? "px-3 pb-2 pt-3" : "px-1 pb-1 pt-3", // Extra top padding for delete badge
                     isLandscape
-                        ? "overflow-y-auto overflow-x-hidden" // Landscape: vertical scroll, bars stacked
-                        : "overflow-x-auto overflow-y-hidden" // Portrait: horizontal scroll
+                        ? "overflow-y-auto overflow-x-hidden no-scrollbar" // Landscape: vertical scroll, bars stacked
+                        : "overflow-x-auto overflow-y-hidden no-scrollbar" // Portrait: horizontal scroll
                 )}
             >
                 {activeSection && (
@@ -887,8 +894,8 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
                                         "flex items-center",
                                         isLandscape
                                             ? isCompact
-                                                ? `flex-1 gap-0.5 min-w-0 ${measure.beats.length > 4 ? 'overflow-x-auto scrollbar-hide' : 'overflow-hidden'}` // Landscape compact: fill row
-                                                : `flex-1 gap-0.5 min-w-0 ${measure.beats.length > 4 ? 'overflow-x-auto scrollbar-hide' : 'overflow-hidden'}` // Landscape grid: fill grid cell
+                                                ? `flex-1 gap-0.5 min-w-0 ${measure.beats.length > 4 ? 'overflow-x-auto scrollbar-hide no-scrollbar' : 'overflow-hidden'}` // Landscape compact: fill row
+                                                : `flex-1 gap-0.5 min-w-0 ${measure.beats.length > 4 ? 'overflow-x-auto scrollbar-hide no-scrollbar' : 'overflow-hidden'}` // Landscape grid: fill grid cell
                                             : "gap-0.5" // Portrait: natural sizing
                                     )}>
                                         {measure.beats.map((beat) => {

@@ -70,7 +70,10 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({
         chordPanelGuitarExpanded,
         chordPanelVoicingsExpanded,
         chordPanelAttention,
-        chordInversion
+        chordInversion,
+        setChordInversion,
+        voicingPickerState,
+        setVoicingPickerState
     } = useSongStore();
 
     // Calculate wheel rotation
@@ -99,20 +102,11 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({
     const [selectedSegmentId, setSelectedSegmentId] = useState<string | null>(null);
     const [internalPanOffset, setInternalPanOffset] = useState({ x: 0, y: 0 });
 
-    // Voicing quick picker state
-    const [voicingPickerState, setVoicingPickerState] = useState<{
-        isOpen: boolean;
-        chord: Chord | null;
-        voicingSuggestion: string;
-        baseQuality: string;
-    }>({ isOpen: false, chord: null, voicingSuggestion: '', baseQuality: '' });
-
 
 
     // Use external pan offset if provided, otherwise use internal state
     const panOffset = externalPanOffset ?? internalPanOffset;
 
-    // Helper to update pan offset - handles both internal and external modes
     const updatePanOffset = useCallback((newOffset: { x: number; y: number }) => {
         if (onPanChange) {
             onPanChange(newOffset);
@@ -120,6 +114,55 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({
             setInternalPanOffset(newOffset);
         }
     }, [onPanChange]);
+
+    // Simplified helper to add current chord with settings to timeline
+    const handleQuickAddChord = useCallback((root: string, quality: string) => {
+        const state = useSongStore.getState();
+        const {
+            addChordToSlot,
+            selectNextSlotAfter,
+            setSelectedSlot,
+            setSelectedChord,
+            openTimeline,
+            selectedSectionId,
+            selectedSlotId,
+            timelineVisible,
+            chordInversion
+        } = state;
+
+        const notes = getChordNotes(root, quality);
+        const symbol = getChordSymbolWithInversion(root, quality, notes, chordInversion);
+        const newChord: Chord = {
+            root,
+            quality: quality as any,
+            notes,
+            inversion: chordInversion,
+            symbol
+        };
+
+        let currentSectionId = selectedSectionId;
+        let currentSlotId = selectedSlotId;
+
+        if (!currentSectionId || !currentSlotId) {
+            openTimeline();
+            const newState = useSongStore.getState();
+            currentSectionId = newState.selectedSectionId;
+            currentSlotId = newState.selectedSlotId;
+            if (!currentSectionId || !currentSlotId) return;
+        }
+
+        addChordToSlot(newChord, currentSectionId, currentSlotId);
+        const advanced = selectNextSlotAfter(currentSectionId, currentSlotId);
+
+        if (!advanced) {
+            setSelectedSlot(currentSectionId, currentSlotId);
+            setSelectedChord(newChord);
+        }
+
+        if (!timelineVisible) {
+            openTimeline();
+        }
+    }, []);
 
     // Mobile detection using centralized hook
     const isMobile = useIsMobile();
@@ -871,7 +914,7 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({
                                         ringType="major"
                                         wheelRotation={effectiveRotation}
                                         romanNumeral={(majorIsDiatonic || majorIsSecondary) ? getRomanNumeral(i, 'major') : undefined}
-                                        voicingSuggestion={(majorIsDiatonic || majorIsSecondary) ? getVoicingSuggestion(i, 'major') : undefined}
+                                        voicingSuggestion={(majorIsDiatonic || majorIsSecondary) ? getVoicingSuggestion(getRelativePosition(i), 'major') : undefined}
                                         segmentId={`major-${i}`}
                                         onHover={handleSegmentHover}
                                     />
@@ -894,7 +937,7 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({
                                         ringType="minor"
                                         wheelRotation={effectiveRotation}
                                         romanNumeral={iiIsDiatonic ? getRomanNumeral(i, 'ii') : undefined}
-                                        voicingSuggestion={iiIsDiatonic ? getVoicingSuggestion(i, 'ii') : undefined}
+                                        voicingSuggestion={iiIsDiatonic ? getVoicingSuggestion(getRelativePosition(i), 'ii') : undefined}
                                         segmentId={`ii-${i}`}
                                         onHover={handleSegmentHover}
                                     />
@@ -917,7 +960,7 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({
                                         ringType="minor"
                                         wheelRotation={effectiveRotation}
                                         romanNumeral={iiiIsDiatonic ? getRomanNumeral(i, 'iii') : undefined}
-                                        voicingSuggestion={iiiIsDiatonic ? getVoicingSuggestion(i, 'iii') : undefined}
+                                        voicingSuggestion={iiiIsDiatonic ? getVoicingSuggestion(getRelativePosition(i), 'iii') : undefined}
                                         segmentId={`iii-${i}`}
                                         onHover={handleSegmentHover}
                                     />
@@ -940,7 +983,7 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({
                                         ringType="diminished"
                                         wheelRotation={effectiveRotation}
                                         romanNumeral={dimIsDiatonic ? getRomanNumeral(i, 'dim') : undefined}
-                                        voicingSuggestion={dimIsDiatonic ? getVoicingSuggestion(i, 'dim') : undefined}
+                                        voicingSuggestion={dimIsDiatonic ? getVoicingSuggestion(getRelativePosition(i), 'dim') : undefined}
                                         segmentId={`dim-${i}`}
                                         onHover={handleSegmentHover}
                                     />
@@ -1090,47 +1133,11 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({
                 }}
                 onAddToTimeline={(quality: string) => {
                     if (voicingPickerState.chord) {
-                        const newNotes = getChordNotes(voicingPickerState.chord.root, quality);
-                        const symbol = getChordSymbolWithInversion(voicingPickerState.chord.root, quality, newNotes, chordInversion);
-                        const newChord: Chord = {
-                            ...voicingPickerState.chord,
-                            quality: quality as any,
-                            notes: newNotes,
-                            inversion: chordInversion,
-                            symbol
-                        };
-
-                        // Get current section/slot from store (may be updated after openTimeline)
-                        let currentSectionId = selectedSectionId;
-                        let currentSlotId = selectedSlotId;
-
-                        // If no slot is selected, open timeline (which will auto-select the first slot)
-                        if (!currentSectionId || !currentSlotId) {
-                            openTimeline();
-                            // Get the latest state from the store after openTimeline updated it
-                            const state = useSongStore.getState();
-                            currentSectionId = state.selectedSectionId;
-                            currentSlotId = state.selectedSlotId;
-
-                            // If still no slot selected (e.g., no sections), just return
-                            if (!currentSectionId || !currentSlotId) {
-                                return;
-                            }
-                        }
-
-                        // Add chord to the selected slot
-                        addChordToSlot(newChord, currentSectionId, currentSlotId);
-
-                        // Keep the added chord selected (don't advance to next slot)
-                        // Since the voicing modal disappears, user needs to see the chord they just added
-                        setSelectedSlot(currentSectionId, currentSlotId);
-                        setSelectedChord(newChord);
-
-                        // Open timeline if it's hidden so user can see the result
-                        if (!timelineVisible) {
-                            openTimeline();
-                        }
+                        handleQuickAddChord(voicingPickerState.chord.root, quality);
                     }
+                }}
+                onDoubleTapInKeyChord={(chord: Chord, quality: string) => {
+                    handleQuickAddChord(chord.root, quality);
                 }}
                 onOpenDetails={() => {
                     if (!chordPanelVisible) {
@@ -1144,6 +1151,9 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({
                 voicings={parseVoicingSuggestions(voicingPickerState.voicingSuggestion, voicingPickerState.baseQuality)}
                 selectedQuality={voicingPickerState.chord?.quality}
                 onChangeChord={(chord, suggestion, quality) => {
+                    const currentState = useSongStore.getState();
+                    const currentRoot = currentState.selectedChord?.root;
+
                     setVoicingPickerState({
                         ...voicingPickerState,
                         chord: chord as WheelChord,
@@ -1151,7 +1161,12 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({
                         baseQuality: quality
                     });
                     setSelectedChord(chord);
-                    setChordInversion(0);
+
+                    // Only reset inversion if DIFFERENT root
+                    if (currentRoot !== chord.root) {
+                        setChordInversion(0);
+                    }
+
                     // Also update segment selection if possible
                     if ((chord as WheelChord).segmentId) {
                         setSelectedSegmentId((chord as WheelChord).segmentId);

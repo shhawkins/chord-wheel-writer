@@ -11,12 +11,12 @@ type SelectionSlot = { sectionId: string; slotId: string };
 /**
  * Intelligent section name suggestion algorithm.
  * Analyzes patterns in existing sections to suggest the next logical section type.
- * 
+ *
  * Common song structures:
  * - ABABCB (Verse-Chorus-Verse-Chorus-Bridge-Chorus)
  * - ABABCAB (Verse-Chorus-Verse-Chorus-Bridge-Verse-Chorus)
  * - AABA (Verse-Verse-Bridge-Verse) - common in jazz standards
- * 
+ *
  * Logic:
  * 1. If empty, start with intro or verse
  * 2. After intro, suggest verse
@@ -140,6 +140,12 @@ interface SongState {
     selectedSlots: SelectionSlot[];
     selectionAnchor: SelectionSlot | null;
     chordPanelScrollTarget: 'voicings' | 'guitar' | 'scales' | 'theory' | null;
+    voicingPickerState: {
+        isOpen: boolean;
+        chord: Chord | null;
+        voicingSuggestion: string;
+        baseQuality: string;
+    };
 
     // Playback state
     isPlaying: boolean;
@@ -170,6 +176,8 @@ interface SongState {
     setChordPanelGuitarExpanded: (expanded: boolean) => void;
     setChordPanelVoicingsExpanded: (expanded: boolean) => void;
     pulseChordPanel: () => void;  // Trigger attention animation on chord panel
+    setVoicingPickerState: (state: Partial<SongState['voicingPickerState']>) => void;
+    closeVoicingPicker: () => void;
 
     setSelectedChord: (chord: Chord | null) => void;
     setSelectedSlot: (sectionId: string | null, slotId: string | null) => void;
@@ -470,6 +478,12 @@ export const useSongStore = create<SongState>()(
             chordPanelScrollTarget: null as SongState['chordPanelScrollTarget'],
             chordPanelVoicingsExpanded: false, // Collapsed by default
             chordPanelAttention: false,  // Attention animation trigger
+            voicingPickerState: {
+                isOpen: false,
+                chord: null as Chord | null,
+                voicingSuggestion: '',
+                baseQuality: ''
+            },
             selectedChord: DEFAULT_C_CHORD as Chord | null,
             selectedSectionId: null as string | null,
             selectedSlotId: null as string | null,
@@ -550,7 +564,7 @@ export const useSongStore = create<SongState>()(
                     // If it exists but we can't see it? maybeSingle returns null if not found (or hidden by RLS).
                     // Ideally we want to know if it exists AT ALL contextually, but RLS hides it.
                     // Simple logic: If we are trying to save a song with an ID, and we can't find that ID in our view of the DB,
-                    // AND we didn't just create it locally? 
+                    // AND we didn't just create it locally?
                     // Actually, if we are switching accounts, the ID belongs to someone else.
                     // So `maybeSingle` returns null.
                     // But `upsert` would fail RLS if it exists for someone else.
@@ -650,7 +664,7 @@ export const useSongStore = create<SongState>()(
 
                 if (error) {
                     console.error('Error saving instrument:', error);
-                    alert(`Failed to save instrument: ${error.message}`);
+                    alert(`Failed to save instrument: ${error.message} `);
                 }
             },
 
@@ -685,7 +699,7 @@ export const useSongStore = create<SongState>()(
                     return null;
                 }
 
-                const path = `${user.id}/${folder}/${filename}`;
+                const path = `${user.id} /${folder}/${filename} `;
 
                 const { data, error } = await supabase
                     .storage
@@ -839,12 +853,9 @@ export const useSongStore = create<SongState>()(
             })),
             toggleSectionCollapsed: (sectionId) => set((state) => {
                 const next = { ...state.collapsedSections, [sectionId]: !state.collapsedSections?.[sectionId] };
-
-                // Remove false entries to keep the map minimal
                 if (!next[sectionId]) {
                     delete next[sectionId];
                 }
-
                 return { collapsedSections: next };
             }),
             setChordPanelGuitarExpanded: (expanded) => set({ chordPanelGuitarExpanded: expanded }),
@@ -852,8 +863,23 @@ export const useSongStore = create<SongState>()(
             setChordPanelScrollTarget: (target) => set({ chordPanelScrollTarget: target }),
             pulseChordPanel: () => {
                 set({ chordPanelAttention: true });
-                // Auto-reset after animation duration
                 setTimeout(() => set({ chordPanelAttention: false }), 600);
+            },
+            setVoicingPickerState: (updates) => {
+                set((state) => ({
+                    voicingPickerState: {
+                        ...state.voicingPickerState,
+                        ...updates
+                    }
+                }));
+            },
+            closeVoicingPicker: () => {
+                set((state) => ({
+                    voicingPickerState: {
+                        ...state.voicingPickerState,
+                        isOpen: false
+                    }
+                }));
             },
 
             setSelectedChord: (chord) => set({ selectedChord: chord }),

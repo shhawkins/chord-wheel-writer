@@ -228,7 +228,7 @@ export const Timeline: React.FC<TimelineProps> = ({ height = 180, scale = 1 }) =
         <div className="w-full h-full flex flex-col overflow-hidden">
             {/* Content area - no header, just the sections */}
             <div
-                className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden px-3 py-1.5"
+                className="flex-1 min-h-0 overflow-x-auto no-scrollbar overflow-y-hidden px-3 py-1.5"
                 ref={(el) => {
                     // Store the ref for scrolling
                     (scrollContainerRef as React.MutableRefObject<HTMLDivElement | null>).current = el;

@@ -1089,7 +1089,7 @@ export const SongOverview: React.FC<SongOverviewProps> = ({ onSave, onExport }) 
             {/* Scrollable Map Area - Edge to Edge */}
             <div
                 ref={scrollContainerRef}
-                className="flex-1 overflow-x-auto overflow-y-hidden flex items-center relative scrollbar-hide bg-[#0b0b0f]"
+                className="flex-1 overflow-x-auto overflow-y-hidden flex items-center relative scrollbar-hide no-scrollbar bg-[#0b0b0f]"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Background Grid Pattern */}

@@ -1,7 +1,9 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { clsx } from 'clsx';
 import { useSongStore } from '../../store/useSongStore';
-import { Play, Pause, SkipBack, SkipForward, Repeat, Volume2, VolumeX, ChevronLeft, ChevronRight, Loader2, Music, Plus } from 'lucide-react';
-import { playSong, pauseSong, skipToSection, scheduleSong, setTempo as setAudioTempo, toggleLoopMode, setInstrument as setAudioInstrument, unlockAudioForIOS, playChord } from '../../utils/audioEngine';
+import { Play, Pause, SkipBack, SkipForward, Repeat, Volume2, VolumeX, Loader2, Music } from 'lucide-react';
+import { playSong, pauseSong, skipToSection, scheduleSong, setTempo as setAudioTempo, toggleLoopMode, setInstrument as setAudioInstrument, unlockAudioForIOS } from '../../utils/audioEngine';
+import { VoiceSelector } from './VoiceSelector';
 import type { InstrumentType } from '../../types';
 import { useMobileLayout } from '../../hooks/useIsMobile';
 
@@ -20,10 +22,7 @@ export const PlaybackControls: React.FC = () => {
         toggleLoop,
         isLooping,
         playingSectionId,
-        selectedSectionId,
-        setSelectedSlot,
-        customInstruments,
-        toggleInstrumentManagerModal
+        selectedSectionId
     } = useSongStore();
 
     const { isMobile, isLandscape } = useMobileLayout();
@@ -97,52 +96,7 @@ export const PlaybackControls: React.FC = () => {
     };
 
 
-    const instrumentOptions: { value: InstrumentType, label: string }[] = [
-        { value: 'piano', label: 'Piano' },
-        { value: 'guitar-jazzmaster', label: 'Jazzmaster' },
-        { value: 'acoustic-archtop', label: 'Acoustic Archtop' },
-        { value: 'nylon-string', label: 'Nylon String' },
-        { value: 'ocarina', label: 'Ocarina' },
-        { value: 'harmonica', label: 'Harmonica' },
-        { value: 'melodica', label: 'Melodica' },
-        { value: 'wine-glass', label: 'Wine Glass' },
-        // User requested Pad and Organ at the bottom, with EPiano in between
-        { value: 'organ', label: 'Organ' },
-        { value: 'epiano', label: 'Electric Piano' },
-        { value: 'pad', label: 'Pad' },
 
-        ...customInstruments.map((inst: any) => ({ value: inst.id, label: inst.name })),
-        { value: 'manage', label: '+ Manage Instruments...' }
-    ];
-
-    // Clamp instrument to available options - handle in effect to avoid render side-effects
-    useEffect(() => {
-        if (!isLoading && instrumentOptions.length > 0) {
-            if (!instrumentOptions.find((o) => o.value === instrument)) {
-                // Only reset if we have options but the current one isn't found
-                // This prevents resetting during initial load/hydration if options aren't ready
-                console.log(`Instrument ${instrument} not found in options, resetting to piano`);
-                setInstrument('piano');
-            }
-        }
-    }, [instrument, instrumentOptions, isLoading]);
-
-    const cycleInstrument = (direction: 'prev' | 'next') => {
-        const idx = instrumentOptions.findIndex(o => o.value === instrument);
-        if (idx === -1) {
-            setInstrument('piano');
-            return;
-        }
-        const nextIndex = direction === 'next'
-            ? (idx + 1) % instrumentOptions.length
-            : (idx - 1 + instrumentOptions.length) % instrumentOptions.length;
-
-        const nextInst = instrumentOptions[nextIndex].value as InstrumentType;
-        const { selectedChord } = useSongStore.getState();
-        setAudioInstrument(nextInst);
-        setInstrument(nextInst);
-        playChord(selectedChord?.notes || ['C4', 'E4', 'G4']);
-    };
 
     // BPM editing handlers
     const handleBpmTap = () => {
@@ -318,60 +272,15 @@ export const PlaybackControls: React.FC = () => {
 
                 {/* Instrument & Volume - Compact for mobile */}
                 <div className={`flex items-center ${isMobile ? 'gap-1.5' : 'gap-4'}`}>
-                    {/* Instrument Selector */}
-                    <div className="flex items-center gap-1">
-                        {!isMobile && (
-                            <div className="flex items-center rounded bg-bg-tertiary/60 border border-border-subtle/70 h-7">
-                                <button
-                                    onClick={() => cycleInstrument('prev')}
-                                    className="px-1 h-full text-text-secondary hover:text-text-primary hover:bg-bg-tertiary rounded-l transition-colors flex items-center"
-                                    title="Previous instrument"
-                                >
-                                    <ChevronLeft size={12} />
-                                </button>
-                                <button
-                                    onClick={() => cycleInstrument('next')}
-                                    className="px-1 h-full text-text-secondary hover:text-text-primary hover:bg-bg-tertiary rounded-r transition-colors flex items-center"
-                                    title="Next instrument"
-                                >
-                                    <ChevronRight size={12} />
-                                </button>
-                            </div>
+                    {isMobile && !isLandscape && <Music size={14} className="text-text-muted" />}
+                    {/* Unified instrument selector */}
+                    <VoiceSelector
+                        variant={isMobile ? (isLandscape ? 'tiny' : 'compact') : 'default'}
+                        showLabel={!isMobile}
+                        className={clsx(
+                            isMobile && isLandscape ? "min-w-[60px]" : "min-w-[70px] sm:min-w-[130px]"
                         )}
-                        {isMobile && !isLandscape && <Music size={14} className="text-text-muted" />}
-                        {/* Show instrument selector on all views (including landscape for voice selection) */}
-                        <select
-                            value={instrument}
-                            onChange={(e) => {
-                                if (e.target.value === 'manage') {
-                                    toggleInstrumentManagerModal(true);
-                                } else {
-                                    const nextInst = e.target.value as InstrumentType;
-                                    const { selectedChord } = useSongStore.getState();
-                                    setAudioInstrument(nextInst);
-                                    setInstrument(nextInst);
-                                    playChord(selectedChord?.notes || ['C4', 'E4', 'G4']);
-                                }
-                            }}
-                            className={`bg-bg-tertiary border border-border-subtle rounded ${isMobile && isLandscape
-                                ? 'px-3 py-1 h-6 text-[7px] min-w-[60px]'
-                                : isMobile
-                                    ? 'px-1.5 h-7 text-[11px] min-w-[70px]'
-                                    : 'px-2 h-7 text-[10px] min-w-[130px]'
-                                } text-text-secondary focus:outline-none focus:border-accent-primary cursor-pointer`}
-                        >
-                            {instrumentOptions.map((opt) => (
-                                <option key={opt.value} value={opt.value}>{opt.label}</option>
-                            ))}
-                        </select>
-                        <button
-                            onClick={() => toggleInstrumentManagerModal(true)}
-                            className="bg-bg-tertiary border border-border-subtle rounded w-7 h-7 flex items-center justify-center text-text-secondary hover:text-text-primary transition-colors"
-                            title="Create Instrument"
-                        >
-                            <Plus size={14} />
-                        </button>
-                    </div>
+                    />
 
                     {/* Volume/Mute Toggle */}
                     <div className={`flex items-center ${isMobile ? '' : 'gap-2 w-28'}`}>

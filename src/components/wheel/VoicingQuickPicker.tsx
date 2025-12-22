@@ -31,7 +31,8 @@ interface VoicingQuickPickerProps {
     onClose: () => void;
     onSelect: (quality: string) => void;
     onChangeChord?: (chord: Chord, suggestion: string, baseQuality: string) => void;
-    onAddToTimeline?: (quality: string) => void;  // Double-tap action
+    onAddToTimeline?: (quality: string) => void;  // Add current chord with current quality to timeline
+    onDoubleTapInKeyChord?: (chord: Chord, quality: string) => void; // Quick add specific in-key chord
     onOpenDetails?: () => void;  // Open chord details panel
     chordRoot: string;
     voicings: VoicingOption[];
@@ -51,6 +52,7 @@ export const VoicingQuickPicker: React.FC<VoicingQuickPickerProps> = ({
     onSelect,
     onChangeChord,
     onAddToTimeline,
+    onDoubleTapInKeyChord,
     onOpenDetails,
     chordRoot,
     voicings,
@@ -213,7 +215,25 @@ export const VoicingQuickPicker: React.FC<VoicingQuickPickerProps> = ({
     };
 
     const handleInKeyChordClick = (chord: Chord) => {
+        const now = Date.now();
         resetFadeTimer();
+
+        // Handle double-tap to add to timeline
+        if (lastTapRef.current && lastTapRef.current.quality === `inkey-${chord.root}` && now - lastTapRef.current.time < 400) {
+            if (onDoubleTapInKeyChord) {
+                // If this is the active chord, capture its current voicing
+                // Otherwise use its default quality
+                const effectiveQuality = chord.root === chordRoot
+                    ? (currentQuality || selectedQuality || chord.quality)
+                    : chord.quality;
+
+                onDoubleTapInKeyChord(chord, effectiveQuality);
+            }
+            onClose();
+            lastTapRef.current = null;
+            return;
+        }
+
         playChord(chord.notes);
 
         if (onChangeChord) {
@@ -233,6 +253,8 @@ export const VoicingQuickPicker: React.FC<VoicingQuickPickerProps> = ({
             const suggestion = getVoicingSuggestion(finalRelPos, type);
             onChangeChord(chord, suggestion, chord.quality);
         }
+
+        lastTapRef.current = { quality: `inkey-${chord.root}`, time: now };
     };
 
     const colors = getWheelColors();
