@@ -675,33 +675,31 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
                             >
                                 <MapIcon size={isDesktop ? 18 : 16} />
                             </button>
-                            {/* Undo/Redo buttons - mobile only (desktop has them in main header) */}
-                            {!isDesktop && (
-                                <div className="flex items-center gap-0.5 ml-1">
-                                    <button
-                                        onClick={undo}
-                                        disabled={!canUndo}
-                                        className={clsx(
-                                            "no-touch-enlarge flex items-center justify-center rounded bg-bg-tertiary/60 hover:bg-bg-tertiary text-text-muted hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-colors",
-                                            isDesktop ? "w-8 h-8" : "w-7 h-7"
-                                        )}
-                                        title="Undo"
-                                    >
-                                        <RotateCcw size={isDesktop ? 14 : 12} />
-                                    </button>
-                                    <button
-                                        onClick={redo}
-                                        disabled={!canRedo}
-                                        className={clsx(
-                                            "no-touch-enlarge flex items-center justify-center rounded bg-bg-tertiary/60 hover:bg-bg-tertiary text-text-muted hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-colors",
-                                            isDesktop ? "w-8 h-8" : "w-7 h-7"
-                                        )}
-                                        title="Redo"
-                                    >
-                                        <RotateCw size={isDesktop ? 14 : 12} />
-                                    </button>
-                                </div>
-                            )}
+                            {/* Undo/Redo buttons */}
+                            <div className="flex items-center gap-0.5 ml-1">
+                                <button
+                                    onClick={undo}
+                                    disabled={!canUndo}
+                                    className={clsx(
+                                        "no-touch-enlarge flex items-center justify-center rounded bg-bg-tertiary/60 hover:bg-bg-tertiary text-text-muted hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-colors",
+                                        isDesktop ? "w-8 h-8" : "w-7 h-7"
+                                    )}
+                                    title="Undo"
+                                >
+                                    <RotateCcw size={isDesktop ? 14 : 12} />
+                                </button>
+                                <button
+                                    onClick={redo}
+                                    disabled={!canRedo}
+                                    className={clsx(
+                                        "no-touch-enlarge flex items-center justify-center rounded bg-bg-tertiary/60 hover:bg-bg-tertiary text-text-muted hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-colors",
+                                        isDesktop ? "w-8 h-8" : "w-7 h-7"
+                                    )}
+                                    title="Redo"
+                                >
+                                    <RotateCw size={isDesktop ? 14 : 12} />
+                                </button>
+                            </div>
 
                             {/* Zoom Controls - desktop only (hide on mobile portrait) */}
                             {isDesktop && (

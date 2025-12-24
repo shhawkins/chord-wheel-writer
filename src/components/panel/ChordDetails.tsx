@@ -36,7 +36,8 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar',
         chordPanelScrollTarget,
         setChordPanelScrollTarget,
         autoAdvance,
-        toggleAutoAdvance
+        toggleAutoAdvance,
+        selectNextSlotAfter
     } = useSongStore();
     const colors = getWheelColors();
     const [previewVariant, setPreviewVariant] = useState<string | null>(null);
@@ -490,10 +491,14 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar',
 
         addChordToSlot(newChord, selectedSectionId, selectedSlotId);
 
-        // Keep the added chord selected (don't auto-advance; only double-tap on wheel advances)
-        setSelectedSlot(selectedSectionId, selectedSlotId);
-        setSelectedChord(newChord);
-    }, [chord, previewVariant, chordInversion, selectedSectionId, selectedSlotId, addChordToSlot, setSelectedSlot, setSelectedChord, timelineVisible, openTimeline]);
+        // Auto-advance if enabled, otherwise keep current slot selected
+        if (autoAdvance) {
+            selectNextSlotAfter(selectedSectionId, selectedSlotId);
+        } else {
+            setSelectedSlot(selectedSectionId, selectedSlotId);
+            setSelectedChord(newChord);
+        }
+    }, [chord, previewVariant, chordInversion, selectedSectionId, selectedSlotId, addChordToSlot, setSelectedSlot, setSelectedChord, timelineVisible, openTimeline, autoAdvance, selectNextSlotAfter]);
 
     // Touch event handling for chord title (for proper double-tap and bounce effect)
     const titleLastTouchTime = useRef(0);
@@ -819,13 +824,14 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar',
                         {!isMobile && !isDrawer && !isLandscapeVariant && chord && (
                             <button
                                 onClick={toggleAutoAdvance}
-                                className={`p-1.5 rounded-lg transition-all flex items-center justify-center ${autoAdvance
-                                        ? "bg-accent-primary text-white shadow-[0_0_8px_rgba(99,102,241,0.3)]"
-                                        : "bg-bg-tertiary/60 text-text-muted hover:text-text-primary hover:bg-bg-tertiary"
+                                className={`px-2 py-1.5 rounded-lg transition-all flex flex-col items-center justify-center gap-0.5 ${autoAdvance
+                                    ? "bg-accent-primary text-white shadow-[0_0_8px_rgba(99,102,241,0.3)]"
+                                    : "bg-bg-tertiary/60 text-text-muted hover:text-text-primary hover:bg-bg-tertiary"
                                     }`}
                                 title={autoAdvance ? "Auto-advance ON - moves to next slot after adding" : "Auto-advance OFF"}
                             >
-                                <MoveRight size={14} />
+                                <MoveRight size={14} className={autoAdvance ? "scale-110" : "scale-90 opacity-50"} />
+                                <div className={`w-1 h-1 rounded-full transition-all ${autoAdvance ? "bg-white scale-100" : "bg-text-tertiary scale-50 opacity-0"}`} />
                             </button>
                         )}
                         {/* Add to Timeline button */}

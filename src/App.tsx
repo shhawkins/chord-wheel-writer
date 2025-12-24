@@ -5,7 +5,7 @@ import { ChordDetails } from './components/panel/ChordDetails';
 import { PlaybackControls } from './components/playback/PlaybackControls';
 import { SongOverview } from './components/timeline/SongOverview';
 import { useSongStore } from './store/useSongStore';
-import { Download, Save, ChevronDown, ChevronUp, Plus, Minus, Clock, FolderOpen, FilePlus, Trash2, RotateCcw, RotateCw, HelpCircle } from 'lucide-react';
+import { Download, Save, ChevronDown, ChevronUp, Plus, Minus, Clock, FolderOpen, FilePlus, Trash2, HelpCircle } from 'lucide-react';
 import { Logo } from './components/Logo';
 import * as Tone from 'tone';
 import jsPDF from 'jspdf';
@@ -1707,78 +1707,7 @@ function App() {
                   className="shrink-0 bg-bg-secondary border-t border-border-subtle overflow-hidden flex flex-col"
                   style={{ height: timelineHeight }}
                 >
-                  {/* Mini toolbar - compact with prominent undo/redo */}
-                  <div className="shrink-0 flex items-center justify-between px-2 py-1 border-b border-border-subtle/50 bg-bg-elevated/80">
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={undo}
-                        disabled={!canUndo}
-                        className="no-touch-enlarge flex items-center gap-1 px-2 py-1 rounded-md bg-bg-tertiary/60 hover:bg-bg-tertiary text-text-muted hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                        title="Undo (⌘Z)"
-                      >
-                        <RotateCcw size={12} />
-                        <span className="text-[9px] font-medium uppercase tracking-wide">Undo</span>
-                      </button>
-                      <button
-                        onClick={redo}
-                        disabled={!canRedo}
-                        className="no-touch-enlarge flex items-center gap-1 px-2 py-1 rounded-md bg-bg-tertiary/60 hover:bg-bg-tertiary text-text-muted hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                        title="Redo (⇧⌘Z)"
-                      >
-                        <RotateCw size={12} />
-                        <span className="text-[9px] font-medium uppercase tracking-wide">Redo</span>
-                      </button>
-
-                      {/* Timeline Zoom Controls - Desktop Left Area */}
-                      <div className="flex items-center gap-1 ml-4 pl-4 border-l border-border-subtle/20 h-5">
-                        <button
-                          onClick={() => setTimelineZoom(timelineZoom - 0.1)}
-                          className="w-5 h-5 flex items-center justify-center rounded bg-bg-tertiary/60 hover:bg-bg-tertiary text-text-muted transition-colors"
-                          title="Zoom Out"
-                        >
-                          <Minus size={10} />
-                        </button>
-                        <span className="text-[10px] font-mono text-text-muted min-w-[32px] text-center">
-                          {Math.round(timelineZoom * 100)}%
-                        </span>
-                        <button
-                          onClick={() => setTimelineZoom(timelineZoom + 0.1)}
-                          className="w-5 h-5 flex items-center justify-center rounded bg-bg-tertiary/60 hover:bg-bg-tertiary text-text-muted transition-colors"
-                          title="Zoom In"
-                        >
-                          <Plus size={10} />
-                        </button>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => {
-                          setConfirmDialog({
-                            isOpen: true,
-                            title: 'Clear Timeline',
-                            message: 'Are you sure you want to clear all chords from the timeline? This action cannot be undone.',
-                            confirmLabel: 'Clear',
-                            isDestructive: true,
-                            onConfirm: clearTimeline
-                          });
-                        }}
-                        className="no-touch-enlarge text-[8px] px-1 py-0.5 text-text-muted hover:text-red-400 rounded hover:bg-red-400/10 transition-colors flex items-center gap-0.5"
-                        title="Clear all chords from timeline"
-                      >
-                        <Trash2 size={8} />
-                        <span className="uppercase tracking-wider font-bold">Clear</span>
-                      </button>
-                      <button
-                        onClick={toggleTimeline}
-                        className="no-touch-enlarge text-[8px] px-1 py-0.5 text-text-muted hover:text-text-primary rounded hover:bg-bg-tertiary transition-colors flex items-center gap-0.5 timeline-toggle"
-                        title="Hide timeline"
-                      >
-                        <ChevronDown size={8} />
-                        <span className="uppercase tracking-wider font-bold">Hide</span>
-                      </button>
-                    </div>
-                  </div>
-                  {/* Timeline content - uses mobile timeline component for consistent aesthetic */}
+                  {/* Timeline content - uses mobile timeline component which has undo/redo/zoom built in */}
                   <div className="flex-1 min-h-0 overflow-hidden">
                     <MobileTimeline isOpen={true} onToggle={toggleTimeline} hideCloseButton={true} isCompact={false} isLandscape={false} />
                   </div>
