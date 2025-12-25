@@ -1,6 +1,7 @@
 import type { Chord } from '../utils/musicTheory';
 
 export interface ChordSlot {
+    // Slot ID
     id: string;
     chord: Chord | null;
     duration: number; // in beats
@@ -112,3 +113,31 @@ export interface CustomInstrument {
     samples: Record<string, string>;
     createdAt: number;
 }
+
+
+/**
+ * User-saved instrument settings
+ */
+export interface InstrumentPatch {
+    id: string;
+    name: string;
+    userId: string;
+    createdAt: string; // ISO date
+    settings: {
+        instrument: InstrumentType;
+        instrumentGain: number;
+        tone: number;
+        pitchShift: number;
+        distortionAmount: number;
+        tremoloDepth: number;
+        phaserMix: number;
+        filterMix: number;
+        reverbMix: number;
+        delayMix: number;
+        delayFeedback: number;
+        chorusMix: number;
+        vibratoDepth: number;
+    };
+}
+
+

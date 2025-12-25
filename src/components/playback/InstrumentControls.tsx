@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useSongStore } from '../../store/useSongStore';
-import { X, Volume2, Music, Waves, Play, Radio, Disc3, ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react';
+import { X, Volume2, Music, Waves, Play, Radio, Disc3, ChevronLeft, ChevronRight, RotateCcw, Folder } from 'lucide-react';
 import { clsx } from 'clsx';
 import { playChord, setInstrument as setAudioInstrument } from '../../utils/audioEngine';
 import { VoiceSelector } from './VoiceSelector';
+import { PatchManager } from './PatchManager';
 import type { InstrumentType } from '../../types';
 import { useMobileLayout } from '../../hooks/useIsMobile';
 import {
@@ -252,6 +253,9 @@ export const InstrumentControls: React.FC = () => {
         filterMix,
         setFilterMix
     } = useSongStore();
+
+    // State for Patch Manager visibility
+    const [showPatchManager, setShowPatchManager] = useState(false);
 
     // Instrument options for cycling (same list as VoiceSelector)
     const instrumentOptions: { value: InstrumentType, label: string }[] = [
@@ -619,7 +623,29 @@ export const InstrumentControls: React.FC = () => {
                 <RotateCcw size={14} />
             </button>
 
+            {/* Patch Manager Toggle (Header Left) */}
+            <button
+                onClick={(e) => {
+                    e.stopPropagation();
+                    setShowPatchManager(!showPatchManager);
+                }}
+                className={clsx(
+                    "absolute left-2 p-1.5 rounded-full transition-colors z-50",
+                    isCompact ? "-top-1" : "top-2",
+                    showPatchManager ? "bg-accent-primary text-white" : "text-text-muted hover:text-accent-primary hover:bg-white/10"
+                )}
+                title="Presets / Patches"
+            >
+                <Folder size={16} />
+            </button>
+
+            {/* Patch Manager Overlay */}
+            {showPatchManager && (
+                <PatchManager onClose={() => setShowPatchManager(false)} />
+            )}
+
         </div>,
         document.body
     );
 };
+

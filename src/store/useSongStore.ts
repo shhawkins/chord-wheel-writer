@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { Song, Section, InstrumentType, Measure, CustomInstrument } from '../types';
+import type { Song, Section, InstrumentType, Measure, CustomInstrument, InstrumentPatch } from '../types';
 import { CIRCLE_OF_FIFTHS, type Chord } from '../utils/musicTheory';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '../lib/supabase';
@@ -172,6 +172,7 @@ interface SongState {
     pitchShift: number; // Semitones (usually octaves in UI)
     isMuted: boolean;
     customInstruments: CustomInstrument[];
+    userPatches: InstrumentPatch[];
 
     chordInversion: number;
     setChordInversion: (inversion: number) => void;
@@ -219,6 +220,12 @@ interface SongState {
     }) => void;
     setVoicingPickerState: (state: Partial<SongState['voicingPickerState']>) => void;
     closeVoicingPicker: () => void;
+
+    // Patch Actions
+    fetchUserPatches: () => Promise<void>;
+    saveUserPatch: (name: string) => Promise<void>;
+    deleteUserPatch: (id: string) => Promise<void>;
+    applyPatch: (patch: InstrumentPatch) => void;
 
     setSelectedChord: (chord: Chord | null) => void;
     setSelectedSlot: (sectionId: string | null, slotId: string | null) => void;
@@ -559,6 +566,7 @@ export const useSongStore = create<SongState>()(
             pitchShift: 0,
             isMuted: false,
             customInstruments: [] as CustomInstrument[],
+            userPatches: [] as InstrumentPatch[],
             cloudSongs: [] as Song[],
             chordInversion: 0,
             isLoadingCloud: false,
@@ -1265,6 +1273,7 @@ export const useSongStore = create<SongState>()(
             setPhaserMix: (amount) => set({ phaserMix: amount }),
             setFilterMix: (amount) => set({ filterMix: amount }),
             setPitchShift: (shift) => set({ pitchShift: shift }),
+
             resetInstrumentControls: () => set({
                 instrumentGain: 1.0,
                 tone: 0,
@@ -1279,6 +1288,97 @@ export const useSongStore = create<SongState>()(
                 chorusMix: 0,
                 vibratoDepth: 0
             }),
+
+            fetchUserPatches: async () => {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) return;
+
+                const { data, error } = await supabase
+                    .from('patches')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+
+                if (error) {
+                    console.error('Error fetching patches:', error);
+                } else if (data) {
+                    set({ userPatches: data.map(d => ({ ...d, createdAt: d.created_at })) });
+                }
+            },
+
+            saveUserPatch: async (name: string) => {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) {
+                    throw new Error('NOT_AUTHENTICATED');
+                }
+
+                const state = get();
+                const settings = {
+                    instrument: state.instrument,
+                    instrumentGain: state.instrumentGain,
+                    tone: state.tone,
+                    pitchShift: state.pitchShift,
+                    distortionAmount: state.distortionAmount,
+                    tremoloDepth: state.tremoloDepth,
+                    phaserMix: state.phaserMix,
+                    filterMix: state.filterMix,
+                    reverbMix: state.reverbMix,
+                    delayMix: state.delayMix,
+                    delayFeedback: state.delayFeedback,
+                    chorusMix: state.chorusMix,
+                    vibratoDepth: state.vibratoDepth,
+                };
+
+                const newPatch = {
+                    user_id: user.id,
+                    name,
+                    settings
+                };
+
+                const { data, error } = await supabase
+                    .from('patches')
+                    .insert(newPatch)
+                    .select()
+                    .single();
+
+                if (error) {
+                    console.error('Error saving patch:', error);
+                    alert('Failed to save patch');
+                } else if (data) {
+                    const patch: InstrumentPatch = { ...data, createdAt: data.created_at };
+                    set(state => ({ userPatches: [patch, ...state.userPatches] }));
+                }
+            },
+
+            deleteUserPatch: async (id: string) => {
+                const { error } = await supabase
+                    .from('patches')
+                    .delete()
+                    .eq('id', id);
+
+                if (error) {
+                    console.error('Error deleting patch:', error);
+                } else {
+                    set(state => ({ userPatches: state.userPatches.filter(p => p.id !== id) }));
+                }
+            },
+
+            applyPatch: (patch: InstrumentPatch) => {
+                set({
+                    instrument: patch.settings.instrument,
+                    instrumentGain: patch.settings.instrumentGain,
+                    tone: patch.settings.tone,
+                    pitchShift: patch.settings.pitchShift,
+                    distortionAmount: patch.settings.distortionAmount,
+                    tremoloDepth: patch.settings.tremoloDepth,
+                    phaserMix: patch.settings.phaserMix,
+                    filterMix: patch.settings.filterMix,
+                    reverbMix: patch.settings.reverbMix,
+                    delayMix: patch.settings.delayMix,
+                    delayFeedback: patch.settings.delayFeedback,
+                    chorusMix: patch.settings.chorusMix,
+                    vibratoDepth: patch.settings.vibratoDepth,
+                });
+            },
 
             setTitle: (title) => set((state) => {
                 const history = buildHistoryState(state);

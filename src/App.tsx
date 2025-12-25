@@ -336,7 +336,8 @@ function App() {
             useAuthStore.getState().setAuthDefaultView('sign_up');
             useAuthStore.getState().setAuthModalOpen(true);
           }
-        }
+        },
+        dismissAction: { label: 'No Thanks' }
       });
     };
 
