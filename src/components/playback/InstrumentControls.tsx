@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useSongStore } from '../../store/useSongStore';
 import { X, Volume2, Music, Waves, Play, Radio, Disc3, PanelLeftOpen, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -34,11 +34,21 @@ const Knob: React.FC<KnobProps> = ({ value, min, max, defaultValue, onChange, la
     const startValue = useRef<number>(0);
     const lastTapTime = useRef<number>(0);
     const touchId = useRef<number | null>(null);
+    // Track the "live" value during dragging to prevent store updates from causing jumps
+    const liveValue = useRef<number>(value);
+
+    // Sync liveValue when value prop changes (but not during dragging)
+    useEffect(() => {
+        if (!isDragging) {
+            liveValue.current = value;
+        }
+    }, [value, isDragging]);
 
     const handleStart = (clientY: number) => {
         setIsDragging(true);
         startY.current = clientY;
-        startValue.current = value;
+        // Use liveValue (which IS in sync unless we're already dragging)
+        startValue.current = liveValue.current;
         document.body.style.cursor = 'ns-resize';
         document.body.classList.add('dragging-knob');
     };
@@ -50,6 +60,7 @@ const Knob: React.FC<KnobProps> = ({ value, min, max, defaultValue, onChange, la
 
         if (timeSinceLastTap < 300) {
             // Double tap detected - reset to default
+            liveValue.current = defaultValue;
             onChange(defaultValue);
             lastTapTime.current = 0; // Reset to prevent triple-tap triggering
             return true;
@@ -103,6 +114,8 @@ const Knob: React.FC<KnobProps> = ({ value, min, max, defaultValue, onChange, la
             const sensitivity = compact ? 150 : 200;
             const deltaValue = (deltaY / sensitivity) * range;
             const newValue = Math.min(Math.max(startValue.current + deltaValue, min), max);
+            // Update our tracked live value
+            liveValue.current = newValue;
             onChange(newValue);
         };
 
@@ -388,16 +401,22 @@ export const InstrumentControls: React.FC = () => {
         };
     }, [instrumentControlsModalVisible, setInstrumentControlsPosition]);
 
-    if (!instrumentControlsModalVisible) return null;
-
     // Derived Tone Value (Average of Treble/Bass tilt)
-    // If Treble=5, Bass=-5 -> Tone=5.
-    // If Treble=-5, Bass=5 -> Tone=-5.
-    const toneValue = (toneControl.treble - toneControl.bass) / 2;
+    // Using useMemo to stabilize the value during instrument changes
+    // and rounding to avoid floating-point precision issues
+    const toneValue = useMemo(() => {
+        const raw = (toneControl.treble - toneControl.bass) / 2;
+        // Round to 2 decimal places to prevent floating-point drift
+        return Math.round(raw * 100) / 100;
+    }, [toneControl.treble, toneControl.bass]);
+
     const handleToneChange = (val: number) => {
-        // Apply tilt
-        setToneControl(val, -val);
+        // Apply tilt - round the value before storing
+        const roundedVal = Math.round(val * 100) / 100;
+        setToneControl(roundedVal, -roundedVal);
     };
+
+    if (!instrumentControlsModalVisible) return null;
 
     // Get chord colors for badge
     const colors = getWheelColors();

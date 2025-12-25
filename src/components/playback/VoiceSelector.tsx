@@ -215,7 +215,8 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
     const currentLabel = instrumentOptions.find(opt => opt.value === instrument)?.label || 'Piano';
 
     return (
-        <div className={clsx("relative", className)}>
+        <div className={clsx("relative flex items-center", className)}>
+            {/* Dropdown button */}
             <button
                 ref={buttonRef}
                 onClick={(e) => {
@@ -225,9 +226,10 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
                 onTouchStart={handleTouchStart}
                 onTouchEnd={handleTouchEnd}
                 className={clsx(
-                    "flex items-center justify-center rounded-lg transition-all gap-2",
+                    "flex items-center justify-center transition-all gap-2",
                     "bg-bg-tertiary border border-white/10 text-text-secondary hover:text-text-primary hover:bg-bg-elevated",
                     showMenu && "bg-bg-elevated text-text-primary border-accent-primary/50",
+                    showSettingsIcon ? "rounded-l-lg border-r-0" : "rounded-lg",
                     variant === 'tiny' ? "min-h-[36px] min-w-[36px] px-2 text-[10px]" :
                         variant === 'compact' ? "h-9 px-3 text-xs" :
                             "h-10 px-4 text-sm"
@@ -236,37 +238,38 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
                 {getInstrumentIcon(instrument)}
                 {showLabel && <span className="font-medium whitespace-nowrap">{currentLabel}</span>}
                 <ChevronDown size={variant === 'tiny' ? 10 : 12} className={clsx("transition-transform", showMenu && "rotate-180")} />
-
-                {/* Settings icon - optional */}
-                {showSettingsIcon && (
-                    <div
-                        className="border-l border-white/10 pl-1.5 ml-1 p-1 -m-1"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            e.preventDefault();
-                            toggleInstrumentControlsModal();
-                            onInteraction?.();
-                        }}
-                        onTouchStart={(e) => {
-                            // Prevent the button's touch handlers from capturing this
-                            e.stopPropagation();
-                        }}
-                        onTouchEnd={(e) => {
-                            e.stopPropagation();
-                            if (e.cancelable) e.preventDefault();
-                            // Clear the parent's touch ref so it doesn't fire
-                            touchStartRef.current = null;
-                            toggleInstrumentControlsModal();
-                            onInteraction?.();
-                        }}
-                    >
-                        <Settings2
-                            size={variant === 'tiny' ? 12 : 14}
-                            className="opacity-60 hover:opacity-100 transition-opacity"
-                        />
-                    </div>
-                )}
             </button>
+
+            {/* Settings icon - separate button for better touch targeting */}
+            {showSettingsIcon && (
+                <button
+                    className={clsx(
+                        "flex items-center justify-center transition-all rounded-r-lg",
+                        "bg-bg-tertiary border border-white/10 border-l-0 text-text-muted hover:text-accent-primary hover:bg-bg-elevated",
+                        "active:scale-95 touch-feedback",
+                        variant === 'tiny' ? "min-h-[36px] min-w-[44px] px-3" :
+                            variant === 'compact' ? "h-9 min-w-[44px] px-3" :
+                                "h-10 min-w-[44px] px-3"
+                    )}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        toggleInstrumentControlsModal();
+                        onInteraction?.();
+                    }}
+                    onTouchEnd={(e) => {
+                        e.stopPropagation();
+                        if (e.cancelable) e.preventDefault();
+                        toggleInstrumentControlsModal();
+                        onInteraction?.();
+                    }}
+                    title="Open instrument settings"
+                >
+                    <Settings2
+                        size={variant === 'tiny' ? 14 : 16}
+                    />
+                </button>
+            )}
 
             {showMenu && createPortal(
                 <div

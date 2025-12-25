@@ -149,6 +149,24 @@ a,
   }
 }
 
+/* iOS Standalone PWA Mode - properly fill the bottom safe area */
+@media (display-mode: standalone) {
+
+  html,
+  body {
+    /* In standalone mode, we have the full viewport including safe areas */
+    background-color: var(--bg-secondary);
+  }
+
+  #root {
+    /* Extend to fill available space */
+    height: 100vh;
+    height: 100dvh;
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+}
+
 @media (min-width: 768px) {
 
   html,
@@ -339,4 +357,20 @@ button:active {
   user-select: none !important;
   -webkit-user-select: none !important;
   cursor: grabbing !important;
+}
+
+/* Global state for dragging knob - prevent cursor flicker */
+.dragging-knob {
+  cursor: ns-resize !important;
+}
+
+/* iOS PWA Standalone - ensure modals don't get cut off at bottom */
+@media (display-mode: standalone) {
+
+  /* Portaled modals should respect bottom safe area */
+  [data-instrument-controls],
+  .voice-selector-menu {
+    /* Ensure these don't get positioned below the safe area */
+    max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 32px);
+  }
 }

@@ -476,12 +476,16 @@ export const VoicingQuickPicker: React.FC<VoicingQuickPickerProps> = ({
                 transform: modalPosition
                     ? `translate3d(${modalPosition.x}px, ${modalPosition.y}px, 0)`
                     : (isLandscapeMobile
-                        ? `translate3d(max(env(safe-area-inset-left), 16px), calc(100vh - 340px), 0)` // Lower it slightly, keep left
+                        // Mobile landscape: position near bottom-left with safe area padding
+                        ? `translate3d(max(env(safe-area-inset-left), 16px), calc(100dvh - 340px - env(safe-area-inset-bottom)), 0)`
                         : (portraitWithPanel
-                            ? `translate3d(12px, calc(100vh - 450px), 0)`
+                            // Portrait with panel: higher position
+                            ? `translate3d(12px, calc(100dvh - 450px - env(safe-area-inset-bottom)), 0)`
                             : (timelineVisible
-                                ? `translate3d(12px, calc(100vh - 480px), 0)`
-                                : `translate3d(12px, calc(100vh - 400px), 0)`))),
+                                // Portrait with timeline: even higher
+                                ? `translate3d(12px, calc(100dvh - 480px - env(safe-area-inset-bottom)), 0)`
+                                // Portrait without timeline: default position
+                                : `translate3d(12px, calc(100dvh - 400px - env(safe-area-inset-bottom)), 0)`))),
                 maxWidth: isMobile
                     ? (isLandscape ? '280px' : 'calc(100vw - 24px)')
                     : '520px',
