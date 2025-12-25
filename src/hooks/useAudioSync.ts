@@ -17,12 +17,14 @@ import {
     setTempo as setAudioTempo,
     setInstrument as setAudioInstrument,
     toggleLoopMode,
-    setToneControl as setAudioTone,
+    setTone as setAudioTone,
     setMasterGain as setAudioMasterGain,
     setReverbMix as setAudioReverbMix,
     setDelayMix as setAudioDelayMix,
     setChorusMix as setAudioChorusMix,
-    setStereoWidth as setAudioStereoWidth,
+    setVibratoDepth as setAudioVibratoDepth,
+    setDistortionAmount as setAudioDistortionAmount,
+    setPitchShift as setAudioPitchShift,
     preloadAudio
 } from '../utils/audioEngine';
 
@@ -34,12 +36,14 @@ export const useAudioSync = () => {
         isLooping,
         playingSectionId,
         selectedSectionId,
-        toneControl,
+        tone,
         instrumentGain,
         reverbMix,
         delayMix,
         chorusMix,
-        stereoWidth
+        vibratoDepth,
+        distortionAmount,
+        pitchShift
     } = useSongStore();
 
     // Sync song structure to audio engine
@@ -62,10 +66,10 @@ export const useAudioSync = () => {
         toggleLoopMode();
     }, [isLooping, currentSong, playingSectionId, selectedSectionId]);
 
-    // Sync tone control (treble/bass)
+    // Sync tone control (tilt)
     useEffect(() => {
-        setAudioTone(toneControl.treble, toneControl.bass);
-    }, [toneControl]);
+        setAudioTone(tone);
+    }, [tone]);
 
     // Sync master gain
     useEffect(() => {
@@ -87,10 +91,20 @@ export const useAudioSync = () => {
         setAudioChorusMix(chorusMix);
     }, [chorusMix]);
 
-    // Sync stereo width
+    // Sync vibrato depth
     useEffect(() => {
-        setAudioStereoWidth(stereoWidth);
-    }, [stereoWidth]);
+        setAudioVibratoDepth(vibratoDepth);
+    }, [vibratoDepth]);
+
+    // Sync distortion amount
+    useEffect(() => {
+        setAudioDistortionAmount(distortionAmount);
+    }, [distortionAmount]);
+
+    // Sync pitch shift
+    useEffect(() => {
+        setAudioPitchShift(pitchShift);
+    }, [pitchShift]);
 
     // Preload audio on mount
     useEffect(() => {

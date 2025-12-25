@@ -158,12 +158,14 @@ interface SongState {
     tempo: number;
     volume: number;
     instrument: InstrumentType;
-    toneControl: { treble: number; bass: number };
+    tone: number;
     instrumentGain: number;
     reverbMix: number;
     delayMix: number;
     chorusMix: number;
-    stereoWidth: number;
+    vibratoDepth: number;
+    distortionAmount: number;
+    pitchShift: number; // Semitones (usually octaves in UI)
     isMuted: boolean;
     customInstruments: CustomInstrument[];
 
@@ -188,12 +190,15 @@ interface SongState {
     toggleInstrumentManagerModal: (force?: boolean, view?: 'list' | 'create') => void;
     toggleInstrumentControlsModal: (force?: boolean) => void;
     setInstrumentControlsPosition: (position: { x: number; y: number } | null) => void;
-    setToneControl: (treble: number, bass: number) => void;
+    setTone: (val: number) => void;
     setInstrumentGain: (gain: number) => void;
     setReverbMix: (mix: number) => void;
     setDelayMix: (mix: number) => void;
     setChorusMix: (mix: number) => void;
-    setStereoWidth: (width: number) => void;
+    setVibratoDepth: (depth: number) => void;
+    setDistortionAmount: (amount: number) => void;
+    setPitchShift: (shift: number) => void;
+    resetInstrumentControls: () => void;
     toggleSectionCollapsed: (sectionId: string) => void;
     setChordPanelGuitarExpanded: (expanded: boolean) => void;
     setChordPanelVoicingsExpanded: (expanded: boolean) => void;
@@ -532,12 +537,14 @@ export const useSongStore = create<SongState>()(
             tempo: 120,
             volume: 0.8,
             instrument: 'piano' as InstrumentType,
-            toneControl: { treble: 0, bass: 0 },
+            tone: 0,
             instrumentGain: 0.75, // Default ~75% gain
             reverbMix: 0.15,      // Default 15% reverb
             delayMix: 0,          // Default no delay
             chorusMix: 0,         // Default no chorus
-            stereoWidth: 0.5,     // Default normal stereo
+            vibratoDepth: 0,
+            distortionAmount: 0,
+            pitchShift: 0,
             isMuted: false,
             customInstruments: [] as CustomInstrument[],
             cloudSongs: [] as Song[],
@@ -598,7 +605,7 @@ export const useSongStore = create<SongState>()(
                 // Exception: If we are creating it for the first time (it doesn't exist but we generated the ID), then it's fine.
 
                 if (song.id && song.id.length === 36) {
-                    const { data: existing } = await supabase
+                    await supabase
                         .from('songs')
                         .select('id')
                         .eq('id', song.id)
@@ -744,7 +751,7 @@ export const useSongStore = create<SongState>()(
 
                 const path = `${user.id}/${folder}/${filename}`;
 
-                const { data, error } = await supabase
+                const { error } = await supabase
                     .storage
                     .from('samples')
                     .upload(path, file, {
@@ -1234,12 +1241,24 @@ export const useSongStore = create<SongState>()(
                 instrumentControlsModalVisible: force !== undefined ? force : !state.instrumentControlsModalVisible
             })),
             setInstrumentControlsPosition: (position) => set({ instrumentControlsPosition: position }),
-            setToneControl: (treble, bass) => set({ toneControl: { treble, bass } }),
+            setTone: (val) => set({ tone: val }),
             setInstrumentGain: (gain) => set({ instrumentGain: gain }),
             setReverbMix: (mix) => set({ reverbMix: mix }),
             setDelayMix: (mix) => set({ delayMix: mix }),
             setChorusMix: (mix) => set({ chorusMix: mix }),
-            setStereoWidth: (width) => set({ stereoWidth: width }),
+            setVibratoDepth: (depth) => set({ vibratoDepth: depth }),
+            setDistortionAmount: (amount) => set({ distortionAmount: amount }),
+            setPitchShift: (shift) => set({ pitchShift: shift }),
+            resetInstrumentControls: () => set({
+                instrumentGain: 1.0,
+                tone: 0,
+                pitchShift: 0,
+                distortionAmount: 0,
+                reverbMix: 0.15,
+                delayMix: 0,
+                chorusMix: 0,
+                vibratoDepth: 0
+            }),
 
             setTitle: (title) => set((state) => {
                 const history = buildHistoryState(state);

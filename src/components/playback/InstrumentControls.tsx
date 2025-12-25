@@ -1,7 +1,7 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useSongStore } from '../../store/useSongStore';
-import { X, Volume2, Music, Waves, Play, Radio, Disc3, PanelLeftOpen, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, Volume2, Music, Waves, Play, Radio, Disc3, ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react';
 import { clsx } from 'clsx';
 import { playChord, setInstrument as setAudioInstrument } from '../../utils/audioEngine';
 import { VoiceSelector } from './VoiceSelector';
@@ -24,10 +24,11 @@ interface KnobProps {
     label: string;
     icon?: React.ReactNode;
     formatValue?: (val: number) => string;
+    step?: number;
     compact?: boolean;
 }
 
-const Knob: React.FC<KnobProps> = ({ value, min, max, defaultValue, onChange, label, icon, formatValue, compact = false }) => {
+const Knob: React.FC<KnobProps> = ({ value, min, max, defaultValue, onChange, label, icon, formatValue, step, compact = false }) => {
     const knobRef = useRef<HTMLDivElement>(null);
     const [isDragging, setIsDragging] = useState(false);
     const startY = useRef<number>(0);
@@ -113,7 +114,13 @@ const Knob: React.FC<KnobProps> = ({ value, min, max, defaultValue, onChange, la
             // Sensitivity: full range over 200px (or 150px for compact)
             const sensitivity = compact ? 150 : 200;
             const deltaValue = (deltaY / sensitivity) * range;
-            const newValue = Math.min(Math.max(startValue.current + deltaValue, min), max);
+            let newValue = Math.min(Math.max(startValue.current + deltaValue, min), max);
+
+            // Apply step if defined
+            if (step) {
+                newValue = Math.round(newValue / step) * step;
+            }
+
             // Update our tracked live value
             liveValue.current = newValue;
             onChange(newValue);
@@ -213,8 +220,8 @@ export const InstrumentControls: React.FC = () => {
         toggleInstrumentControlsModal,
         instrumentControlsPosition,
         setInstrumentControlsPosition,
-        toneControl,
-        setToneControl,
+        tone,
+        setTone,
         instrumentGain,
         setInstrumentGain,
         reverbMix,
@@ -223,8 +230,13 @@ export const InstrumentControls: React.FC = () => {
         setDelayMix,
         chorusMix,
         setChorusMix,
-        stereoWidth,
-        setStereoWidth,
+        vibratoDepth,
+        setVibratoDepth,
+        distortionAmount,
+        setDistortionAmount,
+        pitchShift,
+        setPitchShift,
+        resetInstrumentControls,
         selectedChord,
         chordInversion,
         voicingPickerState,
@@ -401,20 +413,7 @@ export const InstrumentControls: React.FC = () => {
         };
     }, [instrumentControlsModalVisible, setInstrumentControlsPosition]);
 
-    // Derived Tone Value (Average of Treble/Bass tilt)
-    // Using useMemo to stabilize the value during instrument changes
-    // and rounding to avoid floating-point precision issues
-    const toneValue = useMemo(() => {
-        const raw = (toneControl.treble - toneControl.bass) / 2;
-        // Round to 2 decimal places to prevent floating-point drift
-        return Math.round(raw * 100) / 100;
-    }, [toneControl.treble, toneControl.bass]);
 
-    const handleToneChange = (val: number) => {
-        // Apply tilt - round the value before storing
-        const roundedVal = Math.round(val * 100) / 100;
-        setToneControl(roundedVal, -roundedVal);
-    };
 
     if (!instrumentControlsModalVisible) return null;
 
@@ -463,15 +462,17 @@ export const InstrumentControls: React.FC = () => {
                 </button>
             </div>
 
-            {/* Knobs Grid - 2 Rows of 3, very compact */}
-            <div className="grid grid-cols-3 gap-x-3 gap-y-2 mb-1">
+            {/* Knobs Grid - 2 Rows of 4, compact */}
+            <div className="grid grid-cols-4 gap-x-2 gap-y-2 mb-1">
                 <Knob label="Gain" value={instrumentGain} defaultValue={1.0} min={0} max={3.0} onChange={setInstrumentGain} formatValue={(v) => `${Math.round(v * 100)}%`} icon={<Volume2 />} compact />
-                <Knob label="Tone" value={toneValue} defaultValue={0} min={-12} max={12} onChange={handleToneChange} formatValue={(v) => v > 0 ? `+${Math.round(v)}` : `${Math.round(v)}`} icon={<Music />} compact />
-                <Knob label="Reverb" value={reverbMix} defaultValue={0.1} min={0} max={1} onChange={setReverbMix} formatValue={(v) => `${Math.round(v * 100)}%`} icon={<Waves />} compact />
+                <Knob label="Tone" value={tone} defaultValue={0} min={-12} max={12} onChange={setTone} formatValue={(v) => v > 0 ? `+${Math.round(v)}` : `${Math.round(v)}`} icon={<Music />} compact />
+                <Knob label="Octave" value={pitchShift} defaultValue={0} min={-24} max={24} step={12} onChange={setPitchShift} formatValue={(v) => `${v / 12 > 0 ? '+' : ''}${v / 12}`} icon={<Music />} compact />
+                <Knob label="Distort" value={distortionAmount} defaultValue={0} min={0} max={1} onChange={setDistortionAmount} formatValue={(v) => `${Math.round(v * 100)}%`} icon={<Waves />} compact />
 
+                <Knob label="Reverb" value={reverbMix} defaultValue={0.15} min={0} max={1} onChange={setReverbMix} formatValue={(v) => `${Math.round(v * 100)}%`} icon={<Waves />} compact />
                 <Knob label="Delay" value={delayMix} defaultValue={0} min={0} max={1} onChange={setDelayMix} formatValue={(v) => `${Math.round(v * 100)}%`} icon={<Radio />} compact />
                 <Knob label="Chorus" value={chorusMix} defaultValue={0} min={0} max={1} onChange={setChorusMix} formatValue={(v) => `${Math.round(v * 100)}%`} icon={<Disc3 />} compact />
-                <Knob label="Width" value={stereoWidth} defaultValue={0.5} min={0} max={1} onChange={setStereoWidth} formatValue={(v) => v < 0.3 ? 'Mono' : v > 0.7 ? 'Wide' : 'Normal'} icon={<PanelLeftOpen />} compact />
+                <Knob label="Vibrato" value={vibratoDepth} defaultValue={0} min={0} max={1} onChange={setVibratoDepth} formatValue={(v) => `${Math.round(v * 100)}%`} icon={<Waves />} compact />
             </div>
         </>
     ) : (
@@ -501,18 +502,20 @@ export const InstrumentControls: React.FC = () => {
                 </div>
             </div>
 
-            {/* Knobs Row 1 - Primary Effects */}
-            <div className="flex items-center gap-6 px-2 relative z-10">
+            {/* Knobs Row 1 - Core Sound */}
+            <div className="flex items-center gap-4 px-2 relative z-10 justify-center">
                 <Knob label="Gain" value={instrumentGain} defaultValue={1.0} min={0} max={3.0} onChange={setInstrumentGain} formatValue={(v) => `${Math.round(v * 100)}%`} icon={<Volume2 />} />
-                <Knob label="Tone" value={toneValue} defaultValue={0} min={-12} max={12} onChange={handleToneChange} formatValue={(v) => v > 0 ? `+${Math.round(v)}` : `${Math.round(v)}`} icon={<Music />} />
-                <Knob label="Reverb" value={reverbMix} defaultValue={0.1} min={0} max={1} onChange={setReverbMix} formatValue={(v) => `${Math.round(v * 100)}%`} icon={<Waves />} />
+                <Knob label="Tone" value={tone} defaultValue={0} min={-12} max={12} onChange={setTone} formatValue={(v) => v > 0 ? `+${Math.round(v)}` : `${Math.round(v)}`} icon={<Music />} />
+                <Knob label="Octave" value={pitchShift} defaultValue={0} min={-24} max={24} step={12} onChange={setPitchShift} formatValue={(v) => `${v / 12 > 0 ? '+' : ''}${v / 12}`} icon={<Music />} />
+                <Knob label="Distort" value={distortionAmount} defaultValue={0} min={0} max={1} onChange={setDistortionAmount} formatValue={(v) => `${Math.round(v * 100)}%`} icon={<Waves />} />
             </div>
 
-            {/* Knobs Row 2 - Secondary Effects */}
-            <div className="flex items-center gap-6 px-2 relative z-10">
+            {/* Knobs Row 2 - Spatial/Modulation */}
+            <div className="flex items-center gap-4 px-2 relative z-10 justify-center mt-4">
+                <Knob label="Reverb" value={reverbMix} defaultValue={0.15} min={0} max={1} onChange={setReverbMix} formatValue={(v) => `${Math.round(v * 100)}%`} icon={<Waves />} />
                 <Knob label="Delay" value={delayMix} defaultValue={0} min={0} max={1} onChange={setDelayMix} formatValue={(v) => `${Math.round(v * 100)}%`} icon={<Radio />} />
                 <Knob label="Chorus" value={chorusMix} defaultValue={0} min={0} max={1} onChange={setChorusMix} formatValue={(v) => `${Math.round(v * 100)}%`} icon={<Disc3 />} />
-                <Knob label="Width" value={stereoWidth} defaultValue={0.5} min={0} max={1} onChange={setStereoWidth} formatValue={(v) => v < 0.3 ? 'Mono' : v > 0.7 ? 'Wide' : 'Normal'} icon={<PanelLeftOpen />} />
+                <Knob label="Vibrato" value={vibratoDepth} defaultValue={0} min={0} max={1} onChange={setVibratoDepth} formatValue={(v) => `${Math.round(v * 100)}%`} icon={<Waves />} />
             </div>
         </>
     );
@@ -571,6 +574,18 @@ export const InstrumentControls: React.FC = () => {
                     </span>
                 </button>
             )}
+
+            {/* Reset Button (Lower Right) */}
+            <button
+                onClick={(e) => {
+                    e.stopPropagation();
+                    resetInstrumentControls();
+                }}
+                className="absolute bottom-2 right-2 p-1.5 text-text-muted hover:text-text-primary rounded-full hover:bg-white/10 transition-colors"
+                title="Reset all controls to default"
+            >
+                <RotateCcw size={14} />
+            </button>
 
         </div>,
         document.body

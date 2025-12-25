@@ -244,29 +244,31 @@ export const installVisibilityHandler = (): void => {
 // Global limiter to prevent clipping on master output
 let masterLimiter: Tone.Limiter | null = null;
 
-// --- MASTER EFFECTS CHAIN ---
-// Signal path: instrument → EQ3 (tone) → Gain (volume) → Chorus → Delay → StereoWidener → Reverb → Limiter → Destination
-let masterEQ: Tone.EQ3 | null = null;
-let masterGain: Tone.Gain | null = null;
-let masterReverb: Tone.Reverb | null = null;
-let masterChorus: Tone.Chorus | null = null;
-let masterDelay: Tone.PingPongDelay | null = null;
-let masterStereoWidener: Tone.StereoWidener | null = null;
-let effectsChainInitialized = false;
+
 
 // Current effect values (for UI sync)
-let currentToneValues = { treble: 0, bass: 0 };
+let currentTone = 0;
 let currentVolumeGain = 0.75;
 let currentReverbMix = 0.15;
 let currentDelayMix = 0;
 let currentDelayTime = 0.25; // quarter note at 120bpm
 let currentChorusMix = 0;
-let currentStereoWidth = 0.5; // 0.5 = normal, 0 = mono, 1 = wide
+let currentVibratoDepth = 0;
+let currentDistortionAmount = 0;
+let currentPitchShift = 0; // Octaves or Semitones
 
-/**
- * Initialize the master effects chain.
- * Chain: EQ3 → Gain → Chorus → Delay → StereoWidener → Reverb → Limiter → Destination
- */
+
+// Chain: Instrument -> PitchShift -> Vibrato -> Distortion -> EQ3 -> Gain -> Chorus -> Delay -> Reverb -> Limiter -> Destination
+let masterEQ: Tone.EQ3 | null = null;
+let masterGain: Tone.Gain | null = null;
+let masterReverb: Tone.Reverb | null = null;
+let masterChorus: Tone.Chorus | null = null;
+let masterDelay: Tone.PingPongDelay | null = null;
+let masterDistortion: Tone.Distortion | null = null;
+let masterVibrato: Tone.Vibrato | null = null;
+let masterPitchShift: Tone.PitchShift | null = null;
+let effectsChainInitialized = false;
+
 const initMasterEffectsChain = async () => {
     if (effectsChainInitialized) return;
 
@@ -277,42 +279,33 @@ const initMasterEffectsChain = async () => {
     }
 
     // Create reverb (connects to limiter)
-    // Use longer decay (4s) and higher predelay for more noticeable reverb at 100%
     if (!masterReverb) {
         masterReverb = new Tone.Reverb({
-            decay: 4.0,           // Longer decay for lush reverb
+            decay: 4.0,
             wet: currentReverbMix,
-            preDelay: 0.02        // Slight predelay for more natural sound
+            preDelay: 0.02
         }).connect(masterLimiter);
-        // Wait for reverb IR to generate
         await masterReverb.ready;
     }
 
-    // Create stereo widener (connects to reverb)
-    if (!masterStereoWidener) {
-        masterStereoWidener = new Tone.StereoWidener({
-            width: currentStereoWidth
-        }).connect(masterReverb);
-    }
-
-    // Create ping pong delay (connects to stereo widener)
+    // Create delay (connects to reverb)
     if (!masterDelay) {
         masterDelay = new Tone.PingPongDelay({
             delayTime: currentDelayTime,
             feedback: 0.3,
             wet: currentDelayMix
-        }).connect(masterStereoWidener);
+        }).connect(masterReverb);
     }
 
     // Create chorus (connects to delay)
     if (!masterChorus) {
         masterChorus = new Tone.Chorus({
-            frequency: 1.5,       // Slow modulation
-            delayTime: 3.5,       // ms
+            frequency: 1.5,
+            delayTime: 3.5,
             depth: 0.7,
             wet: currentChorusMix
         }).connect(masterDelay);
-        masterChorus.start();     // Chorus needs to be started
+        masterChorus.start();
     }
 
     // Create gain (connects to chorus)
@@ -320,31 +313,55 @@ const initMasterEffectsChain = async () => {
         masterGain = new Tone.Gain(currentVolumeGain).connect(masterChorus);
     }
 
-    // Create EQ3 for tone control (connects to gain)
+    // Create EQ3 (connects to gain)
     if (!masterEQ) {
         masterEQ = new Tone.EQ3({
-            low: currentToneValues.bass,
+            low: -currentTone, // Simple tilt eq
             mid: 0,
-            high: currentToneValues.treble,
+            high: currentTone,
             lowFrequency: 250,
             highFrequency: 2500
         }).connect(masterGain);
+    }
+
+    // Create Distortion (connects to EQ)
+    if (!masterDistortion) {
+        // Distortion can be harsh, so we use it subtly or allow full range
+        masterDistortion = new Tone.Distortion({
+            distortion: currentDistortionAmount,
+            wet: currentDistortionAmount > 0 ? 0.5 : 0 // Blend it
+        }).connect(masterEQ);
+    }
+
+    // Create Vibrato (connects to Distortion)
+    if (!masterVibrato) {
+        masterVibrato = new Tone.Vibrato({
+            frequency: 5,
+            depth: currentVibratoDepth,
+            wet: currentVibratoDepth > 0 ? 1 : 0
+        }).connect(masterDistortion);
+    }
+
+    // Create PitchShift (connects to Vibrato) - This is the entry point
+    if (!masterPitchShift) {
+        masterPitchShift = new Tone.PitchShift({
+            pitch: currentPitchShift
+        }).connect(masterVibrato);
     }
 
     effectsChainInitialized = true;
 };
 
 /**
- * Set the tone control (treble/bass) for all instruments.
- * @param treble - Treble adjustment in dB (-12 to +12)
- * @param bass - Bass adjustment in dB (-12 to +12)
+ * Set the tone control (simple tilt).
+ * @param tone - Tone value (-12 to +12)
  */
-export const setToneControl = async (treble: number, bass: number) => {
+export const setTone = async (tone: number) => {
     await initMasterEffectsChain();
-    currentToneValues = { treble, bass };
+    currentTone = tone;
     if (masterEQ) {
-        masterEQ.high.value = treble;
-        masterEQ.low.value = bass;
+        masterEQ.high.value = tone;
+        masterEQ.low.value = -tone;
     }
 };
 
@@ -411,14 +428,40 @@ export const setChorusMix = async (mix: number) => {
 };
 
 /**
- * Set the stereo width.
- * @param width - Stereo width (0 = mono, 0.5 = normal, 1 = extra wide)
+ * Set the vibrato depth.
+ * @param depth - Depth (0 to 1)
  */
-export const setStereoWidth = async (width: number) => {
+export const setVibratoDepth = async (depth: number) => {
     await initMasterEffectsChain();
-    currentStereoWidth = Math.max(0, Math.min(1, width));
-    if (masterStereoWidener) {
-        masterStereoWidener.width.rampTo(currentStereoWidth, 0.05);
+    currentVibratoDepth = Math.max(0, Math.min(1, depth));
+    if (masterVibrato) {
+        masterVibrato.depth.rampTo(currentVibratoDepth, 0.1);
+        masterVibrato.wet.rampTo(currentVibratoDepth > 0 ? 1 : 0, 0.1);
+    }
+};
+
+/**
+ * Set the distortion amount.
+ * @param amount - Amount (0 to 1)
+ */
+export const setDistortionAmount = async (amount: number) => {
+    await initMasterEffectsChain();
+    currentDistortionAmount = Math.max(0, Math.min(1, amount));
+    if (masterDistortion) {
+        masterDistortion.distortion = currentDistortionAmount;
+        masterDistortion.wet.rampTo(currentDistortionAmount > 0 ? 0.5 : 0, 0.1);
+    }
+};
+
+/**
+ * Set the pitch shift amount (in semitones).
+ * @param pitch - Pitch shift in semitones
+ */
+export const setPitchShift = async (pitch: number) => {
+    await initMasterEffectsChain();
+    currentPitchShift = pitch;
+    if (masterPitchShift) {
+        masterPitchShift.pitch = currentPitchShift;
     }
 };
 
@@ -426,13 +469,15 @@ export const setStereoWidth = async (width: number) => {
  * Get current effect values for UI sync
  */
 export const getEffectValues = () => ({
-    tone: currentToneValues,
+    tone: currentTone,
     volume: currentVolumeGain,
     reverb: currentReverbMix,
     delay: currentDelayMix,
     delayTime: currentDelayTime,
     chorus: currentChorusMix,
-    stereoWidth: currentStereoWidth
+    vibrato: currentVibratoDepth,
+    distortion: currentDistortionAmount,
+    pitch: currentPitchShift
 });
 
 const createCustomSampler = (instrument: CustomInstrument) => {
@@ -503,7 +548,8 @@ export const initAudio = async () => {
     initPromise = (async () => {
         // Initialize Master Effects Chain first
         await initMasterEffectsChain();
-        const chainInput = masterEQ || Tone.Destination;
+        // Entry point is now PitchShift or whatever is first in chain (masterPitchShift)
+        const chainInput = masterPitchShift || Tone.Destination;
 
         // Use a free soundfont URL or basic synth fallback
         // Salamander Grand Piano is a good free option often used with Tone.js
