@@ -432,8 +432,22 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar',
             return;
         }
 
-        if (!chord || !selectedSectionId || !selectedSlotId) {
-            return;
+        if (!chord) return;
+
+        // Auto-select first slot if none selected
+        let currentSectionId = selectedSectionId;
+        let currentSlotId = selectedSlotId;
+
+        if (!currentSectionId || !currentSlotId) {
+            const state = useSongStore.getState();
+            const sections = state.currentSong.sections;
+            if (sections.length > 0 && sections[0].measures[0]?.beats[0]) {
+                currentSectionId = sections[0].id;
+                currentSlotId = sections[0].measures[0].beats[0].id;
+                state.setSelectedSlot(currentSectionId, currentSlotId);
+            } else {
+                return; // No sections/slots to add to
+            }
         }
 
         const variantNotes = getChordNotes(chord.root, variant);
@@ -448,15 +462,15 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar',
             inversion: chordInversion // Save the current inversion with this chord
         };
 
-        addChordToSlot(newChord, selectedSectionId, selectedSlotId);
+        addChordToSlot(newChord, currentSectionId, currentSlotId);
 
         // Always update selection to the added chord first
-        setSelectedSlot(selectedSectionId, selectedSlotId);
+        setSelectedSlot(currentSectionId, currentSlotId);
         setSelectedChord(newChord);
 
         // Then auto-advance to next slot if enabled
         if (autoAdvance) {
-            selectNextSlotAfter(selectedSectionId, selectedSlotId);
+            selectNextSlotAfter(currentSectionId, currentSlotId);
         }
 
         // Keep preview variant in sync
@@ -481,9 +495,23 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar',
             return;
         }
 
-        if (!chord || !selectedSectionId || !selectedSlotId) {
-            return;
+        // Auto-select first slot if none selected
+        let currentSectionId = selectedSectionId;
+        let currentSlotId = selectedSlotId;
+
+        if (!currentSectionId || !currentSlotId) {
+            const state = useSongStore.getState();
+            const sections = state.currentSong.sections;
+            if (sections.length > 0 && sections[0].measures[0]?.beats[0]) {
+                currentSectionId = sections[0].id;
+                currentSlotId = sections[0].measures[0].beats[0].id;
+                state.setSelectedSlot(currentSectionId, currentSlotId);
+            } else {
+                return; // No sections/slots to add to
+            }
         }
+
+        if (!chord) return;
 
         const currentVariant = previewVariant || chord.quality;
         const variantNotes = getChordNotes(chord.root, currentVariant);
@@ -497,15 +525,15 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar',
             inversion: chordInversion
         };
 
-        addChordToSlot(newChord, selectedSectionId, selectedSlotId);
+        addChordToSlot(newChord, currentSectionId, currentSlotId);
 
         // Always update selection to the added chord first
-        setSelectedSlot(selectedSectionId, selectedSlotId);
+        setSelectedSlot(currentSectionId, currentSlotId);
         setSelectedChord(newChord);
 
         // Then auto-advance to next slot if enabled
         if (autoAdvance) {
-            selectNextSlotAfter(selectedSectionId, selectedSlotId);
+            selectNextSlotAfter(currentSectionId, currentSlotId);
         }
     }, [chord, previewVariant, chordInversion, selectedSectionId, selectedSlotId, addChordToSlot, setSelectedSlot, setSelectedChord, timelineVisible, openTimeline, autoAdvance, selectNextSlotAfter]);
 
