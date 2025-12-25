@@ -454,7 +454,7 @@ export const VoicingQuickPicker: React.FC<VoicingQuickPickerProps> = ({
             onWheel={(e) => e.stopPropagation()}
             className={clsx(
                 "fixed bg-bg-elevated/65 backdrop-blur-md border border-white/10 rounded-2xl shadow-2xl select-none",
-                isLandscapeMobile ? "flex flex-col p-3 gap-2" : "flex flex-col p-3 gap-3",
+                isLandscapeMobile ? "flex flex-col p-3 pt-1 gap-2" : "flex flex-col p-3 pt-1 gap-3",
                 "animate-in fade-in zoom-in-95 duration-200",
                 isLandscapeMobile ? "min-w-[200px]" : "min-w-[320px]",
                 "touch-none"
@@ -488,6 +488,16 @@ export const VoicingQuickPicker: React.FC<VoicingQuickPickerProps> = ({
                     : '520px'
             }}
         >
+            {/* Centered Top Drag Handle - Redundant, matching drawer style */}
+            <div
+                onMouseDown={handleDragStart}
+                onTouchStart={handleDragStart}
+                className="drag-handle flex flex-col items-center justify-center py-2 -mx-3 cursor-move shrink-0"
+                title="Drag to reposition"
+            >
+                <div className="w-12 h-1.5 rounded-full bg-text-muted/40" />
+            </div>
+
             {/* ROW 1: VOICINGS & QUICK ACTIONS */}
             <div className={clsx("flex items-center gap-2 w-full shrink-0", isLandscapeMobile ? "h-10" : "h-11")}>
                 <div
