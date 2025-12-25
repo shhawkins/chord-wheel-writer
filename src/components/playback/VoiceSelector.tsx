@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import clsx from 'clsx';
 import {
     Keyboard,
@@ -36,7 +37,8 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
     } = useSongStore();
 
     const [showMenu, setShowMenu] = useState(false);
-    const menuRef = useRef<HTMLDivElement>(null);
+    const buttonRef = useRef<HTMLButtonElement>(null);
+    const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({}); // State for menu position
 
     const getInstrumentIcon = (type: InstrumentType | string) => {
         if (type.includes('piano') || type.includes('organ') || type.includes('marimba') || type.includes('synth') || type.includes('pad')) return <Keyboard size={variant === 'tiny' ? 12 : 14} />;
@@ -73,6 +75,41 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
         };
     };
 
+    const toggleMenu = () => {
+        if (!showMenu && buttonRef.current) {
+            // Calculate position when opening
+            const rect = buttonRef.current.getBoundingClientRect();
+            // Default to opening upwards (above the button) as per original design
+            // but check if there's space, else open downwards? 
+            // Original code used "bottom-full", so it opens UP.
+            // Let's replicate this behavior with fixed positioning.
+
+            // We want the bottom of the menu to be at rect.top - 8px.
+            // And right aligned or left aligned? Original was right-0 (right aligned to container, but here container is button).
+
+            // Check viewport space
+            const windowHeight = window.innerHeight;
+            const spaceAbove = rect.top;
+            const spaceBelow = windowHeight - rect.bottom;
+
+            // Prefer opening upwards if space allows or if it's the footer
+            // But if we are in the header (top of screen), opening upwards might clip off screen.
+            const shouldOpenDown = spaceAbove < 320 && spaceBelow > spaceAbove;
+
+            setMenuStyle({
+                position: 'fixed',
+                left: shouldOpenDown ? rect.left : 'auto',
+                right: shouldOpenDown ? 'auto' : (window.innerWidth - rect.right),
+                top: shouldOpenDown ? (rect.bottom + 8) : 'auto',
+                bottom: shouldOpenDown ? 'auto' : (windowHeight - rect.top + 8),
+                zIndex: 100000, // Very high z-index
+                maxHeight: '300px'
+            });
+        }
+        setShowMenu(!showMenu);
+        onInteraction?.();
+    };
+
     const handleTouchEnd = (e: React.TouchEvent) => {
         if (!touchStartRef.current) return;
 
@@ -84,8 +121,7 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
         if (deltaX < 10 && deltaY < 10) {
             e.stopPropagation();
             if (e.cancelable) e.preventDefault();
-            setShowMenu(!showMenu);
-            onInteraction?.();
+            toggleMenu();
         }
         touchStartRef.current = null;
     };
@@ -135,17 +171,34 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
 
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent | TouchEvent) => {
-            if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+            // Check if click is on the button
+            if (buttonRef.current && buttonRef.current.contains(e.target as Node)) {
+                return;
+            }
+
+            // If explicit menu ref check is needed we can add it, but portal structure makes it tricky
+            // We'll rely on the menu wrapper closing itself if click is outside
+            // Check if the click target is inside the portal menu (we'll add a class/id)
+            const target = e.target as HTMLElement;
+            if (!target.closest('.voice-selector-menu')) {
                 setShowMenu(false);
             }
         };
+
+        // Handle scroll to update position or close? Closing is safer.
+        const handleScroll = () => {
+            if (showMenu) setShowMenu(false);
+        };
+
         if (showMenu) {
             document.addEventListener('mousedown', handleClickOutside);
             document.addEventListener('touchstart', handleClickOutside as any);
+            window.addEventListener('scroll', handleScroll, true);
         }
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
             document.removeEventListener('touchstart', handleClickOutside as any);
+            window.removeEventListener('scroll', handleScroll, true);
         };
     }, [showMenu]);
 
@@ -160,12 +213,12 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
     const currentLabel = instrumentOptions.find(opt => opt.value === instrument)?.label || 'Piano';
 
     return (
-        <div className={clsx("relative", className)} ref={menuRef}>
+        <div className={clsx("relative", className)}>
             <button
+                ref={buttonRef}
                 onClick={(e) => {
                     e.stopPropagation();
-                    setShowMenu(!showMenu);
-                    onInteraction?.();
+                    toggleMenu();
                 }}
                 onTouchStart={handleTouchStart}
                 onTouchEnd={handleTouchEnd}
@@ -183,12 +236,17 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
                 <ChevronDown size={variant === 'tiny' ? 10 : 12} className={clsx("transition-transform", showMenu && "rotate-180")} />
             </button>
 
-            {showMenu && (
+            {showMenu && createPortal(
                 <div
                     className={clsx(
-                        "absolute bottom-full right-0 mb-2 w-48 bg-bg-elevated border border-border-medium rounded-xl shadow-2xl overflow-y-auto max-h-72 z-[10000] flex flex-col p-1.5",
-                        "animate-in fade-in zoom-in-95 slide-in-from-bottom-2 duration-150"
+                        "voice-selector-menu", // Identifier for click-outside check
+                        "bg-bg-elevated border border-border-medium rounded-xl shadow-2xl overflow-y-auto max-h-72 flex flex-col p-1.5",
+                        "animate-in fade-in zoom-in-95 duration-150"
                     )}
+                    style={{
+                        ...menuStyle,
+                        width: '12rem', // w-48
+                    }}
                     onClick={(e) => e.stopPropagation()}
                 >
                     <div className="px-2 py-1.5 mb-1 text-[10px] font-bold text-text-muted uppercase tracking-wider">
@@ -238,7 +296,8 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
                         <Plus size={16} />
                         Manage Instruments
                     </button>
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     );

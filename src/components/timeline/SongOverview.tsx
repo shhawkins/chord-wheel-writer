@@ -4,6 +4,8 @@ import { VoiceSelector } from '../playback/VoiceSelector';
 import { useSongStore } from '../../store/useSongStore';
 import {
     X,
+    RotateCcw,
+    RotateCw,
     GripVertical,
     ZoomIn,
     ZoomOut,
@@ -256,7 +258,7 @@ const SortableSection = ({ section, allSections, onSelectBeat, onBeatTap, onEmpt
 
             {/* Delete Button - Positioned outside drag handle */}
             <button
-                className="absolute top-0 right-0 z-20 p-1.5 rounded-md hover:bg-white/10 text-white/40 hover:text-red-400 transition-colors"
+                className="absolute top-0.5 right-1 z-20 w-7 h-7 flex items-center justify-center rounded-md hover:bg-white/10 text-white/40 hover:text-red-400 transition-colors"
                 onClick={(e) => {
                     e.stopPropagation();
                     onRemoveSection(section.id);
@@ -619,7 +621,10 @@ export const SongOverview: React.FC<SongOverviewProps> = ({ onSave, onExport }) 
         playingSectionId,
         openTimeline,
         removeSection,
-
+        undo,
+        redo,
+        canUndo,
+        canRedo,
         addSuggestedSection
     } = useSongStore();
 
@@ -882,6 +887,36 @@ export const SongOverview: React.FC<SongOverviewProps> = ({ onSave, onExport }) 
 
                     {/* Action buttons */}
                     <div className="flex items-center gap-2">
+                        {/* Undo/Redo */}
+                        <div className="flex items-center gap-1 bg-white/5 rounded-full p-0.5 border border-white/5 mr-2">
+                            <button
+                                onClick={(e) => { e.stopPropagation(); undo(); }}
+                                disabled={!canUndo}
+                                className={clsx(
+                                    "w-7 h-7 rounded-full flex items-center justify-center transition-all",
+                                    canUndo
+                                        ? "text-white/70 hover:text-white hover:bg-white/10 active:scale-95"
+                                        : "text-white/20 cursor-not-allowed"
+                                )}
+                                title="Undo"
+                            >
+                                <RotateCcw size={14} />
+                            </button>
+                            <button
+                                onClick={(e) => { e.stopPropagation(); redo(); }}
+                                disabled={!canRedo}
+                                className={clsx(
+                                    "w-7 h-7 rounded-full flex items-center justify-center transition-all",
+                                    canRedo
+                                        ? "text-white/70 hover:text-white hover:bg-white/10 active:scale-95"
+                                        : "text-white/20 cursor-not-allowed"
+                                )}
+                                title="Redo"
+                            >
+                                <RotateCw size={14} />
+                            </button>
+                        </div>
+
                         {onSave && (
                             <button
                                 onClick={(e) => {

@@ -3,7 +3,7 @@ import { useDraggable, useDroppable } from '@dnd-kit/core';
 import type { ChordSlot as IChordSlot } from '../../types';
 import clsx from 'clsx';
 import { useSongStore } from '../../store/useSongStore';
-import { getWheelColors, normalizeNote, formatChordForDisplay, getVoicingSuggestion } from '../../utils/musicTheory';
+import { getWheelColors, normalizeNote, formatChordForDisplay, getVoicingSuggestion, MAJOR_POSITIONS, CIRCLE_OF_FIFTHS } from '../../utils/musicTheory';
 import { playChord } from '../../utils/audioEngine';
 
 interface ChordSlotProps {
@@ -139,11 +139,69 @@ export const ChordSlot: React.FC<ChordSlotProps> = ({ slot, sectionId, size = 48
         // User requested: "allow the VoicingQuickPicker to be opened on mobile with the chord details pane open if the user taps a chord on the timeline"
         // Atomic open: avoids state dsync by setting everything in one go
         const inv = slot.chord.inversion ?? 0;
+        const currentState = useSongStore.getState();
+        const selectedKey = currentState.selectedKey;
+        const keyIndex = CIRCLE_OF_FIFTHS.indexOf(selectedKey);
+
+        // Calculate voicing suggestions based on chord's relation to key
+        let voicingSuggestion = '';
+        if (keyIndex !== -1) {
+            // Find which position this chord belongs to (major, ii, iii, or dim)
+            const root = slot.chord.root;
+            // Remove 'm' or '°' from root for comparison if needed, but MAJOR_POSITIONS has full names
+            // Actually MAJOR_POSITIONS has 'Dm', 'Em' etc. so exact match should work for triad roots.
+            // But slot.chord.root is just the note name usually?
+            // Wait, slot.chord.root is 'C', 'D#', etc. stored in chord object.
+            // WheelChord adds suffixes? No, WheelChord uses root + quality.
+            // MAJOR_POSITIONS uses 'Dm' string.
+
+            // Strategy: Search for the root note in MAJOR_POSITIONS, accounting for quality
+            const isMinor = slot.chord.quality.includes('minor');
+            const isDim = slot.chord.quality.includes('dim') || slot.chord.quality.includes('half');
+
+            let posIndex = -1;
+            let type: 'major' | 'ii' | 'iii' | 'dim' = 'major';
+
+            // We only strictly need suggestions for diatonic chords, so exact match on root + quality inference is fine
+            // Iterate through MAJOR_POSITIONS
+            for (let i = 0; i < MAJOR_POSITIONS.length; i++) {
+                const pos = MAJOR_POSITIONS[i];
+                // Check Major
+                if (!isMinor && !isDim && pos.major === root) {
+                    posIndex = i;
+                    type = 'major';
+                    break;
+                }
+                // Check ii (root + 'm' == pos.ii)
+                if (isMinor && pos.ii === `${root}m`) {
+                    posIndex = i;
+                    type = 'ii';
+                    break;
+                }
+                // Check iii
+                if (isMinor && pos.iii === `${root}m`) {
+                    posIndex = i;
+                    type = 'iii';
+                    break;
+                }
+                // Check dim
+                if (isDim && (pos.diminished === `${root}°` || pos.diminished.startsWith(root))) {
+                    posIndex = i;
+                    type = 'dim';
+                    break;
+                }
+            }
+
+            if (posIndex !== -1) {
+                const relPos = (posIndex - keyIndex + 12) % 12;
+                voicingSuggestion = getVoicingSuggestion(relPos, type);
+            }
+        }
 
         openVoicingPicker({
             chord: slot.chord,
             inversion: inv,
-            voicingSuggestion: getVoicingSuggestion(0, slot.chord.quality.includes('minor') ? 'ii' : 'major'),
+            voicingSuggestion,
             baseQuality: slot.chord.quality
         });
     };

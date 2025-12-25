@@ -78,7 +78,9 @@ export const MusicStaff: React.FC<MusicStaffProps> = ({
 
     // SVG dimensions - compact mode uses smaller dimensions
     const defaultWidth = compact ? 180 : (isMobile ? 280 : 340);
-    const width = propWidth || defaultWidth;
+    // Use propWidth if provided and it's a number, otherwise use default for viewBox calculation
+    const viewBoxWidth = (typeof propWidth === 'number') ? propWidth : defaultWidth;
+
     // Increased height to accommodate low notes and their labels
     const height = compact ? 70 : (isMobile ? 110 : 115);
 
@@ -88,7 +90,7 @@ export const MusicStaff: React.FC<MusicStaffProps> = ({
     // Position staff higher to leave room for low notes below
     const staffY = height * (compact ? 0.28 : 0.22);
     const lineSpacing = compact ? 7 : 10;
-    const staffWidth = Math.max(80, width - (margin * 2));
+    const staffWidth = Math.max(80, viewBoxWidth - (margin * 2));
 
     // Fixed Y positions for labels (below the lowest notes)
     const noteLabelY = staffY + (compact ? 32 : 50);
@@ -101,7 +103,7 @@ export const MusicStaff: React.FC<MusicStaffProps> = ({
         const clefOffset = compact ? 40 : 60;
         const availableNoteWidth = staffWidth - clefOffset - 15;
 
-        // Ensure minimum spacing between notes in compact mode
+        // ... (rest of logic same) ...
         const minSpacing = compact ? 18 : 25;
         const idealSpacing = availableNoteWidth / Math.max(notes.length - 1, 1);
         const actualSpacing = Math.max(idealSpacing, minSpacing);
@@ -121,11 +123,13 @@ export const MusicStaff: React.FC<MusicStaffProps> = ({
         };
     });
 
-    // Generate ledger lines for notes outside the staff
+    // ... (rest of logic) ...
+
     const getLedgerLines = (noteInfo: typeof noteData[0]) => {
+        // (helper unchanged)
         const lines = [];
         const ledgerWidth = 28;
-
+        // ... helper body ...
         if (noteInfo.line < -4) {
             for (let i = -6; i >= noteInfo.line; i -= 2) {
                 if (i < -4) {
@@ -159,18 +163,17 @@ export const MusicStaff: React.FC<MusicStaffProps> = ({
                 }
             }
         }
-
         return lines;
     };
 
     return (
-        <div className={`flex justify-center items-center ${compact ? '' : 'w-full'}`}>
+        <div className={`flex justify-center items-center ${compact ? 'w-full' : 'w-full'}`}>
             <svg
-                viewBox={`0 0 ${width} ${height}`}
-                className={compact ? '' : 'w-full'}
+                viewBox={`0 0 ${viewBoxWidth} ${height}`}
+                className={compact ? 'w-full' : 'w-full'}
                 style={{
                     minHeight: compact ? 60 : (isMobile ? 95 : 100),
-                    width: compact ? width : undefined
+                    width: '100%' // Always fluid width
                 }}
             >
                 {/* Staff lines (5 lines of treble clef) */}

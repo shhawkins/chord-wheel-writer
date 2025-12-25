@@ -374,8 +374,9 @@ function App() {
     if (typeof window === 'undefined') return 500;
     const w = window.innerWidth;
     const h = window.innerHeight;
-    // Available height = viewport - header(48) - footer(56) - timeline(152) - padding(32)
-    const availableHeight = h - 48 - 56 - 152 - 32;
+    // Available height = viewport - header(48) - footer(65) - timeline(152) - padding(20)
+    // Adjusted footer estimate to 65px (tight fit) and padding to 20px
+    const availableHeight = h - 48 - 65 - 152 - 20;
     // Available width = viewport - sidebar(380) - padding(40)
     const availableWidth = w - 380 - 40;
     return Math.max(300, Math.min(availableWidth, availableHeight));
@@ -587,10 +588,10 @@ function App() {
 
       // For desktop/tablet, compute wheel size based on actual available space
       if (!mobile) {
-        // Available height = viewport - header(48) - footer(64) - timeline(152) - padding(40)
-        // Using conservative padding to ensure everything fits on iPad screens
-        const timelineH = useSongStore.getState().timelineVisible ? 152 : 0;
-        const availableHeight = height - 48 - 64 - timelineH - 40;
+        // Available height = viewport - header(48) - footer(65) - timeline(152) - padding(20)
+        // Using tighter padding to maximize size
+        const timelineH = useSongStore.getState().timelineVisible ? 152 : 60;
+        const availableHeight = height - 48 - 280 - timelineH - 20;
         // Available width = viewport - sidebar(380) - padding(40)
         const availableWidth = width - 380 - 40;
         setComputedWheelSize(Math.max(200, Math.min(availableWidth, availableHeight)));
@@ -633,7 +634,8 @@ function App() {
     const width = window.innerWidth;
     const height = window.innerHeight;
     const timelineH = timelineVisible ? 152 : 48;
-    const availableHeight = height - 48 - 56 - timelineH - 32;
+    // Footer height estimate adjusted to 65px, tighter padding (20px)
+    const availableHeight = height - 48 - 65 - timelineH - 20;
     const availableWidth = width - 380 - 40;
     setComputedWheelSize(Math.max(300, Math.min(availableWidth, availableHeight)));
   }, [timelineVisible, isMobile]);
@@ -1433,7 +1435,7 @@ function App() {
       )}
       {/* Header - slides up when in mobile immersive mode, when chord panel is open, or in landscape by default */}
       <header
-        className={`${isMobile ? 'h-14' : 'h-12'} border-b border-border-subtle grid grid-cols-[1fr_auto_1fr] items-center ${isMobile ? 'px-4' : 'px-3'} bg-bg-secondary shrink-0 z-50 transition-all duration-300 ease-out ${(isMobile && !isLandscape && (mobileImmersive || chordPanelVisible)) ||
+        className={`${isMobile ? 'h-14' : 'h-12'} mb-[5px] border-b border-border-subtle grid grid-cols-[1fr_auto_1fr] items-center ${isMobile ? 'px-4' : 'px-3'} bg-bg-secondary shrink-0 z-50 transition-all duration-300 ease-out ${(isMobile && !isLandscape && (mobileImmersive || chordPanelVisible)) ||
           (isMobile && isLandscape && !landscapeHeaderVisible)
           ? 'opacity-0 -translate-y-full pointer-events-none absolute top-0 left-0 right-0'
           : 'relative'
@@ -1597,28 +1599,28 @@ function App() {
           } : undefined}
         >
           {/* Wheel Area */}
-          <div className={`flex-1 flex flex-col ${isMobile && !isLandscape ? 'justify-center' : isMobile && isLandscape ? 'justify-center items-center' : 'justify-center items-center pt-2'} ${isMobile ? 'overflow-hidden' : 'overflow-visible'}`}>
+          <div className={`flex-1 flex flex-col ${isMobile && !isLandscape ? 'justify-center' : isMobile && isLandscape ? 'justify-center items-center' : 'justify-start items-center pt-8'} ${isMobile ? 'overflow-hidden' : 'overflow-visible'}`}>
             {/* Zoom toolbar - show on desktop only, ultra-compact sleek design */}
             {!isMobile ? (
-              <div className="flex justify-end gap-2 px-2 shrink-0 w-full">
+              <div className="flex justify-end gap-3 px-4 shrink-0 w-full mb-2">
                 {/* Zoom controls */}
-                <div className="flex items-center bg-bg-secondary/60 backdrop-blur-sm rounded-full px-0.5 border border-border-subtle/40">
+                <div className="flex items-center bg-bg-secondary/60 backdrop-blur-sm rounded-full px-1 border border-border-subtle/40 scale-100 origin-right h-8">
                   <button
                     onClick={handleZoomOut}
                     disabled={wheelZoom <= 0.2}
-                    className="no-touch-enlarge w-4 h-4 flex items-center justify-center hover:bg-bg-tertiary disabled:opacity-30 disabled:cursor-not-allowed rounded-full text-text-muted hover:text-text-primary transition-colors"
+                    className="no-touch-enlarge w-6 h-6 flex items-center justify-center hover:bg-bg-tertiary disabled:opacity-30 disabled:cursor-not-allowed rounded-full text-text-muted hover:text-text-primary transition-colors"
                     title="Zoom out"
                   >
-                    <Minus size={8} />
+                    <Minus size={14} />
                   </button>
-                  <span className="text-[7px] w-5 text-text-muted text-center font-medium">{Math.round(wheelZoom * 100)}%</span>
+                  <span className="text-[10px] w-8 text-text-muted text-center font-medium">{Math.round(wheelZoom * 100)}%</span>
                   <button
                     onClick={handleZoomIn}
                     disabled={wheelZoom >= 2.5}
-                    className="no-touch-enlarge w-4 h-4 flex items-center justify-center hover:bg-bg-tertiary disabled:opacity-30 disabled:cursor-not-allowed rounded-full text-text-muted hover:text-text-primary transition-colors"
+                    className="no-touch-enlarge w-6 h-6 flex items-center justify-center hover:bg-bg-tertiary disabled:opacity-30 disabled:cursor-not-allowed rounded-full text-text-muted hover:text-text-primary transition-colors"
                     title="Zoom in"
                   >
-                    <Plus size={8} />
+                    <Plus size={14} />
                   </button>
                 </div>
                 {/* Help button */}
@@ -1627,7 +1629,7 @@ function App() {
                   className="no-touch-enlarge w-8 h-8 flex items-center justify-center bg-bg-secondary/60 hover:bg-bg-tertiary backdrop-blur-sm rounded-full text-text-muted hover:text-accent-primary transition-colors border border-border-subtle/40"
                   title="Songwriter Wheel Guide"
                 >
-                  <HelpCircle size={16} />
+                  <HelpCircle size={18} />
                 </button>
               </div>
             ) : null}
@@ -1635,6 +1637,7 @@ function App() {
             <div
               className={`flex-1 flex justify-center ${isMobile ? 'items-center' : ''} ${isMobile && isLandscape ? 'p-1 overflow-hidden' : isMobile && !isLandscape ? 'px-0 py-0' : 'p-2 overflow-visible'}`}
               onClick={handleLandscapeWheelTap}
+              style={!isMobile ? { transform: 'scale(1.15)', transformOrigin: 'center center' } : undefined}
             >
               <div
                 className="relative flex items-center justify-center"
@@ -1704,18 +1707,30 @@ function App() {
               <>
                 {/* Timeline - compact fixed height with mobile-inspired design */}
                 <div
-                  className="shrink-0 bg-bg-secondary border-t border-border-subtle overflow-hidden flex flex-col"
+                  className="shrink-0 bg-bg-secondary border-t border-border-subtle overflow-hidden flex flex-col relative z-20 mb-6"
                   style={{ height: timelineHeight }}
                 >
+                  {/* Timeline Header Handle */}
+                  <div
+                    className="h-4 w-full bg-bg-secondary border-b border-border-subtle flex items-center justify-center cursor-pointer hover:bg-bg-tertiary transition-colors shrink-0"
+                    onClick={toggleTimeline}
+                    title="Collapse Timeline"
+                  >
+                    <div className="flex items-center gap-1 text-[9px] text-text-muted font-bold tracking-wider uppercase opacity-70">
+                      <ChevronDown size={10} />
+                      <span>Timeline</span>
+                    </div>
+                  </div>
+
                   {/* Timeline content - uses mobile timeline component which has undo/redo/zoom built in */}
-                  <div className="flex-1 min-h-0 overflow-hidden">
+                  <div className="relative flex-1 min-h-0 overflow-hidden">
                     <MobileTimeline isOpen={true} onToggle={toggleTimeline} hideCloseButton={true} isCompact={false} isLandscape={false} />
                   </div>
                 </div>
               </>
             ) : (
               /* Collapsed timeline - thin bar with show button */
-              <div className="h-12 bg-bg-secondary border-t border-border-subtle flex items-center justify-center shrink-0">
+              <div className="h-12 bg-bg-secondary border-t border-border-subtle flex items-center justify-center shrink-0 relative z-50 mb-6">
                 <button
                   onClick={toggleTimeline}
                   className="px-3 h-full flex items-center gap-1 text-[8px] text-text-muted hover:text-text-primary hover:bg-bg-tertiary transition-colors timeline-toggle"

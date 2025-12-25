@@ -114,10 +114,10 @@ export const VoicingQuickPicker: React.FC<VoicingQuickPickerProps> = ({
     const fadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
-        if (isOpen) {
+        if (selectedQuality) {
             setCurrentQuality(selectedQuality);
         }
-    }, [isOpen, selectedQuality, chordRoot]); // Removed chordInversion from deps to prevent voicing resets during inversion changes
+    }, [selectedQuality, isOpen, chordRoot]); // Removed chordInversion from deps to prevent voicing resets during inversion changes
 
     const resetFadeTimer = useCallback(() => {
         if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current);

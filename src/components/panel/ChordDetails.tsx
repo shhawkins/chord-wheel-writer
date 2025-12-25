@@ -2,6 +2,7 @@ import { useSongStore } from '../../store/useSongStore';
 import { PianoKeyboard } from './PianoKeyboard';
 import { GuitarChord } from './GuitarChord';
 import { MusicStaff } from './MusicStaff';
+import { VoiceSelector } from '../playback/VoiceSelector';
 import { getWheelColors, getChordNotes, getIntervalFromKey, invertChord, getMaxInversion, getInversionName, getChordSymbolWithInversion, formatChordForDisplay, getQualitySymbol, getMajorScale } from '../../utils/musicTheory';
 import { PanelRightClose, PanelRight, GripVertical, ChevronDown, ChevronLeft, ChevronRight, Plus, MoveRight } from 'lucide-react';
 import { playChord, playNote } from '../../utils/audioEngine';
@@ -825,8 +826,14 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar',
                         )}
                     </div>
 
-                    {/* Placeholder for center column when grid is active, or hidden when stacked */}
-                    {!isVeryNarrowPanel && <div />}
+                    {/* Center column: Voice Selector (Mobile Drawer only) */}
+                    {!isVeryNarrowPanel && (
+                        (isMobile && isDrawer) ? (
+                            <div className="flex justify-center w-full">
+                                <VoiceSelector variant="tiny" showLabel={false} />
+                            </div>
+                        ) : <div />
+                    )}
                     {/* Right column: Auto-advance + Add button + Close button */}
                     <div className={`flex items-center gap-2 shrink-0 ${isVeryNarrowPanel ? 'justify-center w-full' : 'justify-end'}`}>
                         {/* Auto-advance toggle - desktop sidebar only */}
@@ -1050,7 +1057,6 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar',
                                                                     numerals={displayNotes.map(note => getAbsoluteDegree(note))}
                                                                     onNotePlay={handleNotePlay}
                                                                     compact={true}
-                                                                    width="100%"
                                                                 />
                                                             </div>
                                                         )}
