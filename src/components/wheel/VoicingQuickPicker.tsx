@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import clsx from 'clsx';
 import { playChord } from '../../utils/audioEngine';
 import { useMobileLayout } from '../../hooks/useIsMobile';
-import { Info, Plus, ChevronLeft, ChevronRight, GripHorizontal, MoveRight, X } from 'lucide-react';
+import { Info, Plus, ChevronLeft, ChevronRight, MoveRight, X } from 'lucide-react';
 import { VoiceSelector } from '../playback/VoiceSelector';
 import { useSongStore } from '../../store/useSongStore';
 import {
@@ -725,16 +725,6 @@ export const VoicingQuickPicker: React.FC<VoicingQuickPickerProps> = ({
                 )}
             </div>
 
-
-            {/* Corner Drag Handle - More conspicuous */}
-            <div
-                onMouseDown={handleDragStart}
-                onTouchStart={handleDragStart}
-                className="drag-handle absolute bottom-1 right-1 w-7 h-7 flex items-center justify-center cursor-move text-white/50 bg-white/10 hover:bg-white/20 rounded-full transition-all border border-white/5"
-                title="Drag to reposition"
-            >
-                <GripHorizontal size={14} className="rotate-45" />
-            </div>
         </div>,
         document.body
     );
