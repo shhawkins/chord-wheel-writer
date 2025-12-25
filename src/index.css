@@ -70,6 +70,10 @@ body {
   /* Prevent text size adjustment on orientation change */
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+
+  /* DISALLOW SELECTION GLOBALLY */
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 /* On mobile, fix position to prevent address bar issues */

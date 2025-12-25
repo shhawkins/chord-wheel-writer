@@ -21,7 +21,7 @@ import clsx from 'clsx';
 import { getWheelColors, formatChordForDisplay, type Chord } from '../../utils/musicTheory';
 import { PianoKeyboard } from '../panel/PianoKeyboard';
 import { GuitarChord } from '../panel/GuitarChord';
-import { playChord } from '../../utils/audioEngine';
+import { playChord, playNote } from '../../utils/audioEngine';
 // PlaybackControls removed as we use custom controls
 import {
     DndContext,
@@ -504,8 +504,10 @@ const ChordDetailPanel: React.FC<ChordDetailPanelProps> = ({
                         <PianoKeyboard
                             highlightedNotes={displayChord.notes || []}
                             rootNote={displayChord.root}
+                            bassNote={displayChord.bassNote}
                             color={chordColor}
                             octave={4}
+                            onNotePlay={(note, octave) => playNote(note, octave)}
                         />
                     </div>
 
@@ -591,8 +593,10 @@ const ChordDetailPanel: React.FC<ChordDetailPanelProps> = ({
                     <PianoKeyboard
                         highlightedNotes={displayChord.notes || []}
                         rootNote={displayChord.root}
+                        bassNote={displayChord.bassNote}
                         color={chordColor}
                         octave={4}
+                        onNotePlay={(note, octave) => playNote(note, octave)}
                     />
                 </div>
 
