@@ -717,7 +717,7 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar',
                                         style={{
                                             backgroundColor: 'transparent',
                                             color: chordColor,
-                                            padding: '4px 10px',
+                                            padding: isCompactLandscape ? '2px 8px' : '4px 10px',
                                             borderRadius: '8px',
                                             border: `2px solid ${chordColor}`
                                         }}
@@ -855,11 +855,11 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar',
                         {chord && (
                             <button
                                 onClick={handleDiagramDoubleClick}
-                                className={`${isVeryNarrowPanel ? 'flex-1 py-2' : isMobile && isDrawer ? 'px-8 py-1.5 min-w-[100px]' : isMobile ? 'px-3 py-1.5' : 'px-2.5 py-1'} bg-gradient-to-r from-accent-primary to-purple-600 hover:opacity-90 rounded-lg transition-all touch-feedback flex items-center justify-center gap-1.5 shadow-md shadow-accent-primary/20 active:scale-95`}
+                                className={`${isVeryNarrowPanel ? 'flex-1 py-2' : isCompactLandscape ? 'px-3 py-1 h-[26px]' : isMobile && isDrawer ? 'px-8 py-1.5 min-w-[100px]' : isMobile ? 'px-3 py-1.5' : 'px-2.5 py-1'} bg-gradient-to-r from-accent-primary to-purple-600 hover:opacity-90 rounded-lg transition-all touch-feedback flex items-center justify-center gap-1.5 shadow-md shadow-accent-primary/20 active:scale-95`}
                                 title="Add chord to timeline"
                             >
-                                <Plus size={isVeryNarrowPanel ? 16 : isMobile ? 14 : 12} className="text-white" />
-                                <span className={`${isVeryNarrowPanel ? 'text-sm' : isMobile ? 'text-xs' : 'text-[11px]'} font-semibold text-white`}>Add</span>
+                                <Plus size={isCompactLandscape ? 12 : isVeryNarrowPanel ? 16 : isMobile ? 14 : 12} className="text-white" />
+                                <span className={`${isVeryNarrowPanel ? 'text-sm' : isCompactLandscape ? 'text-[10px]' : isMobile ? 'text-xs' : 'text-[11px]'} font-semibold text-white`}>Add</span>
                             </button>
                         )}
                         {/* Hide close button in landscape variants and mobile drawer - use handle/swipe instead */}
