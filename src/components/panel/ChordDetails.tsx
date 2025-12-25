@@ -705,7 +705,7 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar',
                     </div>
                 )}
                 {/* Consolidated Header - stacks vertically when panel is very narrow, otherwise 3-column grid */}
-                <div className={`${isLandscapeVariant ? 'px-3 py-2' : isMobile && isDrawer ? 'px-2 py-2' : 'px-4 py-3'} border-b border-border-subtle ${isVeryNarrowPanel ? 'flex flex-col gap-2' : 'grid grid-cols-[1fr_auto_1fr] items-center gap-2'} shrink-0 ${isDrawer ? 'bg-bg-secondary/80 backdrop-blur-md' : ''}`}>
+                <div className={`${isLandscapeVariant ? 'px-3 py-2' : isMobile && isDrawer ? 'px-2 py-2' : 'px-4 py-3'} border-b border-border-subtle ${isVeryNarrowPanel ? 'flex flex-col gap-2' : `grid grid-cols-[1.2fr_auto_1fr] items-center ${isMobile && isDrawer ? 'gap-3' : 'gap-2'}`} shrink-0 ${isDrawer ? 'bg-bg-secondary/80 backdrop-blur-md' : ''}`}>
                     {/* Left column: Chord title (centered when stacked) */}
                     <div className={`flex items-center min-w-0 ${isVeryNarrowPanel ? 'justify-center' : ''}`} style={{ gap: '8px' }}>
                         {isCompactLandscape && chord ? (
@@ -774,7 +774,7 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar',
                                         gap: '4px',
                                         backgroundColor: 'transparent',
                                         color: chordColor,
-                                        padding: '3px 8px',
+                                        padding: isMobile && isDrawer ? '3px 6px' : '3px 8px',
                                         borderRadius: '6px',
                                         border: `1.5px solid ${chordColor}`
                                     } : { gap: '4px' }}
@@ -793,7 +793,7 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar',
 
                                 {/* Inversion controls - now a separate element to the right of the badge */}
                                 {chord && !isCompactLandscape && (
-                                    <div className="flex items-center bg-bg-tertiary/40 rounded-full px-0.5 ml-1 shrink-0" title="Chord inversion - which note is in the bass">
+                                    <div className={`flex items-center bg-bg-tertiary/40 rounded-full px-0.5 ${isMobile && isDrawer ? 'ml-1' : 'ml-1.5'} shrink-0`} title="Chord inversion - which note is in the bass">
                                         <button
                                             onClick={(e) => {
                                                 e.stopPropagation();
@@ -808,8 +808,8 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar',
                                         >
                                             <ChevronLeft size={8} />
                                         </button>
-                                        <span className="text-[10px] font-semibold text-text-secondary min-w-[20px] text-center">
-                                            {getInversionName(chordInversion)}
+                                        <span className={`text-[10px] font-semibold text-text-secondary ${isMobile && isDrawer ? 'min-w-[12px]' : 'min-w-[20px]'} text-center`}>
+                                            {(isMobile && isDrawer) ? (chordInversion === 0 ? 'R' : chordInversion) : getInversionName(chordInversion)}
                                         </span>
                                         <button
                                             onClick={(e) => {
