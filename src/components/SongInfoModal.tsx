@@ -198,7 +198,6 @@ export const SongInfoModal: React.FC<SongInfoModalProps> = ({
                             <option value="4/4">4/4 (Common Time)</option>
                             <option value="3/4">3/4 (Waltz)</option>
                             <option value="2/4">2/4 (March)</option>
-                            <option value="5/4">5/4</option>
                             <option value="6/8">6/8 (Compound)</option>
                             <option value="7/8">7/8</option>
                             <option value="12/8">12/8</option>

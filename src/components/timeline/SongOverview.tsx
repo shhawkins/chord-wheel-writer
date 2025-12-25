@@ -168,10 +168,12 @@ const SortableSection = ({ section, allSections, onSelectBeat, onBeatTap, onEmpt
     const measures = section.measures;
     const displayName = getSectionDisplayName(section, allSections);
 
-    // Calculate width based on compact mode
-    const minWidth = isCompact ? 40 : 100;
-    // Ensure we respect the minimum measure width (32px + gap) to prevent cutoff
-    const effectiveMeasureWidth = Math.max(measureWidth, 32);
+    // Calculate width based on compact mode. BASE_MEASURE_WIDTH is 60.
+    const zoomLevel = measureWidth / 60;
+    const minWidth = isCompact ? Math.max(10 * zoomLevel, 10) : 100;
+    // Allow measures to shrink down to 2px when heavily zoomed out, but keep 32px as a "comfortable" min only for larger zooms if needed
+    // Actually we should just trust measureWidth since it's derived from zoom
+    const effectiveMeasureWidth = Math.max(measureWidth, 2);
     const sectionWidth = Math.max(minWidth, measures.length * effectiveMeasureWidth);
     const sectionHeight = isCompact ? 60 : 140;
 
@@ -258,18 +260,20 @@ const SortableSection = ({ section, allSections, onSelectBeat, onBeatTap, onEmpt
                 )}
             </div>
 
-            {/* Delete Button - Positioned outside drag handle */}
-            <button
-                className="absolute top-0.5 right-1 z-20 w-7 h-7 flex items-center justify-center rounded-md hover:bg-white/10 text-white/40 hover:text-red-400 transition-colors"
-                onClick={(e) => {
-                    e.stopPropagation();
-                    onRemoveSection(section.id);
-                }}
-                onPointerDown={(e) => e.stopPropagation()}
-                title="Remove Section"
-            >
-                <Trash size={15} />
-            </button>
+            {/* Delete Button - Positioned outside drag handle - hide if too narrow */}
+            {sectionWidth >= 120 && (
+                <button
+                    className="absolute top-0.5 right-1 z-20 w-7 h-7 flex items-center justify-center rounded-md hover:bg-white/10 text-white/40 hover:text-red-400 transition-colors"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onRemoveSection(section.id);
+                    }}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    title="Remove Section"
+                >
+                    <Trash size={15} />
+                </button>
+            )}
 
             {/* Content Area - Detailed Measures */}
             <div
@@ -278,7 +282,7 @@ const SortableSection = ({ section, allSections, onSelectBeat, onBeatTap, onEmpt
                 {measures.map((measure: any, mIdx: number) => (
                     <div
                         key={measure.id}
-                        className="flex-1 min-w-[32px] h-full flex flex-col gap-1"
+                        className="flex-1 min-w-[2px] h-full flex flex-col gap-1"
                     >
                         {/* Bar Number & Rhythm Indicators */}
                         <div className="h-4 flex items-end justify-between px-0.5 border-b border-white/10 pb-0.5">
@@ -298,18 +302,27 @@ const SortableSection = ({ section, allSections, onSelectBeat, onBeatTap, onEmpt
                             if (chordCount === 0) {
                                 // Show empty beats as tappable slots
                                 const firstEmptyBeat = measure.beats[0];
+                                const isPlayingMeasure = measure.beats.some((b: any) => b.id === playingSlotId);
+
                                 return (
                                     <div
-                                        className="flex-1 rounded-sm bg-white/5 border border-dashed border-white/10 flex items-center justify-center cursor-pointer hover:bg-white/10 hover:border-white/20 transition-colors"
+                                        className={clsx(
+                                            "flex-1 rounded-sm flex items-center justify-center cursor-pointer transition-all duration-150",
+                                            isPlayingMeasure
+                                                ? "bg-green-500/20 border-2 border-green-500 shadow-[0_0_12px_rgba(34,197,94,0.5)] z-10 scale-105"
+                                                : "bg-white/5 border border-dashed border-white/10 hover:bg-white/10 hover:border-white/20"
+                                        )}
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             if (firstEmptyBeat) {
                                                 onEmptySlotTap(section.id, firstEmptyBeat.id);
                                             }
                                         }}
-                                        title="Tap to select this slot"
+                                        title={isPlayingMeasure ? "Perform empty measures" : "Tap to select this slot"}
                                     >
-                                        <span className="text-[10px] text-white/20">+</span>
+                                        <span className={clsx("text-[10px]", isPlayingMeasure ? "opacity-0" : "text-white/20")}>
+                                            +
+                                        </span>
                                     </div>
                                 );
                             }
@@ -621,6 +634,7 @@ export const SongOverview: React.FC<SongOverviewProps> = ({ onSave, onExport }) 
         tempo,
         setTempo,
         playingSectionId,
+        playingSlotId,
         openTimeline,
         removeSection,
         undo,
@@ -864,11 +878,11 @@ export const SongOverview: React.FC<SongOverviewProps> = ({ onSave, onExport }) 
             {isMobile && isLandscape ? (
                 // COMPACT LANDSCAPE HEADER
                 <div
-                    className="shrink-0 relative z-20 flex items-center justify-between px-4 py-2 bg-gradient-to-b from-black/80 to-transparent"
-                    style={{ paddingTop: 'max(8px, env(safe-area-inset-top))' }}
+                    className="shrink-0 relative z-20 flex items-center justify-between px-4 py-1 bg-gradient-to-b from-black/80 to-transparent"
+                    style={{ paddingTop: 'max(4px, env(safe-area-inset-top))' }}
                     onClick={(e) => e.stopPropagation()}
                 >
-                    <h2 className="font-bold text-white text-sm truncate flex-1 mr-4">
+                    <h2 className="font-bold text-white text-xs truncate flex-1 mr-4">
                         {currentSong.title}
                         <span className="text-white/40 font-normal ml-2 text-xs opacity-70">
                             {currentSong.sections.length} sections • {totalMeasures} bars
@@ -997,7 +1011,10 @@ export const SongOverview: React.FC<SongOverviewProps> = ({ onSave, onExport }) 
                     </div>
 
                     {/* Song Stats Bar */}
-                    <div className="flex items-center gap-4 px-4 pb-4 text-[10px] font-medium text-white/40 overflow-x-auto no-scrollbar">
+                    <div
+                        className="flex items-center gap-4 px-4 pb-4 text-[10px] font-medium text-white/40 overflow-x-auto no-scrollbar"
+                        onClick={(e) => e.stopPropagation()}
+                    >
                         <div className="flex items-center gap-1.5 shrink-0">
                             <span className="text-accent-primary">{currentSong.sections.length}</span>
                             <span>Sections</span>
@@ -1018,7 +1035,10 @@ export const SongOverview: React.FC<SongOverviewProps> = ({ onSave, onExport }) 
 
 
             {/* Song Timeline Overview - More vertical space in landscape */}
-            <div className={clsx("px-4", isMobile && isLandscape ? "pb-2 flex-1 flex flex-col justify-end" : "pb-4")}>
+            <div
+                className={clsx("px-4", isMobile && isLandscape ? "pb-2 flex-1 flex flex-col justify-end" : "pb-4")}
+                onClick={(e) => e.stopPropagation()}
+            >
                 <SongTimeline
                     sections={currentSong.sections}
                     activeSectionId={(playingSectionId || selectedMapSectionId || editingSectionId) || undefined}
@@ -1250,7 +1270,7 @@ export const SongOverview: React.FC<SongOverviewProps> = ({ onSave, onExport }) 
                                         openTimeline();
                                     }}
                                     isActive={isPlaying && currentSong.sections.findIndex((s: Section) => s.id === section.id) === currentSong.sections.findIndex((s: Section) => s.id === playingSectionId)}
-                                    playingSlotId={useSongStore.getState().isPlaying ? useSongStore.getState().playingSlotId : null}
+                                    playingSlotId={playingSlotId}
                                     selectedBeatId={selectedMapBeatId}
                                     chordColors={chordColors}
                                     measureWidth={measureWidth}
@@ -1279,12 +1299,12 @@ export const SongOverview: React.FC<SongOverviewProps> = ({ onSave, onExport }) 
                         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <div className="flex items-center justify-between px-6 py-2">
+                        <div className="flex items-center justify-between px-4 py-1">
                             {/* Left: Zoom - Compact */}
                             <div className="flex items-center gap-2 w-32">
-                                <button onClick={() => setZoomLevel(Math.max(0.08, zoomLevel - 0.1))} className="p-1 active:text-white text-white/50"><ZoomOut size={16} /></button>
-                                <input type="range" min="0.08" max="2" step="0.05" value={zoomLevel} onChange={handleZoomChange} className="flex-1 h-1 bg-white/10 rounded-full appearance-none" />
-                                <button onClick={() => setZoomLevel(Math.min(2, zoomLevel + 0.1))} className="p-1 active:text-white text-white/50"><ZoomIn size={16} /></button>
+                                <button onClick={() => setZoomLevel(Math.max(0.02, zoomLevel - 0.05))} className="p-1 active:text-white text-white/50"><ZoomOut size={16} /></button>
+                                <input type="range" min="0.02" max="2" step="0.02" value={zoomLevel} onChange={handleZoomChange} className="flex-1 h-1 bg-white/10 rounded-full appearance-none" />
+                                <button onClick={() => setZoomLevel(Math.min(2, zoomLevel + 0.05))} className="p-1 active:text-white text-white/50"><ZoomIn size={16} /></button>
                             </div>
 
                             {/* Center: Play Controls - Inline */}
@@ -1293,11 +1313,11 @@ export const SongOverview: React.FC<SongOverviewProps> = ({ onSave, onExport }) 
                                 <button
                                     onClick={handlePlayPause}
                                     className={clsx(
-                                        "w-10 h-10 rounded-full flex items-center justify-center shadow-lg transition-all active:scale-95",
+                                        "w-8 h-8 rounded-full flex items-center justify-center shadow-lg transition-all active:scale-95",
                                         isPlaying ? "bg-accent-primary text-white" : "bg-accent-primary/20 text-accent-primary border border-accent-primary"
                                     )}
                                 >
-                                    {isPlaying ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" className="ml-0.5" />}
+                                    {isPlaying ? <Pause size={14} fill="currentColor" /> : <Play size={14} fill="currentColor" className="ml-0.5" />}
                                 </button>
                                 <button onClick={() => handleSkip('next')} className="text-accent-primary p-2 active:scale-95"><SkipForward size={20} fill="currentColor" /></button>
                             </div>
@@ -1323,16 +1343,16 @@ export const SongOverview: React.FC<SongOverviewProps> = ({ onSave, onExport }) 
                             {/* Zoom Control */}
                             <div className="flex items-center gap-4 w-full">
                                 <button
-                                    onClick={() => setZoomLevel(Math.max(0.08, zoomLevel - 0.1))}
+                                    onClick={() => setZoomLevel(Math.max(0.02, zoomLevel - 0.05))}
                                     className="p-2 -m-2 text-text-secondary active:text-white transition-colors"
                                 >
                                     <ZoomOut size={18} />
                                 </button>
                                 <input
                                     type="range"
-                                    min="0.08"
+                                    min="0.02"
                                     max="2"
-                                    step="0.05"
+                                    step="0.02"
                                     value={zoomLevel}
                                     onChange={handleZoomChange}
                                     onTouchStart={(e) => e.stopPropagation()}
@@ -1341,7 +1361,7 @@ export const SongOverview: React.FC<SongOverviewProps> = ({ onSave, onExport }) 
                                     style={{ WebkitAppearance: 'none' }}
                                 />
                                 <button
-                                    onClick={() => setZoomLevel(Math.min(2, zoomLevel + 0.1))}
+                                    onClick={() => setZoomLevel(Math.min(2, zoomLevel + 0.05))}
                                     className="p-2 -m-2 text-text-secondary active:text-white transition-colors"
                                 >
                                     <ZoomIn size={18} />

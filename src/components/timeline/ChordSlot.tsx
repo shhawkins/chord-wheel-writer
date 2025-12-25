@@ -9,11 +9,12 @@ import { playChord } from '../../utils/audioEngine';
 interface ChordSlotProps {
     slot: IChordSlot;
     sectionId: string;
+    measureId?: string;
     size?: number;
     width?: number;
 }
 
-export const ChordSlot: React.FC<ChordSlotProps> = ({ slot, sectionId, size = 48, width }) => {
+export const ChordSlot: React.FC<ChordSlotProps> = ({ slot, sectionId, measureId, size = 48, width }) => {
     const {
         selectedSlots,
         selectedSlotId,
@@ -26,7 +27,8 @@ export const ChordSlot: React.FC<ChordSlotProps> = ({ slot, sectionId, size = 48
         playingSlotId,
         isPlaying: isGloballyPlaying,
         clearSlot,
-        openVoicingPicker
+        openVoicingPicker,
+        resizeSlot
     } = useSongStore();
     const colors = getWheelColors();
     const resolvedWidth = width ?? size;
@@ -148,14 +150,6 @@ export const ChordSlot: React.FC<ChordSlotProps> = ({ slot, sectionId, size = 48
         if (keyIndex !== -1) {
             // Find which position this chord belongs to (major, ii, iii, or dim)
             const root = slot.chord.root;
-            // Remove 'm' or '°' from root for comparison if needed, but MAJOR_POSITIONS has full names
-            // Actually MAJOR_POSITIONS has 'Dm', 'Em' etc. so exact match should work for triad roots.
-            // But slot.chord.root is just the note name usually?
-            // Wait, slot.chord.root is 'C', 'D#', etc. stored in chord object.
-            // WheelChord adds suffixes? No, WheelChord uses root + quality.
-            // MAJOR_POSITIONS uses 'Dm' string.
-
-            // Strategy: Search for the root note in MAJOR_POSITIONS, accounting for quality
             const isMinor = slot.chord.quality.includes('minor');
             const isDim = slot.chord.quality.includes('dim') || slot.chord.quality.includes('half');
 
@@ -238,6 +232,44 @@ export const ChordSlot: React.FC<ChordSlotProps> = ({ slot, sectionId, size = 48
     // Calculate font size based on slot size
     const fontSize = Math.max(8, Math.min(12, size * 0.22));
 
+
+    // --- RESIZE LOGIC ---
+    const handleResizeStart = (e: React.PointerEvent) => {
+        e.stopPropagation(); // Don't trigger chord drag
+        const startX = e.clientX;
+        const startDuration = slot.duration;
+        const oneBeatWidth = resolvedWidth / startDuration; // Approximate width of 1.0 duration
+
+        const onMove = (moveEvent: PointerEvent) => {
+            const dx = moveEvent.clientX - startX;
+            // Snap to 0.25 (16th note) increments
+            // One beat width * deltaDuration = dx
+            // deltaDuration = dx / oneBeatWidth
+            // const rawDelta = dx / oneBeatWidth;
+            // const step = 0.25;
+
+            // We don't update store here to avoid heavy renders, we wait for Up
+            // But we could show ghost? For now simplicity: drag release commits
+        };
+
+        const onUp = (upEvent: PointerEvent) => {
+            const dx = upEvent.clientX - startX;
+            const rawDelta = dx / oneBeatWidth;
+            const step = 0.25;
+            const snappedDelta = Math.round(rawDelta / step) * step;
+
+            if (measureId && Math.abs(snappedDelta) >= step) {
+                resizeSlot(sectionId, measureId, slot.id, snappedDelta);
+            }
+
+            window.removeEventListener('pointermove', onMove);
+            window.removeEventListener('pointerup', onUp);
+        };
+
+        window.addEventListener('pointermove', onMove);
+        window.addEventListener('pointerup', onUp);
+    };
+
     return (
         <div
             ref={setDroppableRef}
@@ -289,8 +321,21 @@ export const ChordSlot: React.FC<ChordSlotProps> = ({ slot, sectionId, size = 48
                     >
                         {formatChordForDisplay(slot.chord.symbol || '')}
                     </span>
+
+                    {/* Duration badge if > 1 */}
+                    {slot.duration !== 1 && (
+                        <span className="absolute bottom-0 right-1 text-[8px] text-white/50">{slot.duration}</span>
+                    )}
                 </div>
             )}
+
+            {/* Resize Handle - Right Edge */}
+            {/* Show on hover or if selected */}
+            <div
+                className="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize z-50 hover:bg-white/20 opacity-0 hover:opacity-100 transition-opacity"
+                onPointerDown={handleResizeStart}
+                onClick={(e) => e.stopPropagation()} // Prevent click through
+            />
 
             {/* Delete badge - appears on hover */}
             {slot.chord && !isDragging && (

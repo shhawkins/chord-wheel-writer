@@ -83,6 +83,7 @@ export const Measure: React.FC<MeasureProps> = ({ measure, sectionId, index, cho
                             key={beat.id}
                             slot={beat}
                             sectionId={sectionId}
+                            measureId={measure.id}
                             size={chordSize}
                             width={slotWidth}
                         />

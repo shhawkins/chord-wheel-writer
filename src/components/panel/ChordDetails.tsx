@@ -710,27 +710,31 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar',
                     <div className={`flex items-center min-w-0 ${isVeryNarrowPanel ? 'justify-center' : ''}`} style={{ gap: '8px' }}>
                         {isCompactLandscape && chord ? (
                             <>
-                                {/* Landscape view: show chord badge, numeral, and inversion controls */}
-                                <div className="flex items-center gap-2">
-                                    <span
-                                        className="text-xs font-bold cursor-pointer touch-feedback hover:opacity-80 active:scale-95 transition-all"
-                                        style={{
-                                            backgroundColor: 'transparent',
-                                            color: chordColor,
-                                            padding: isCompactLandscape ? '2px 8px' : '4px 10px',
-                                            borderRadius: '8px',
-                                            border: `2px solid ${chordColor}`
-                                        }}
-                                        onClick={handleDiagramClick}
-                                        onDoubleClick={handleDiagramDoubleClick}
-                                    >
-                                        {getShortChordName()}
-                                    </span>
-                                    {chord.numeral && (
-                                        <span className="text-sm font-serif italic text-text-muted shrink-0">{formatChordForDisplay(chord.numeral)}</span>
-                                    )}
+                                {/* Landscape view: show chord badge, numeral, and inversion controls vertically stacked */}
+                                <div className="flex flex-col items-center justify-center gap-0.5">
+                                    <div className="flex items-center gap-2">
+                                        <span
+                                            className="text-xs font-bold cursor-pointer touch-feedback hover:opacity-80 active:scale-95 transition-all text-center"
+                                            style={{
+                                                backgroundColor: 'transparent',
+                                                color: chordColor,
+                                                padding: '2px 8px',
+                                                borderRadius: '8px',
+                                                border: `2px solid ${chordColor}`,
+                                                minWidth: '36px'
+                                            }}
+                                            onClick={handleDiagramClick}
+                                            onDoubleClick={handleDiagramDoubleClick}
+                                        >
+                                            {getShortChordName()}
+                                        </span>
+                                        {chord.numeral && (
+                                            <span className="text-xs font-serif italic text-text-muted shrink-0">{formatChordForDisplay(chord.numeral)}</span>
+                                        )}
+                                    </div>
+
                                     {/* Compact inversion controls for landscape - ultra tiny */}
-                                    <div className="flex items-center shrink-0" title="Chord inversion">
+                                    <div className="flex items-center shrink-0 justify-center w-full gap-1" title="Chord inversion">
                                         <button
                                             onClick={() => {
                                                 const newInversion = Math.max(0, chordInversion - 1);
@@ -851,8 +855,8 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar',
                                 <div className={`w-1.5 h-1.5 rounded-full transition-all ${autoAdvance ? "bg-white scale-100" : "bg-white/40 scale-75"}`} />
                             </button>
                         )}
-                        {/* Add to Timeline button */}
-                        {chord && (
+                        {/* Add to Timeline button - hidden in compact landscape */}
+                        {chord && !isCompactLandscape && (
                             <button
                                 onClick={handleDiagramDoubleClick}
                                 className={`${isVeryNarrowPanel ? 'flex-1 py-2' : isCompactLandscape ? 'px-3 py-1 h-[26px]' : isMobile && isDrawer ? 'px-8 py-1.5 min-w-[100px]' : isMobile ? 'px-3 py-1.5' : 'px-2.5 py-1'} bg-gradient-to-r from-accent-primary to-purple-600 hover:opacity-90 rounded-lg transition-all touch-feedback flex items-center justify-center gap-1.5 shadow-md shadow-accent-primary/20 active:scale-95`}

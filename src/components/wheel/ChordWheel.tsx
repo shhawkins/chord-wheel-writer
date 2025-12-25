@@ -1103,17 +1103,17 @@ export const ChordWheel: React.FC<ChordWheelProps> = ({
                     <circle cx={cx} cy={cy} r={centerRadius} fill="#1a1a24" stroke="#3a3a4a" strokeWidth="2" style={{ pointerEvents: 'none' }} />
 
                     {/* KEY Label */}
-                    <text x={cx} y={cy - 25} textAnchor="middle" fill="#6366f1" fontSize="9" fontWeight="bold" letterSpacing="2">
+                    <text x={cx} y={cy - 25} textAnchor="middle" fill="#6366f1" fontSize="9" fontWeight="bold" letterSpacing="2" style={{ pointerEvents: 'none' }}>
                         KEY
                     </text>
 
                     {/* Key Name */}
-                    <text x={cx} y={cy + 3} textAnchor="middle" fill="white" fontSize="26" fontWeight="bold">
+                    <text x={cx} y={cy + 3} textAnchor="middle" fill="white" fontSize="26" fontWeight="bold" style={{ pointerEvents: 'none' }}>
                         {formatChordForDisplay(selectedKey)}
                     </text>
 
                     {/* Key Signature */}
-                    <text x={cx} y={cy + 21} textAnchor="middle" fill="#9898a6" fontSize="11">
+                    <text x={cx} y={cy + 21} textAnchor="middle" fill="#9898a6" fontSize="11" style={{ pointerEvents: 'none' }}>
                         {keySigDisplay || 'No ♯/♭'}
                     </text>
 

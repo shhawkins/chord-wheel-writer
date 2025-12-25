@@ -3,7 +3,7 @@ import { useSongStore } from '../../store/useSongStore';
 import { playChord } from '../../utils/audioEngine';
 import { Plus, Minus, ChevronLeft, ChevronRight, Map as MapIcon, Settings2, RotateCcw, RotateCw } from 'lucide-react';
 import { SectionOptionsPopup } from './SectionOptionsPopup';
-import { useMobileLayout, useIsMobile } from '../../hooks/useIsMobile';
+import { useMobileLayout } from '../../hooks/useIsMobile';
 import { NoteValueSelector } from './NoteValueSelector';
 import { getSectionDisplayName, type Section } from '../../types';
 import { ChordSlot } from './ChordSlot';
@@ -11,9 +11,6 @@ import clsx from 'clsx';
 import {
     DndContext,
     DragOverlay,
-    closestCenter,
-    pointerWithin,
-    rectIntersection,
     KeyboardSensor,
     PointerSensor,
     TouchSensor,
@@ -51,7 +48,6 @@ const SortableSectionTab: React.FC<SortableSectionTabProps> = ({
     isDesktop,
     onActivate,
     onEdit,
-    onDelete,
 }) => {
     const {
         attributes,
@@ -255,26 +251,50 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
     // Edge scroll state for custom auto-scroll behavior
     const edgeScrollRef = useRef<number | null>(null);
     const scrollDirectionRef = useRef<'left' | 'right' | null>(null);
+    const dragStartScrollLeft = useRef<number>(0); // Scroll position when drag started
+    const [scrollOffset, setScrollOffset] = useState(0); // Accumulated scroll during drag
     const EDGE_THRESHOLD = 50; // pixels from edge to trigger scroll
     const SCROLL_SPEED = 8; // pixels per frame
 
-    // Custom collision detection that works with manual scrolling
-    // Uses pointerWithin for accurate detection after scroll
-    const scrollAwareCollision: CollisionDetection = (args) => {
-        // First try pointerWithin - most accurate for touch
-        const pointerCollisions = pointerWithin(args);
-        if (pointerCollisions.length > 0) {
-            return pointerCollisions;
+    // Custom collision detection using native DOM hit-testing
+    // This bypasses dnd-kit's internal coordinate cache which can get out of sync during manual scrolling
+    const customCollisionDetection: CollisionDetection = ({ pointerCoordinates }) => {
+        if (!pointerCoordinates) return [];
+
+        // Use native elementFromPoint to find what's actually under the finger on screen
+        // detailed hit test through the drag overlay (which has pointer-events: none)
+        const element = document.elementFromPoint(pointerCoordinates.x, pointerCoordinates.y);
+
+        if (!element) return [];
+
+        // Find the closest parent that is a droppable slot
+        const slotElement = element.closest('[data-slot-id]');
+
+        if (slotElement) {
+            const slotId = slotElement.getAttribute('data-slot-id');
+            if (slotId) {
+                // Return a collision with the specific slot ID
+                return [{
+                    id: `slot - ${slotId} `, // Matches the ID format in useDroppable
+                    data: { value: slotId }
+                }];
+            }
         }
 
-        // Fallback to rectIntersection
-        const rectCollisions = rectIntersection(args);
-        if (rectCollisions.length > 0) {
-            return rectCollisions;
+        // Fallback for reordering sections if we're not over a slot
+        // Check if we're over a section tab
+        const sectionTab = element.closest('[data-section-id]');
+        if (sectionTab) {
+            const sectionId = sectionTab.getAttribute('data-section-id');
+            if (sectionId) {
+                return [{
+                    id: sectionId,
+                    data: { value: sectionId }
+                }];
+            }
         }
 
-        // Finally fall back to closestCenter
-        return closestCenter(args);
+        return [];
     };
 
     // DnD sensors - Configured to coexist with horizontal scrolling
@@ -300,6 +320,11 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
     const handleDragStart = (event: any) => {
         setActiveDragId(event.active.id);
         setActiveDragType(event.active.data.current?.type === 'chord' ? 'chord' : 'section');
+        // Capture initial scroll position
+        if (scrollRef.current) {
+            dragStartScrollLeft.current = scrollRef.current.scrollLeft;
+        }
+        setScrollOffset(0);
     };
 
     // Stop edge scrolling helper
@@ -323,6 +348,10 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
 
             const delta = scrollDirectionRef.current === 'left' ? -SCROLL_SPEED : SCROLL_SPEED;
             scrollRef.current.scrollLeft += delta;
+
+            // Update scroll offset for drag preview
+            const currentOffset = scrollRef.current.scrollLeft - dragStartScrollLeft.current;
+            setScrollOffset(currentOffset);
 
             edgeScrollRef.current = requestAnimationFrame(scroll);
         };
@@ -427,7 +456,7 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
                 // Also scroll the section tab into view with a slight delay for DOM updates
                 setTimeout(() => {
                     if (sectionTabsRef.current) {
-                        const sectionTab = sectionTabsRef.current.querySelector(`[data - section - id= "${selectedSectionId}"]`);
+                        const sectionTab = sectionTabsRef.current.querySelector(`[data-section-id="${selectedSectionId}"]`);
                         if (sectionTab) {
                             sectionTab.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
                         }
@@ -450,7 +479,7 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
     // Auto-scroll chord container to show playing slot
     useEffect(() => {
         if (playingSlotId && scrollRef.current) {
-            const playingElement = scrollRef.current.querySelector(`[data - slot - id= "${playingSlotId}"]`);
+            const playingElement = scrollRef.current.querySelector(`[data-slot-id="${playingSlotId}"]`);
             if (playingElement) {
                 playingElement.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
             }
@@ -637,7 +666,7 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
         >
             <DndContext
                 sensors={sensors}
-                collisionDetection={scrollAwareCollision}
+                collisionDetection={customCollisionDetection}
                 onDragStart={handleDragStart}
                 onDragMove={handleDragMove}
                 onDragEnd={handleDragEnd}
@@ -676,7 +705,7 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
                             {/* Timeline Zoom Controls - Combined with Map in green area */}
                             <div className="flex items-center gap-1 border-l border-white/10 pl-1.5 h-4">
                                 <button
-                                    onClick={() => setTimelineZoom(timelineZoom - 0.1)}
+                                    onClick={() => setTimelineZoom(timelineZoom - 0.05)}
                                     className="w-4 h-4 flex items-center justify-center rounded bg-bg-tertiary/60 hover:bg-bg-tertiary text-text-muted transition-colors active:scale-90"
                                     title="Zoom Out"
                                 >
@@ -686,7 +715,7 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
                                     {Math.round(timelineZoom * 100)}%
                                 </span>
                                 <button
-                                    onClick={() => setTimelineZoom(timelineZoom + 0.1)}
+                                    onClick={() => setTimelineZoom(timelineZoom + 0.05)}
                                     className="w-4 h-4 flex items-center justify-center rounded bg-bg-tertiary/60 hover:bg-bg-tertiary text-text-muted transition-colors active:scale-90"
                                     title="Zoom In"
                                 >
@@ -802,7 +831,7 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
                             {isDesktop && (
                                 <div className="flex items-center gap-1 ml-4 pl-4 border-l border-white/10 h-6">
                                     <button
-                                        onClick={() => setTimelineZoom(timelineZoom - 0.1)}
+                                        onClick={() => setTimelineZoom(timelineZoom - 0.05)}
                                         className="w-4 h-4 flex items-center justify-center rounded bg-bg-tertiary/60 hover:bg-bg-tertiary text-text-muted transition-colors active:scale-90"
                                         title="Zoom Out"
                                     >
@@ -812,7 +841,7 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
                                         {Math.round(timelineZoom * 100)}%
                                     </span>
                                     <button
-                                        onClick={() => setTimelineZoom(timelineZoom + 0.1)}
+                                        onClick={() => setTimelineZoom(timelineZoom + 0.05)}
                                         className="w-4 h-4 flex items-center justify-center rounded bg-bg-tertiary/60 hover:bg-bg-tertiary text-text-muted transition-colors active:scale-90"
                                         title="Zoom In"
                                     >
@@ -895,7 +924,7 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
                     ref={scrollRef}
                     className={clsx(
                         "flex-1",
-                        isDesktop ? "px-3 pb-2 pt-3" : "px-1 pb-1 pt-3", // Extra top padding for delete badge
+                        isDesktop ? "px-3 pb-2 pt-3" : isLandscape ? (isCompact ? "px-4 pb-1 pt-3" : "pl-6 pr-4 pb-1 pt-3") : "px-1 pb-1 pt-3", // Expanded landscape needs more left padding
                         "min-h-0", // Ensure flex child shrinks/scrolls correctly
                         // Disable scrolling when dragging to prevent interference
                         activeDragId
@@ -906,7 +935,7 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
                     )}
                 >
                     {/* Multi-section visualization for landscape mode */}
-                    {(isLandscape ? currentSong.sections : [activeSection]).map((section, sectionIdx) => (
+                    {(isLandscape ? currentSong.sections : [activeSection]).map((section) => (
                         section && (
                             <div key={section.id} className={clsx(
                                 "flex flex-col",
@@ -928,8 +957,8 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
                                 <div className={clsx(
                                     isLandscape
                                         ? isCompact
-                                            ? "flex flex-col gap-1.5" // Landscape compact: stack bars vertically
-                                            : "grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-1" // Landscape full width: responsive grid
+                                            ? "grid grid-cols-3 gap-1.5" // Landscape compact: wider slots (3 cols)
+                                            : "grid grid-cols-3 gap-2" // Landscape expanded: 3 cols, more gap
                                         : clsx(
                                             "flex flex-row items-center",
                                             isDesktop ? "gap-1.5" : "gap-0.5" // Desktop: larger gap between measures
@@ -940,7 +969,7 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
                                             <div className={clsx(
                                                 "flex items-center",
                                                 isLandscape
-                                                    ? isCompact ? "gap-1 w-full" : "gap-1"
+                                                    ? "gap-1 min-w-0 overflow-hidden" // No w-full, allow shrinking
                                                     : isDesktop ? "gap-1 shrink-0" : "gap-0.5 shrink-0"
                                             )}>
                                                 {/* Bar marker */}
@@ -966,18 +995,17 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
                                                 <div className={clsx(
                                                     "flex items-center",
                                                     isLandscape
-                                                        ? isCompact
-                                                            ? `flex - 1 gap - 1 min - w - 0 ${measure.beats.length > 4 ? 'overflow-x-auto no-scrollbar' : 'overflow-hidden'} `
-                                                            : `flex - 1 gap - 1 min - w - 0 ${measure.beats.length > 4 ? 'overflow-x-auto no-scrollbar' : 'overflow-hidden'} `
+                                                        ? "flex-1 gap-1 min-w-0 overflow-x-auto no-scrollbar" // Allow horizontal scrolling when jammed
                                                         : "gap-0.5"
                                                 )}>
                                                     {measure.beats.map((beat) => {
                                                         const beatCount = measure.beats.length;
 
-                                                        // Landscape widths
+                                                        // Landscape widths - give more space in expanded mode
                                                         let landscapeWidth: number | undefined;
                                                         if (isLandscape) {
-                                                            landscapeWidth = Math.max(24, Math.floor(180 / Math.max(4, beatCount)));
+                                                            const baseLandscapeWidth = isCompact ? 180 : 240; // More width when expanded
+                                                            landscapeWidth = Math.max(32, Math.floor(baseLandscapeWidth / Math.max(4, beatCount)));
                                                         }
 
                                                         // Portrait widths
@@ -1160,7 +1188,13 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
 
 
                 {/* Drag Overlay for visual feedback */}
-                <DragOverlay dropAnimation={null}>
+                <DragOverlay
+                    dropAnimation={null}
+                    style={{
+                        // Apply scroll offset so preview moves with the content during edge scrolling
+                        transform: `translateX(${scrollOffset}px)`,
+                    }}
+                >
                     {activeDragId && activeDragType === 'section' && (() => {
                         const section = currentSong.sections.find(s => s.id === activeDragId);
                         if (!section) return null;

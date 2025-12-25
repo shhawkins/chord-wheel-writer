@@ -235,6 +235,7 @@ interface SongState {
     setSectionTimeSignature: (id: string, signature: [number, number]) => void;
     setMeasureSubdivision: (sectionId: string, measureId: string, steps: number) => void;
     setSectionSubdivision: (sectionId: string, steps: number) => void;
+    resizeSlot: (sectionId: string, measureId: string, slotId: string, lenChange: number) => void;
 
     addChordToSlot: (chord: Chord, sectionId: string, slotId: string) => void;
     clearSlot: (sectionId: string, slotId: string) => void;
@@ -824,7 +825,7 @@ export const useSongStore = create<SongState>()(
 
             toggleChordPanel: () => set((state) => ({ chordPanelVisible: !state.chordPanelVisible })),
             toggleTimeline: () => set((state) => ({ timelineVisible: !state.timelineVisible })),
-            setTimelineZoom: (zoom) => set({ timelineZoom: Math.max(0.3, Math.min(2, zoom)) }),
+            setTimelineZoom: (zoom) => set({ timelineZoom: Math.max(0.1, Math.min(2, zoom)) }),
             openTimeline: () => set((state) => {
                 // Dispatch custom event for mobile to open its timeline drawer
                 if (typeof window !== 'undefined') {
@@ -888,7 +889,7 @@ export const useSongStore = create<SongState>()(
                 voicingPickerState: { ...state.voicingPickerState, ...pickerState }
             })),
 
-            openVoicingPicker: (config) => set((state) => ({
+            openVoicingPicker: (config) => set({
                 selectedChord: config.chord,
                 chordInversion: config.inversion,
                 voicingPickerState: {
@@ -897,7 +898,7 @@ export const useSongStore = create<SongState>()(
                     voicingSuggestion: config.voicingSuggestion || '',
                     baseQuality: config.baseQuality || config.chord?.quality || 'major'
                 }
-            })),
+            }),
             closeVoicingPicker: () => set((state) => ({
                 voicingPickerState: {
                     ...state.voicingPickerState,
@@ -1447,7 +1448,8 @@ export const useSongStore = create<SongState>()(
 
             removeSection: (id: string) => set((state) => {
                 const history = buildHistoryState(state);
-                const { [id]: _removed, ...remainingCollapsed } = state.collapsedSections || {};
+                const remainingCollapsed = { ...state.collapsedSections };
+                delete remainingCollapsed[id];
                 return {
                     ...history,
                     currentSong: {
@@ -1701,6 +1703,81 @@ export const useSongStore = create<SongState>()(
                     ...history,
                     currentSong: { ...state.currentSong, sections: newSections },
                     ...selection,
+                };
+            }),
+
+            resizeSlot: (sectionId: string, measureId: string, slotId: string, lenChange: number) => set((state) => {
+                const history = buildHistoryState(state);
+                const newSections = state.currentSong.sections.map((section) => {
+                    if (section.id !== sectionId) return section;
+
+                    return {
+                        ...section,
+                        measures: section.measures.map((measure) => {
+                            if (measure.id !== measureId) return measure;
+
+                            const beatIndex = measure.beats.findIndex(b => b.id === slotId);
+                            if (beatIndex === -1) return measure;
+
+                            const beat = measure.beats[beatIndex];
+                            let newDuration = beat.duration + lenChange;
+
+                            // Clamp min duration
+                            if (newDuration < 0.25) return measure; // Minimum 16th note approx
+
+                            let newBeats = [...measure.beats];
+
+                            if (lenChange > 0) {
+                                // Growing: Consume subsequent beats
+                                let remainingNeed = lenChange;
+                                let nextIdx = beatIndex + 1;
+
+                                while (remainingNeed > 0.001 && nextIdx < newBeats.length) {
+                                    const nextBeat = newBeats[nextIdx];
+                                    if (nextBeat.duration <= remainingNeed + 0.001) {
+                                        // Consume entirely
+                                        remainingNeed -= nextBeat.duration;
+                                        newBeats.splice(nextIdx, 1);
+                                        // Don't increment nextIdx, we just removed one
+                                    } else {
+                                        // Partial consume
+                                        newBeats[nextIdx] = {
+                                            ...nextBeat,
+                                            duration: nextBeat.duration - remainingNeed
+                                        };
+                                        remainingNeed = 0;
+                                    }
+                                }
+
+                                // Update target beat duration
+                                // If we hit end of measure, we treat it as maxed out
+                                const consumed = lenChange - remainingNeed;
+                                newBeats[beatIndex] = { ...beat, duration: beat.duration + consumed };
+
+                            } else {
+                                // Shrinking: Add empty beat after
+                                // Only shrink if we can
+                                const shrinkAmount = Math.abs(lenChange);
+                                if (beat.duration <= shrinkAmount) return measure; // Can't shrink non-existent
+
+                                newBeats[beatIndex] = { ...beat, duration: beat.duration - shrinkAmount };
+                                // Insert filler
+                                const filler = {
+                                    id: uuidv4(),
+                                    chord: null,
+                                    duration: shrinkAmount
+                                };
+                                newBeats.splice(beatIndex + 1, 0, filler);
+                            }
+
+                            return { ...measure, beats: newBeats };
+                        })
+                    };
+                });
+
+                return {
+                    ...history,
+                    currentSong: { ...state.currentSong, sections: newSections }
                 };
             }),
 

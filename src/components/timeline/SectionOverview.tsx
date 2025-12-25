@@ -6,14 +6,14 @@
  * Designed to be displayed within the SectionOptionsPopup for visual feedback.
  */
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import clsx from 'clsx';
-import { Play, Square, Repeat } from 'lucide-react';
+import { Play, Pause, Repeat } from 'lucide-react';
 import type { Section } from '../../types';
 import { getWheelColors, formatChordForDisplay } from '../../utils/musicTheory';
-import { playChord, initAudio } from '../../utils/audioEngine';
+import { playSection, pauseSong, stopAudio } from '../../utils/audioEngine';
 import { useSongStore } from '../../store/useSongStore';
-import * as Tone from 'tone';
+import { useMobileLayout } from '../../hooks/useIsMobile';
 
 interface SectionPreviewProps {
     section: Section;
@@ -35,7 +35,7 @@ const SECTION_THEMES: Record<string, { bg: string; border: string; accent: strin
 };
 
 // Add hook import
-import { useMobileLayout } from '../../hooks/useIsMobile';
+// Moved import to top
 
 export const SectionOverview: React.FC<SectionPreviewProps> = ({
     section,
@@ -43,7 +43,7 @@ export const SectionOverview: React.FC<SectionPreviewProps> = ({
     className,
     onSlotClick
 }) => {
-    const { tempo, isLooping, toggleLoop } = useSongStore();
+    const { isLooping, toggleLoop, isPlaying, playingSlotId } = useSongStore();
     const { isLandscape, isMobile } = useMobileLayout();
     const chordColors = getWheelColors();
     const theme = SECTION_THEMES[section.type] || SECTION_THEMES.custom;
@@ -52,9 +52,7 @@ export const SectionOverview: React.FC<SectionPreviewProps> = ({
     const measureCount = section.measures.length;
 
     // Play state
-    const [isPlaying, setIsPlaying] = useState(false);
-    const [playingBeatId, setPlayingBeatId] = useState<string | null>(null);
-    const timeoutIdsRef = useRef<number[]>([]);
+
 
     // Calculate scaling based on number of bars
     // Scale down to fit in a fixed container width (around 260px)
@@ -72,99 +70,29 @@ export const SectionOverview: React.FC<SectionPreviewProps> = ({
     const isVeryCompact = measureCount > 12 || (isLandscape && isMobile && measureCount > 10);
 
     // Stop playback
-    const stopPlayback = () => {
-        timeoutIdsRef.current.forEach(id => clearTimeout(id));
-        timeoutIdsRef.current = [];
-        setIsPlaying(false);
-        setPlayingBeatId(null);
-    };
-
-    // Stop playback when section changes or modal closes
+    // Stop playback when section changes
     useEffect(() => {
         // When section.id changes, stop any existing playback
-        stopPlayback();
-
-        // Cleanup on unmount (modal close)
-        return () => {
-            timeoutIdsRef.current.forEach(id => clearTimeout(id));
-            timeoutIdsRef.current = [];
-        };
+        stopAudio();
     }, [section.id]);
 
-    // Play section chords once or loop
-    const playSectionOnce = async () => {
-        if (isPlaying) {
-            stopPlayback();
-            return;
-        }
-
-        // Initialize audio
-        if (Tone.context.state !== 'running') {
-            await Tone.start();
-        }
-        if (Tone.context.state === 'suspended') {
-            await Tone.context.resume();
-        }
-        await initAudio();
-
-        setIsPlaying(true);
-        const msPerBeat = (60 / tempo) * 1000;
-        const stepsPerMeasure = section.measures[0]?.beats.length || beatsPerBar;
-        const beatsPerStep = beatsPerBar / stepsPerMeasure;
-        const msPerStep = beatsPerStep * msPerBeat;
-
-        const runFullSection = () => {
-            // Schedule highlighting and audio for each beat slot
-            let stepIndex = 0;
-            section.measures.forEach((measure) => {
-                measure.beats.forEach((beat) => {
-                    const delayMs = stepIndex * msPerStep;
-
-                    // Schedule highlighting for this beat (regardless of whether it has a chord)
-                    const highlightTimeoutId = window.setTimeout(() => {
-                        setPlayingBeatId(beat.id);
-                    }, delayMs);
-                    timeoutIdsRef.current.push(highlightTimeoutId);
-
-                    // Schedule audio if there's a chord
-                    if (beat.chord && beat.chord.notes && beat.chord.notes.length > 0) {
-                        const audioTimeoutId = window.setTimeout(() => {
-                            // Calculate duration: use whole step duration, capped at 1 bar
-                            const durationBeats = Math.min(beatsPerStep, beatsPerBar);
-                            const noteValue = 4 / durationBeats;
-                            const durationStr = `${noteValue}n`;
-                            playChord(beat.chord!.notes, durationStr);
-                        }, delayMs);
-                        timeoutIdsRef.current.push(audioTimeoutId);
-                    }
-
-                    stepIndex++;
-                });
-            });
-
-            // Schedule end or loop
-            const totalSteps = section.measures.reduce((acc, m) => acc + m.beats.length, 0);
-            const sectionDurationMs = totalSteps * msPerStep;
-
-            const endTimeoutId = window.setTimeout(() => {
-                if (useSongStore.getState().isLooping) {
-                    // Loop: clear previous timeouts and restart
-                    timeoutIdsRef.current = [];
-                    runFullSection();
-                } else {
-                    setIsPlaying(false);
-                    setPlayingBeatId(null);
-                    timeoutIdsRef.current = [];
-                }
-            }, sectionDurationMs);
-            timeoutIdsRef.current.push(endTimeoutId);
+    // Ensure audio stops when modal closes (unmount)
+    useEffect(() => {
+        return () => {
+            stopAudio();
         };
+    }, []);
 
-        runFullSection();
+    const handlePlayToggle = () => {
+        if (isPlaying) {
+            pauseSong();
+        } else {
+            playSection(section);
+        }
     };
 
     return (
-        <div className={clsx("w-full", className)}>
+        <div className={clsx("w-full my-1", className)}>
             {/* Section Preview Container */}
             <div
                 className={clsx(
@@ -178,7 +106,7 @@ export const SectionOverview: React.FC<SectionPreviewProps> = ({
 
                 {/* Measures Grid */}
                 <div
-                    className={clsx("pl-2 pr-3 overflow-hidden", isLandscape && isMobile ? "py-1" : "py-2")}
+                    className={clsx("pl-2 pr-3 overflow-hidden", isLandscape && isMobile ? "py-0.5" : "py-2")}
                     style={{ maxHeight: isVeryCompact ? '80px' : isCompact ? '100px' : '120px' }}
                 >
                     <div
@@ -234,7 +162,7 @@ export const SectionOverview: React.FC<SectionPreviewProps> = ({
                                             const chordColor = hasChord
                                                 ? (chordColors[chord!.root as keyof typeof chordColors] || '#666')
                                                 : '#666';
-                                            const isCurrentlyPlaying = playingBeatId === beat.id;
+                                            const isCurrentlyPlaying = playingSlotId === beat.id;
 
                                             // Scale font size based on slot count and compactness
                                             const slotCount = measure.beats.length;
@@ -320,23 +248,23 @@ export const SectionOverview: React.FC<SectionPreviewProps> = ({
                 {/* Footer info */}
                 <div className={clsx(
                     "bg-black/20 border-t border-white/5 flex items-center gap-2",
-                    isLandscape && isMobile ? "px-2 py-1" : "px-2 py-1.5"
+                    isLandscape && isMobile ? "px-2 py-0.5" : "px-2 py-1.5"
                 )}>
                     <div className="flex items-center gap-1">
                         {/* Play button */}
                         <button
-                            onClick={playSectionOnce}
+                            onClick={handlePlayToggle}
                             className={clsx(
                                 "rounded-full flex items-center justify-center transition-all",
                                 "hover:scale-110 active:scale-95",
-                                isLandscape && isMobile ? "w-5 h-5" : "w-6 h-6",
+                                isLandscape && isMobile ? "w-4 h-4" : "w-6 h-6",
                                 isPlaying
                                     ? "bg-red-500/80 text-white"
                                     : "bg-accent-primary/20 text-accent-primary hover:bg-accent-primary/30"
                             )}
-                            title={isPlaying ? "Stop" : "Play section"}
+                            title={isPlaying ? "Pause" : "Play section"}
                         >
-                            {isPlaying ? <Square size={10} /> : <Play size={12} className="ml-0.5" />}
+                            {isPlaying ? <Pause size={10} /> : <Play size={12} className="ml-0.5" />}
                         </button>
 
                         {/* Cycle toggle */}
@@ -348,7 +276,7 @@ export const SectionOverview: React.FC<SectionPreviewProps> = ({
                             className={clsx(
                                 "rounded-full flex items-center justify-center transition-all",
                                 "hover:scale-110 active:scale-95",
-                                isLandscape && isMobile ? "w-5 h-5" : "w-6 h-6",
+                                isLandscape && isMobile ? "w-4 h-4" : "w-6 h-6",
                                 isLooping
                                     ? "bg-accent-primary text-white shadow-lg shadow-accent-primary/20"
                                     : "bg-white/5 text-white/30 hover:bg-white/10 hover:text-white/50"

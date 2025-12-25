@@ -1,5 +1,5 @@
 import * as Tone from 'tone';
-import type { InstrumentType, Song, CustomInstrument } from '../types';
+import type { InstrumentType, Song, CustomInstrument, Section } from '../types';
 import { useSongStore } from '../store/useSongStore';
 
 type InstrumentName = InstrumentType;
@@ -145,7 +145,7 @@ export const unlockAudioForIOS = async (): Promise<void> => {
 
 // Visibility change handling for audio context resumption
 let visibilityHandlerInstalled = false;
-let audioContextSuspendedByVisibility = false;
+
 
 /**
  * Callback type for notifying the app that audio needs user gesture to resume
@@ -188,7 +188,7 @@ export const tryResumeAudioContext = async (): Promise<boolean> => {
 
         // Check if we successfully resumed
         if (Tone.context.state === 'running') {
-            audioContextSuspendedByVisibility = false;
+
             onAudioResumeNeeded?.(false);
             return true;
         }
@@ -215,7 +215,7 @@ const handleVisibilityChange = async (): Promise<void> => {
         // Page is now visible - check if we need to resume
         if (Tone.context.state === 'suspended') {
             console.log('[Audio] Page visible but audio suspended - attempting resume');
-            audioContextSuspendedByVisibility = true;
+
 
             // Attempt auto-resume
             const resumed = await tryResumeAudioContext();
@@ -569,7 +569,7 @@ const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
  * Play a chord with proper voicing
  * Notes are spread across octaves to sound musical
  */
-export const playChord = async (notes: string[], duration: string = "1n", time?: number | string) => {
+export const playChord = async (notes: string[], duration: string | number = "1n", time?: number | string) => {
     if (Tone.context.state !== 'running') {
         await Tone.start();
     }
@@ -677,6 +677,10 @@ export const playNote = async (note: string, octave: number = 4, duration: strin
 export const stopAudio = () => {
     Object.values(instruments).forEach(inst => inst?.releaseAll());
     Tone.Transport.stop();
+    // Cancel all scheduled events
+    Tone.Transport.cancel(0);
+    scheduledEvents = [];
+
     // Reset playhead in store
     const { setPlayingSlot, setIsPlaying } = useSongStore.getState();
     setPlayingSlot(null, null);
@@ -702,62 +706,87 @@ export const scheduleSong = (song: Song) => {
     scheduledEvents = [];
     sectionStartTimes = {};
 
-    // Ensure Transport time signature is default 4/4 for our linear beat calculation
-    Tone.Transport.timeSignature = 4;
+    // --- TIME-BASED SCHEDULING ---
+    // We bypass Tone's "bars:beats" grid because it defaults to 4/4 and is hard to change dynamically.
+    // Instead, we calculate the exact time in seconds for every beat.
 
-    let currentBeats = 0;
+    const currentTempo = useSongStore.getState().tempo;
+    const secondsPerBeat = 60 / currentTempo;
+
+    let cumulativeTime = 0;
 
     song.sections.forEach(section => {
-        sectionStartTimes[section.id] = currentBeats;
-
+        sectionStartTimes[section.id] = cumulativeTime; // Store start time in seconds
         section.measures.forEach(measure => {
             measure.beats.forEach(beat => {
-                const time = beatsToTransportTime(currentBeats);
-                const durationBeats = beat.duration;
-                // Convert duration to Tone notation approx (e.g. 1n, 2n, 4n) or seconds
-                // Actually triggerAttackRelease takes time.
-                // We'll calculate 16th note count for duration
-                const durationSixteenths = durationBeats * 4;
-                const durationStr = `${Math.floor(durationSixteenths / 16)}:${Math.floor((durationSixteenths % 16) / 4)}:${durationSixteenths % 4}`;
+                const durationSeconds = beat.duration * secondsPerBeat;
+                const scheduledTime = cumulativeTime;
 
-                const eventId = Tone.Transport.schedule((scheduledTime) => {
-                    // Calculate actual delay until the chord should play
-                    // scheduledTime is the audio context time when this event should happen
-                    // Tone.context.currentTime is the current audio context time
-                    // The difference tells us how far ahead we are
-                    const delaySeconds = Math.max(0, scheduledTime - Tone.context.currentTime);
+
+
+                // Schedule the event at this exact time
+                const eventId = Tone.Transport.schedule((time) => {
+                    // Update UI - calculate delay from now
+                    const delaySeconds = Math.max(0, time - Tone.context.currentTime);
                     const delayMs = delaySeconds * 1000;
 
-                    // Update UI after the calculated delay - this syncs the visual with the audio
                     setTimeout(() => {
                         useSongStore.getState().setPlayingSlot(section.id, beat.id);
                     }, delayMs);
 
-                    // Play Sound (Tone.js handles the timing internally with scheduledTime)
+                    // Play Sound
                     if (beat.chord) {
-                        playChord(beat.chord.notes, durationStr, scheduledTime);
+                        playChord(beat.chord.notes, durationSeconds, time);
                     }
-                }, time);
+                }, scheduledTime);
 
                 scheduledEvents.push(eventId);
-                currentBeats += durationBeats;
+
+                // Advance time for next event
+                cumulativeTime += durationSeconds;
             });
         });
     });
 
-    // Schedule stop at the end
-    const endEventId = Tone.Transport.schedule(() => {
-        if (!useSongStore.getState().isLooping) {
-            stopAudio();
-        }
-    }, beatsToTransportTime(currentBeats));
-    scheduledEvents.push(endEventId);
+    // Handle Looping
 
-    // Set loop points if needed (default to full song loop if no specific section loop logic yet)
-    // Note: The store's 'isLooping' currently loops the *currently playing section* per requirements
-    // "if the cycle button is toggled, the currently playing (or selected) section will loop"
+    Tone.Transport.loopStart = 0;
+    Tone.Transport.loopEnd = cumulativeTime;
+    Tone.Transport.loop = useSongStore.getState().isLooping;
+
+    if (!Tone.Transport.loop) {
+        // Schedule stop at the end
+        const stopId = Tone.Transport.schedule(() => {
+            stopAudio();
+        }, cumulativeTime);
+        scheduledEvents.push(stopId);
+    }
 };
 
+
+export const playSection = async (section: Section) => {
+    await initAudio();
+    if (Tone.context.state !== 'running') {
+        await Tone.context.resume();
+    }
+
+    // Stop current playback to ensure clean slate
+    stopAudio();
+
+    // Create a temporary song structure with just this section
+    const tempSong: Song = {
+        ...useSongStore.getState().currentSong,
+        sections: [section]
+    };
+
+    const { tempo } = useSongStore.getState();
+    Tone.Transport.bpm.value = tempo;
+
+    scheduleSong(tempSong);
+
+    Tone.Transport.start();
+    useSongStore.getState().setIsPlaying(true);
+};
 
 export const preloadAudio = async () => {
     await initAudio();

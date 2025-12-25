@@ -23,7 +23,7 @@ export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
     const containerRef = useRef<HTMLDivElement>(null);
     const activePointers = useRef<Set<number>>(new Set()); // Track active pointer IDs
     const lastPlayedByPointer = useRef<Map<number, string>>(new Map()); // Last note per pointer
-    const [activeKeys, setActiveKeys] = useState<Set<string>>(new Set()); // Visual feedback for all active keys
+    const [activeNotesState, setActiveNotesState] = useState<Set<string>>(new Set()); // Visual feedback for all active keys
 
     // Convert note name to pitch class (0-11) for accurate comparison
     const noteToPitchClass = (note: string): number => {
@@ -72,7 +72,7 @@ export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
         if (lastNote !== noteKey) {
             lastPlayedByPointer.current.set(pointerId, noteKey);
             // Update visual feedback - add this key to active set
-            setActiveKeys(prev => {
+            setActiveNotesState(prev => {
                 const newSet = new Set(prev);
                 // Remove old key for this pointer if exists
                 if (lastNote) newSet.delete(lastNote);
@@ -93,7 +93,7 @@ export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
 
         // Remove visual feedback for this pointer's note
         if (lastNote) {
-            setActiveKeys(prev => {
+            setActiveNotesState(prev => {
                 const newSet = new Set(prev);
                 newSet.delete(lastNote);
                 return newSet;
@@ -208,7 +208,7 @@ export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
                 const isRoot = getIsRoot(note);
                 const isBass = getIsBass(note);
                 const noteKey = `${note}-${keyOctave}`;
-                const isActive = activeKeys.has(noteKey);
+                const isActive = activeNotesState.has(noteKey);
 
                 keys.push(
                     <div
@@ -290,7 +290,7 @@ export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
                 const isBass = getIsBass(note);
                 const leftPos = octaveOffset + offset;
                 const noteKey = `${note}-${keyOctave}`;
-                const isActive = activeKeys.has(noteKey);
+                const isActive = activeNotesState.has(noteKey);
 
                 keys.push(
                     <div

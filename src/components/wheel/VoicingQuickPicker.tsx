@@ -149,6 +149,11 @@ export const VoicingQuickPicker: React.FC<VoicingQuickPickerProps> = ({
         return () => { if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current); };
     }, [isOpen, resetFadeTimer]);
 
+    // Reset position when orientation changes to prevent being stuck off-screen
+    useEffect(() => {
+        setModalPosition(null); // Reset to default position for new orientation
+    }, [isLandscape]);
+
     useEffect(() => {
         if (!isOpen) return;
         const handleClickOutside = (e: MouseEvent | TouchEvent) => {
@@ -449,9 +454,10 @@ export const VoicingQuickPicker: React.FC<VoicingQuickPickerProps> = ({
             onWheel={(e) => e.stopPropagation()}
             className={clsx(
                 "fixed bg-bg-elevated/65 backdrop-blur-md border border-white/10 rounded-2xl shadow-2xl select-none",
-                "flex flex-col p-3 gap-3",
+                isLandscapeMobile ? "flex flex-col p-3 gap-2" : "flex flex-col p-3 gap-3",
                 "animate-in fade-in zoom-in-95 duration-200",
-                "min-w-[320px] touch-none"
+                isLandscapeMobile ? "min-w-[200px]" : "min-w-[320px]",
+                "touch-none"
             )}
             onMouseDown={(e) => e.stopPropagation()}
             onTouchStart={(e) => {
@@ -475,15 +481,15 @@ export const VoicingQuickPicker: React.FC<VoicingQuickPickerProps> = ({
                                 ? `translate3d(12px, calc(100vh - 480px), 0)`
                                 : `translate3d(12px, calc(100vh - 400px), 0)`))),
                 maxWidth: isMobile
-                    ? (isLandscape ? '480px' : 'calc(100vw - 24px)')
+                    ? (isLandscape ? '280px' : 'calc(100vw - 24px)')
                     : '520px',
                 width: isMobile
-                    ? (isLandscape ? '480px' : 'calc(100vw - 24px)')
+                    ? (isLandscape ? '280px' : 'calc(100vw - 24px)')
                     : '520px'
             }}
         >
             {/* ROW 1: VOICINGS & QUICK ACTIONS */}
-            <div className="flex items-center gap-2 w-full h-11 shrink-0">
+            <div className={clsx("flex items-center gap-2 w-full shrink-0", isLandscapeMobile ? "h-10" : "h-11")}>
                 <div
                     onWheel={(e) => e.stopPropagation()}
                     className="flex flex-row items-center overflow-x-auto no-scrollbar mask-linear-fade flex-1 min-w-0 gap-1.5 h-full"
@@ -498,7 +504,9 @@ export const VoicingQuickPicker: React.FC<VoicingQuickPickerProps> = ({
                                 onTouchEnd={(e) => { e.stopPropagation(); handleTouchEnd(e, () => handleVoicingClick(voicing.quality)); }}
                                 className={clsx(
                                     "flex items-center justify-center rounded-xl transition-all shrink-0 active:scale-95 outline-none",
-                                    isTiny ? "min-w-[36px] h-full px-1" : "min-w-[44px] h-full px-2.5",
+                                    isLandscapeMobile
+                                        ? "min-w-[32px] h-full px-1"
+                                        : (isTiny ? "min-w-[36px] h-full px-1" : "min-w-[44px] h-full px-2.5"),
                                     isSelected
                                         ? "bg-accent-primary text-white"
                                         : "text-text-secondary hover:text-text-primary hover:bg-bg-tertiary border border-white/5"
@@ -518,11 +526,11 @@ export const VoicingQuickPicker: React.FC<VoicingQuickPickerProps> = ({
                         onTouchEnd={(e) => { e.stopPropagation(); handleTouchEnd(e, () => handleAllVoicingsClick()); }}
                         className={clsx(
                             "flex items-center justify-center rounded-xl transition-all shrink-0 active:scale-95 outline-none",
-                            "min-w-[80px] h-full px-3",
+                            isLandscapeMobile ? "min-w-[60px] h-full px-2" : "min-w-[80px] h-full px-3",
                             "text-accent-primary hover:text-white hover:bg-accent-primary border border-accent-primary/20 bg-accent-primary/5"
                         )}
                     >
-                        <span className="font-bold text-[10px] uppercase tracking-wider">
+                        <span className={clsx("font-bold uppercase tracking-wider", isLandscapeMobile ? "text-[8px]" : "text-[10px]")}>
                             All Voicings
                         </span>
                     </button>
@@ -536,7 +544,7 @@ export const VoicingQuickPicker: React.FC<VoicingQuickPickerProps> = ({
                             onClick={(e) => { e.stopPropagation(); onOpenDetails(); onClose(); }}
                             onTouchStart={handleTouchStart}
                             onTouchEnd={(e) => { e.stopPropagation(); handleTouchEnd(e, () => { onOpenDetails(); onClose(); }); }}
-                            className="w-10 h-full flex items-center justify-center rounded-xl text-text-tertiary hover:text-text-primary hover:bg-bg-tertiary transition-colors outline-none"
+                            className={clsx("flex items-center justify-center rounded-xl text-text-tertiary hover:text-text-primary hover:bg-bg-tertiary transition-colors outline-none", isLandscapeMobile ? "w-8 h-full" : "w-10 h-full")}
                         >
                             <Info size={18} />
                         </button>
@@ -553,7 +561,8 @@ export const VoicingQuickPicker: React.FC<VoicingQuickPickerProps> = ({
                             });
                         }}
                         className={clsx(
-                            "w-10 h-full flex flex-col items-center justify-center rounded-xl transition-all outline-none no-touch-enlarge",
+                            "flex flex-col items-center justify-center rounded-xl transition-all outline-none no-touch-enlarge",
+                            isLandscapeMobile ? "w-8 h-full" : "w-10 h-full",
                             autoAdvance
                                 ? "bg-accent-primary text-white shadow-[0_0_12px_rgba(99,102,241,0.4)] border border-white/20"
                                 : "text-text-tertiary hover:text-text-primary hover:bg-bg-tertiary border border-white/5 bg-white/5"
@@ -582,7 +591,7 @@ export const VoicingQuickPicker: React.FC<VoicingQuickPickerProps> = ({
                                     if (qualityToAdd) { onAddToTimeline(qualityToAdd); }
                                 });
                             }}
-                            className="w-10 h-full flex items-center justify-center rounded-xl bg-accent-primary/30 text-accent-primary hover:bg-accent-primary hover:text-white transition-all shadow-sm outline-none"
+                            className={clsx("flex items-center justify-center rounded-xl bg-accent-primary/30 text-accent-primary hover:bg-accent-primary hover:text-white transition-all shadow-sm outline-none", isLandscapeMobile ? "w-8 h-full" : "w-10 h-full")}
                         >
                             <Plus size={20} />
                         </button>
@@ -593,7 +602,10 @@ export const VoicingQuickPicker: React.FC<VoicingQuickPickerProps> = ({
             {/* ROW 2: IN-KEY CHORD BADGES (Single scrollable row) */}
             <div
                 onWheel={(e) => e.stopPropagation()}
-                className="flex flex-row items-center overflow-x-auto no-scrollbar mask-linear-fade w-full gap-2 py-0.5 shrink-0 h-11"
+                className={clsx(
+                    "flex flex-row items-center overflow-x-auto overflow-y-hidden touch-pan-x no-scrollbar mask-linear-fade w-full gap-2 py-0.5 shrink-0",
+                    isLandscapeMobile ? "h-12" : "h-12"
+                )}
             >
                 {inKeyChords.map((chord, idx) => {
                     const chordColor = colors[chord.root as keyof typeof colors] || '#6366f1';
@@ -639,7 +651,7 @@ export const VoicingQuickPicker: React.FC<VoicingQuickPickerProps> = ({
             </div>
 
             {/* ROW 3: INVERSION & INSTRUMENT */}
-            <div className="flex items-center justify-between gap-3 pt-2 border-t border-white/5 w-full h-11 shrink-0">
+            <div className={clsx("flex items-center justify-between gap-3 border-t border-white/5 w-full shrink-0", isLandscapeMobile ? "h-10 pt-1" : "h-11 pt-2")}>
                 <div className="flex items-center bg-bg-tertiary/60 border border-white/10 rounded-xl px-1 h-full flex-1 shadow-inner overflow-hidden">
                     <button
                         onClick={(e) => { e.stopPropagation(); handleInversionChange('down'); }}
@@ -674,12 +686,14 @@ export const VoicingQuickPicker: React.FC<VoicingQuickPickerProps> = ({
                     </button>
                 </div>
 
-                <VoiceSelector
-                    variant="default"
-                    showLabel={true}
-                    className="flex-1 shrink-0 h-full"
-                    onInteraction={resetFadeTimer}
-                />
+                {!isLandscapeMobile && (
+                    <VoiceSelector
+                        variant="default"
+                        showLabel={true}
+                        className="flex-1 shrink-0 h-full"
+                        onInteraction={resetFadeTimer}
+                    />
+                )}
             </div>
 
             {/* Corner Drag Handle - More conspicuous */}
