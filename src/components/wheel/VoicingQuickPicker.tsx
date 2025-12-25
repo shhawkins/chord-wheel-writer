@@ -477,7 +477,7 @@ export const VoicingQuickPicker: React.FC<VoicingQuickPickerProps> = ({
                     ? `translate3d(${modalPosition.x}px, ${modalPosition.y}px, 0)`
                     : (isLandscapeMobile
                         // Mobile landscape: position near bottom-left with safe area padding
-                        ? `translate3d(max(env(safe-area-inset-left), 16px), calc(100dvh - 340px - env(safe-area-inset-bottom)), 0)`
+                        ? `translate3d(max(env(safe-area-inset-left), 16px), calc(100dvh - 210px - env(safe-area-inset-bottom)), 0)`
                         : (portraitWithPanel
                             // Portrait with panel: higher position
                             ? `translate3d(12px, calc(100dvh - 450px - env(safe-area-inset-bottom)), 0)`
@@ -724,8 +724,8 @@ export const VoicingQuickPicker: React.FC<VoicingQuickPickerProps> = ({
                 {!isLandscapeMobile && (
                     <VoiceSelector
                         variant="default"
-                        showLabel={true}
-                        className="flex-1 shrink-0 h-full"
+                        showLabel={false}
+                        className="shrink-0 h-full"
                         onInteraction={resetFadeTimer}
                     />
                 )}
