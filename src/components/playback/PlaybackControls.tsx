@@ -283,12 +283,9 @@ export const PlaybackControls: React.FC = () => {
             {/* Safe Area Status Bar - uses bottom space visually without interactive elements */}
             {isMobile && (
                 <div
-                    className="w-full bg-bg-elevated/50 flex justify-center items-start pt-[6px]"
+                    className="w-full bg-bg-elevated/50 flex justify-center items-start"
                     style={{ height: 'env(safe-area-inset-bottom)', minHeight: 'env(safe-area-inset-bottom)' }}
-                >
-                    {/* Visual indicator of timeline progress or just a decorative handle */}
-                    <div className="w-32 h-1 rounded-full bg-white/5" />
-                </div>
+                />
             )}
         </div>
     );
