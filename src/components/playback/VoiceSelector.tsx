@@ -171,29 +171,34 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
 
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent | TouchEvent) => {
-            // Check if click is on the button
-            if (buttonRef.current && buttonRef.current.contains(e.target as Node)) {
+            const target = e.target as HTMLElement;
+            if (!target || !(target instanceof Element)) return;
+
+            // Don't close if clicking the button (handled by its own onClick)
+            if (buttonRef.current?.contains(target)) return;
+
+            // Don't close if clicking inside the menu
+            if (target.closest('.voice-selector-menu')) return;
+
+            setShowMenu(false);
+        };
+
+        // Handle scroll to close the menu when container scrolls, but NOT when menu itself scrolls
+        const handleScroll = (e: Event) => {
+            if (!showMenu) return;
+
+            const target = e.target as HTMLElement;
+            if (target && target instanceof Element && target.closest('.voice-selector-menu')) {
                 return;
             }
 
-            // If explicit menu ref check is needed we can add it, but portal structure makes it tricky
-            // We'll rely on the menu wrapper closing itself if click is outside
-            // Check if the click target is inside the portal menu (we'll add a class/id)
-            const target = e.target as HTMLElement;
-            if (!target.closest('.voice-selector-menu')) {
-                setShowMenu(false);
-            }
-        };
-
-        // Handle scroll to update position or close? Closing is safer.
-        const handleScroll = () => {
-            if (showMenu) setShowMenu(false);
+            setShowMenu(false);
         };
 
         if (showMenu) {
             document.addEventListener('mousedown', handleClickOutside);
-            document.addEventListener('touchstart', handleClickOutside as any);
-            window.addEventListener('scroll', handleScroll, true);
+            document.addEventListener('touchstart', handleClickOutside, { passive: true });
+            window.addEventListener('scroll', handleScroll, { capture: true, passive: true });
         }
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
@@ -247,6 +252,8 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
                         ...menuStyle,
                         width: '12rem', // w-48
                     }}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onTouchStart={(e) => e.stopPropagation()}
                     onClick={(e) => e.stopPropagation()}
                 >
                     <div className="px-2 py-1.5 mb-1 text-[10px] font-bold text-text-muted uppercase tracking-wider">

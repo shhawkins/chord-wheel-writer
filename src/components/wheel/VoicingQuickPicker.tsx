@@ -131,12 +131,19 @@ export const VoicingQuickPicker: React.FC<VoicingQuickPickerProps> = ({
 
     useEffect(() => {
         if (!isOpen) return;
-        const handleClickOutside = (e: MouseEvent) => {
-            // Exceptions for click-outside: don't close if clicking the timeline toggle or wheel areas
+        const handleClickOutside = (e: MouseEvent | TouchEvent) => {
+            // Exceptions for click-outside: don't close if clicking the timeline toggle, wheel areas,
+            // or the voice selector menu portal (which is outside the modal in DOM)
             const target = e.target as HTMLElement;
-            if (target.closest('.timeline-toggle') || target.closest('.mobile-timeline-drawer')) return;
+            if (!target || !(target instanceof Element)) return;
 
-            if (modalRef.current && !modalRef.current.contains(e.target as Node)) onClose();
+            if (
+                target.closest('.timeline-toggle') ||
+                target.closest('.mobile-timeline-drawer') ||
+                target.closest('.voice-selector-menu')
+            ) return;
+
+            if (modalRef.current && !modalRef.current.contains(target)) onClose();
         };
         const timeoutId = setTimeout(() => {
             document.addEventListener('mousedown', handleClickOutside);
