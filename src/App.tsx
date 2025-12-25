@@ -254,10 +254,10 @@ function App() {
       justShowedPasswordUpdateRef.current = true;
     } else if (isNewUser && user?.email) {
       clearIsNewUserFlag();
-      setNotification({ message: `🎉 Welcome to Songwriter Wheel!\nSigned up as ${user.email}` });
+      setNotification({ message: `🎉 Welcome to Songwriter Wheel!\nSigned\u00A0up\u00A0as ${user.email}` });
       justShowedPasswordUpdateRef.current = true;
     } else if (user?.email && !prevUserRef.current?.email && !justShowedPasswordUpdateRef.current) {
-      setNotification({ message: `Successfully signed in as\n${user.email}` });
+      setNotification({ message: `Successfully\u00A0signed\u00A0in\u00A0as\n${user.email}` });
     }
   }, [user, wasPasswordJustUpdated, isNewUser, clearPasswordUpdatedFlag, clearIsNewUserFlag]);
 
@@ -1936,10 +1936,10 @@ function App() {
 
       {/* Toast Notification */}
       {notification && (
-        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[2000] px-6 py-3 bg-stone-800/95 backdrop-blur-md border border-stone-700 text-white text-sm font-medium rounded-2xl shadow-2xl animate-in fade-in slide-in-from-top-4 duration-300 flex items-center gap-4 max-w-[90vw]">
-          <div className="flex items-start gap-3">
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[2000] px-6 py-3 bg-stone-800/95 backdrop-blur-md border border-stone-700 text-white text-sm font-medium rounded-2xl shadow-2xl animate-in fade-in slide-in-from-top-4 duration-300 flex items-center gap-4 w-max max-w-[90vw] min-w-[280px]">
+          <div className="flex items-start gap-3 flex-1">
             <div className="w-2 h-2 rounded-full bg-green-500 mt-1.5 shrink-0" />
-            <div className="whitespace-pre-wrap leading-relaxed">
+            <div className="whitespace-pre-wrap leading-relaxed break-words flex-1">
               {notification.message}
             </div>
           </div>
