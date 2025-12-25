@@ -257,8 +257,10 @@ let currentVibratoDepth = 0;
 let currentDistortionAmount = 0;
 let currentPitchShift = 0; // Octaves or Semitones
 
-
-// Chain: Instrument -> PitchShift -> Vibrato -> Distortion -> EQ3 -> Gain -> Chorus -> Delay -> Reverb -> Limiter -> Destination
+let currentDelayFeedback = 0.3;
+let currentTremoloDepth = 0;
+let currentPhaserMix = 0;
+// Chain: Instrument -> PitchShift -> Vibrato -> Tremolo -> Phaser -> Distortion -> EQ3 -> Gain -> Chorus -> Delay -> Reverb -> Limiter -> Destination
 let masterEQ: Tone.EQ3 | null = null;
 let masterGain: Tone.Gain | null = null;
 let masterReverb: Tone.Reverb | null = null;
@@ -266,6 +268,8 @@ let masterChorus: Tone.Chorus | null = null;
 let masterDelay: Tone.PingPongDelay | null = null;
 let masterDistortion: Tone.Distortion | null = null;
 let masterVibrato: Tone.Vibrato | null = null;
+let masterTremolo: Tone.Tremolo | null = null;
+let masterPhaser: Tone.Phaser | null = null;
 let masterPitchShift: Tone.PitchShift | null = null;
 let effectsChainInitialized = false;
 
@@ -292,7 +296,7 @@ const initMasterEffectsChain = async () => {
     if (!masterDelay) {
         masterDelay = new Tone.PingPongDelay({
             delayTime: currentDelayTime,
-            feedback: 0.3,
+            feedback: currentDelayFeedback,
             wet: currentDelayMix
         }).connect(masterReverb);
     }
@@ -333,13 +337,33 @@ const initMasterEffectsChain = async () => {
         }).connect(masterEQ);
     }
 
-    // Create Vibrato (connects to Distortion)
+    // Create Phaser (connects to Distortion)
+    if (!masterPhaser) {
+        masterPhaser = new Tone.Phaser({
+            frequency: 0.5,
+            octaves: 3,
+            baseFrequency: 350,
+            wet: currentPhaserMix
+        }).connect(masterDistortion);
+    }
+
+    // Create Tremolo (connects to Phaser)
+    if (!masterTremolo) {
+        masterTremolo = new Tone.Tremolo({
+            frequency: 4, // Hz
+            depth: currentTremoloDepth,
+            wet: currentTremoloDepth > 0 ? 1 : 0
+        }).connect(masterPhaser);
+        masterTremolo.start();
+    }
+
+    // Create Vibrato (connects to Tremolo)
     if (!masterVibrato) {
         masterVibrato = new Tone.Vibrato({
             frequency: 5,
             depth: currentVibratoDepth,
             wet: currentVibratoDepth > 0 ? 1 : 0
-        }).connect(masterDistortion);
+        }).connect(masterTremolo);
     }
 
     // Create PitchShift (connects to Vibrato) - This is the entry point
@@ -454,6 +478,43 @@ export const setDistortionAmount = async (amount: number) => {
 };
 
 /**
+ * Set the delay feedback.
+ * @param amount - Feedback amount (0 to 1)
+ */
+export const setDelayFeedback = async (amount: number) => {
+    await initMasterEffectsChain();
+    currentDelayFeedback = Math.max(0, Math.min(1, amount));
+    if (masterDelay) {
+        masterDelay.feedback.value = currentDelayFeedback;
+    }
+};
+
+/**
+ * Set the tremolo depth.
+ * @param depth - Depth (0 to 1)
+ */
+export const setTremoloDepth = async (depth: number) => {
+    await initMasterEffectsChain();
+    currentTremoloDepth = Math.max(0, Math.min(1, depth));
+    if (masterTremolo) {
+        masterTremolo.depth.rampTo(currentTremoloDepth, 0.1);
+        masterTremolo.wet.rampTo(currentTremoloDepth > 0 ? 1 : 0, 0.1);
+    }
+};
+
+/**
+ * Set the phaser mix.
+ * @param mix - Mix (0 to 1)
+ */
+export const setPhaserMix = async (mix: number) => {
+    await initMasterEffectsChain();
+    currentPhaserMix = Math.max(0, Math.min(1, mix));
+    if (masterPhaser) {
+        masterPhaser.wet.rampTo(currentPhaserMix, 0.1);
+    }
+};
+
+/**
  * Set the pitch shift amount (in semitones).
  * @param pitch - Pitch shift in semitones
  */
@@ -477,6 +538,9 @@ export const getEffectValues = () => ({
     chorus: currentChorusMix,
     vibrato: currentVibratoDepth,
     distortion: currentDistortionAmount,
+    feedback: currentDelayFeedback,
+    tremolo: currentTremoloDepth,
+    phaser: currentPhaserMix,
     pitch: currentPitchShift
 });
 

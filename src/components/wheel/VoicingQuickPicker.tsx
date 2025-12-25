@@ -517,7 +517,10 @@ export const VoicingQuickPicker: React.FC<VoicingQuickPickerProps> = ({
                     e.stopPropagation();
                     onClose();
                 }}
-                className="absolute top-0.5 right-0.5 w-7 h-7 flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-white/10 rounded-full transition-colors z-20"
+                className={clsx(
+                    "absolute right-0.5 w-7 h-7 flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-white/10 rounded-full transition-colors z-20",
+                    isLandscapeMobile ? "-top-1" : "top-0.5"
+                )}
                 aria-label="Close"
             >
                 <X size={14} />

@@ -165,6 +165,9 @@ interface SongState {
     chorusMix: number;
     vibratoDepth: number;
     distortionAmount: number;
+    delayFeedback: number;
+    tremoloDepth: number;
+    phaserMix: number;
     pitchShift: number; // Semitones (usually octaves in UI)
     isMuted: boolean;
     customInstruments: CustomInstrument[];
@@ -197,6 +200,9 @@ interface SongState {
     setChorusMix: (mix: number) => void;
     setVibratoDepth: (depth: number) => void;
     setDistortionAmount: (amount: number) => void;
+    setDelayFeedback: (amount: number) => void;
+    setTremoloDepth: (amount: number) => void;
+    setPhaserMix: (amount: number) => void;
     setPitchShift: (shift: number) => void;
     resetInstrumentControls: () => void;
     toggleSectionCollapsed: (sectionId: string) => void;
@@ -542,6 +548,9 @@ export const useSongStore = create<SongState>()(
             reverbMix: 0.15,      // Default 15% reverb
             delayMix: 0,          // Default no delay
             chorusMix: 0,         // Default no chorus
+            delayFeedback: 0.3,   // Default 30% feedback
+            tremoloDepth: 0,      // Default no tremolo
+            phaserMix: 0,         // Default no phaser
             vibratoDepth: 0,
             distortionAmount: 0,
             pitchShift: 0,
@@ -1248,12 +1257,18 @@ export const useSongStore = create<SongState>()(
             setChorusMix: (mix) => set({ chorusMix: mix }),
             setVibratoDepth: (depth) => set({ vibratoDepth: depth }),
             setDistortionAmount: (amount) => set({ distortionAmount: amount }),
+            setDelayFeedback: (amount) => set({ delayFeedback: amount }),
+            setTremoloDepth: (amount) => set({ tremoloDepth: amount }),
+            setPhaserMix: (amount) => set({ phaserMix: amount }),
             setPitchShift: (shift) => set({ pitchShift: shift }),
             resetInstrumentControls: () => set({
                 instrumentGain: 1.0,
                 tone: 0,
                 pitchShift: 0,
                 distortionAmount: 0,
+                delayFeedback: 0.3,
+                tremoloDepth: 0,
+                phaserMix: 0,
                 reverbMix: 0.15,
                 delayMix: 0,
                 chorusMix: 0,

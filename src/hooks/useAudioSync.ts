@@ -24,6 +24,9 @@ import {
     setChorusMix as setAudioChorusMix,
     setVibratoDepth as setAudioVibratoDepth,
     setDistortionAmount as setAudioDistortionAmount,
+    setDelayFeedback as setAudioDelayFeedback,
+    setTremoloDepth as setAudioTremoloDepth,
+    setPhaserMix as setAudioPhaserMix,
     setPitchShift as setAudioPitchShift,
     preloadAudio
 } from '../utils/audioEngine';
@@ -43,6 +46,9 @@ export const useAudioSync = () => {
         chorusMix,
         vibratoDepth,
         distortionAmount,
+        delayFeedback,
+        tremoloDepth,
+        phaserMix,
         pitchShift
     } = useSongStore();
 
@@ -105,6 +111,21 @@ export const useAudioSync = () => {
     useEffect(() => {
         setAudioPitchShift(pitchShift);
     }, [pitchShift]);
+
+    // Sync delay feedback
+    useEffect(() => {
+        setAudioDelayFeedback(delayFeedback);
+    }, [delayFeedback]);
+
+    // Sync tremolo depth
+    useEffect(() => {
+        setAudioTremoloDepth(tremoloDepth);
+    }, [tremoloDepth]);
+
+    // Sync phaser mix
+    useEffect(() => {
+        setAudioPhaserMix(phaserMix);
+    }, [phaserMix]);
 
     // Preload audio on mount
     useEffect(() => {
