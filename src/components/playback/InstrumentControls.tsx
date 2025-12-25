@@ -4,6 +4,7 @@ import { useSongStore } from '../../store/useSongStore';
 import { X, Volume2, Music, Waves, Play } from 'lucide-react';
 import { clsx } from 'clsx';
 import { playChord } from '../../utils/audioEngine';
+import { VoiceSelector } from './VoiceSelector';
 import {
     getWheelColors,
     getContrastingTextColor,
@@ -136,7 +137,8 @@ export const InstrumentControls: React.FC = () => {
     const {
         instrumentControlsModalVisible,
         toggleInstrumentControlsModal,
-        instrument,
+        instrumentControlsPosition,
+        setInstrumentControlsPosition,
         toneControl,
         setToneControl,
         instrumentGain,
@@ -149,8 +151,8 @@ export const InstrumentControls: React.FC = () => {
 
     // -- Draggable Logic (Copied/Adapted from VoicingQuickPicker) --
     const modalRef = useRef<HTMLDivElement>(null);
-    // Initialize position to a sensible default (top-right) using transform from the start
-    const [modalPosition, setModalPosition] = useState<{ x: number; y: number }>({ x: -1, y: -1 });
+    // Initialize position to persisted value or sensible default (centered)
+    const [modalPosition, setModalPosition] = useState<{ x: number; y: number }>({ x: -999, y: -999 });
     const [initialized, setInitialized] = useState(false);
     const isDraggingModal = useRef(false);
     const dragOffset = useRef({ x: 0, y: 0 });
@@ -159,15 +161,24 @@ export const InstrumentControls: React.FC = () => {
     // Initialize position after first render to avoid jitter
     useEffect(() => {
         if (instrumentControlsModalVisible && !initialized) {
-            // Calculate initial position (top-right corner with margins)
-            const initialX = window.innerWidth - 220; // 200px width + 20px margin
-            const initialY = 80;
-            setModalPosition({ x: initialX, y: initialY });
+            if (instrumentControlsPosition) {
+                // Use persisted position
+                setModalPosition(instrumentControlsPosition);
+            } else {
+                // Calculate centered position
+                const width = Math.min(window.innerWidth - 40, 320); // Approx width
+                const height = 300; // Approx height
+                const initialX = Math.max(20, (window.innerWidth - width) / 2);
+                const initialY = Math.max(80, (window.innerHeight - height) / 2);
+                setModalPosition({ x: initialX, y: initialY });
+            }
             setInitialized(true);
         }
-    }, [instrumentControlsModalVisible, initialized]);
+    }, [instrumentControlsModalVisible, initialized, instrumentControlsPosition]);
 
-    // Reset initialization when modal closes so it reopens fresh
+    // Reset initialization when modal closes so it reopens fresh?
+    // Actually, we want to KEEP the position state alive if possible, or just rely on 'instrumentControlsPosition'
+    // If we close and reopen, 'initialized' resets to false, then useEffect runs -> checks store -> sets position. Correct.
     useEffect(() => {
         if (!instrumentControlsModalVisible) {
             setInitialized(false);
@@ -177,7 +188,7 @@ export const InstrumentControls: React.FC = () => {
     const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
         if (!modalRef.current) return;
         // Don't drag if clicking buttons/knobs (handled by propagation stop, but safety check)
-        if ((e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('.touch-none')) return;
+        if ((e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('.touch-none') || (e.target as HTMLElement).closest('.voice-selector-dropdown')) return;
 
         if (e.cancelable) e.preventDefault();
 
@@ -220,7 +231,10 @@ export const InstrumentControls: React.FC = () => {
         const handleUp = () => {
             if (isDraggingModal.current && modalRef.current) {
                 const rect = modalRef.current.getBoundingClientRect();
-                setModalPosition({ x: rect.left, y: rect.top });
+                const newPos = { x: rect.left, y: rect.top };
+                setModalPosition(newPos);
+                // Save to store for persistence
+                setInstrumentControlsPosition(newPos);
 
                 modalRef.current.style.willChange = 'auto';
                 modalRef.current.style.transition = '';
@@ -244,12 +258,9 @@ export const InstrumentControls: React.FC = () => {
             if (rafRef.current) cancelAnimationFrame(rafRef.current);
             document.body.classList.remove('dragging-modal');
         };
-    }, [instrumentControlsModalVisible]);
+    }, [instrumentControlsModalVisible, setInstrumentControlsPosition]);
 
     if (!instrumentControlsModalVisible) return null;
-
-    // Instrument Name Formatting
-    const instrumentName = instrument.charAt(0).toUpperCase() + instrument.slice(1).replace('-', ' ');
 
     // Derived Tone Value (Average of Treble/Bass tilt)
     // If Treble=5, Bass=-5 -> Tone=5.
@@ -272,8 +283,8 @@ export const InstrumentControls: React.FC = () => {
         }
     };
 
-    // Don't render until position is initialized to prevent jitter
-    if (!initialized) return null;
+    // Don't render until position is initialized and valid
+    if (!initialized || modalPosition.x === -999) return null;
 
     return createPortal(
         <div
@@ -286,7 +297,7 @@ export const InstrumentControls: React.FC = () => {
                 left: 0,
                 top: 0,
                 width: 'auto',
-                minWidth: '200px',
+                minWidth: '220px',
                 transform: `translate3d(${modalPosition.x}px, ${modalPosition.y}px, 0)`,
                 willChange: 'transform'
             }}
@@ -307,16 +318,21 @@ export const InstrumentControls: React.FC = () => {
                 <X size={16} />
             </button>
 
-            {/* Title / Instrument */}
-            <div className="text-center mb-2">
-                <div className="text-[10px] uppercase tracking-widest text-text-tertiary font-bold mb-0.5">Instrument</div>
-                <div className="text-sm font-bold text-accent-primary bg-accent-primary/10 px-3 py-1 rounded-full border border-accent-primary/20">
-                    {instrumentName}
+            {/* Title / Instrument Selector */}
+            <div className="text-center mb-2 w-full flex flex-col items-center">
+                <div className="text-[10px] uppercase tracking-widest text-text-tertiary font-bold mb-1.5">Instrument</div>
+                <div className="voice-selector-dropdown relative z-20">
+                    <VoiceSelector
+                        variant="default"
+                        showLabel={true}
+                        showSettingsIcon={false}
+                        className="min-w-[140px]"
+                    />
                 </div>
             </div>
 
             {/* Knobs Row */}
-            <div className="flex items-center gap-6 px-2">
+            <div className="flex items-center gap-6 px-2 relative z-10">
                 {/* Gain - max 200% for louder output */}
                 <Knob
                     label="Gain"
@@ -365,7 +381,7 @@ export const InstrumentControls: React.FC = () => {
                     }}
                     className={clsx(
                         "flex items-center gap-2 px-4 py-2 rounded-xl transition-all active:scale-95",
-                        "border border-white/20 shadow-lg hover:shadow-xl"
+                        "border border-white/20 shadow-lg hover:shadow-xl relative z-10"
                     )}
                     style={{
                         background: chordColor,

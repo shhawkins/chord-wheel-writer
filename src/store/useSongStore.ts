@@ -128,6 +128,7 @@ interface SongState {
     instrumentManagerModalVisible: boolean; // Toggle Instrument Manager Modal visibility
     instrumentManagerInitialView: 'list' | 'create'; // Initial view for Instrument Manager Modal
     instrumentControlsModalVisible: boolean; // Toggle Instrument Controls Modal
+    instrumentControlsPosition: { x: number; y: number } | null; // Persisted position
     collapsedSections: Record<string, boolean>; // Per-section collapsed UI state
 
     // Chord panel sections state (for portrait mode voicing picker logic)
@@ -183,6 +184,7 @@ interface SongState {
     toggleSongInfoModal: (force?: boolean) => void;
     toggleInstrumentManagerModal: (force?: boolean, view?: 'list' | 'create') => void;
     toggleInstrumentControlsModal: (force?: boolean) => void;
+    setInstrumentControlsPosition: (position: { x: number; y: number } | null) => void;
     setToneControl: (treble: number, bass: number) => void;
     setInstrumentGain: (gain: number) => void;
     setReverbMix: (mix: number) => void;
@@ -499,6 +501,7 @@ export const useSongStore = create<SongState>()(
             instrumentManagerModalVisible: false,
             instrumentManagerInitialView: 'list' as 'list' | 'create',
             instrumentControlsModalVisible: false,
+            instrumentControlsPosition: null, // null = centered, otherwise {x, y}
             collapsedSections: {},
             chordPanelGuitarExpanded: false,  // Collapsed by default on mobile
             chordPanelScrollTarget: null as SongState['chordPanelScrollTarget'],
@@ -1221,6 +1224,7 @@ export const useSongStore = create<SongState>()(
             toggleInstrumentControlsModal: (force) => set((state) => ({
                 instrumentControlsModalVisible: force !== undefined ? force : !state.instrumentControlsModalVisible
             })),
+            setInstrumentControlsPosition: (position) => set({ instrumentControlsPosition: position }),
             setToneControl: (treble, bass) => set({ toneControl: { treble, bass } }),
             setInstrumentGain: (gain) => set({ instrumentGain: gain }),
             setReverbMix: (mix) => set({ reverbMix: mix }),

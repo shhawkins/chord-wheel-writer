@@ -21,6 +21,7 @@ interface VoiceSelectorProps {
     className?: string;
     variant?: 'default' | 'compact' | 'tiny';
     showLabel?: boolean;
+    showSettingsIcon?: boolean;
     onInteraction?: () => void;
 }
 
@@ -28,6 +29,7 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
     className,
     variant = 'default',
     showLabel = true,
+    showSettingsIcon = true,
     onInteraction
 }) => {
     const {
@@ -81,13 +83,6 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
         if (!showMenu && buttonRef.current) {
             // Calculate position when opening
             const rect = buttonRef.current.getBoundingClientRect();
-            // Default to opening upwards (above the button) as per original design
-            // but check if there's space, else open downwards? 
-            // Original code used "bottom-full", so it opens UP.
-            // Let's replicate this behavior with fixed positioning.
-
-            // We want the bottom of the menu to be at rect.top - 8px.
-            // And right aligned or left aligned? Original was right-0 (right aligned to container, but here container is button).
 
             // Check viewport space
             const windowHeight = window.innerHeight;
@@ -242,33 +237,35 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
                 {showLabel && <span className="font-medium whitespace-nowrap">{currentLabel}</span>}
                 <ChevronDown size={variant === 'tiny' ? 10 : 12} className={clsx("transition-transform", showMenu && "rotate-180")} />
 
-                {/* Settings icon - integrated into dropdown button */}
-                <div
-                    className="border-l border-white/10 pl-1.5 ml-1 p-1 -m-1"
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
-                        toggleInstrumentControlsModal();
-                        onInteraction?.();
-                    }}
-                    onTouchStart={(e) => {
-                        // Prevent the button's touch handlers from capturing this
-                        e.stopPropagation();
-                    }}
-                    onTouchEnd={(e) => {
-                        e.stopPropagation();
-                        if (e.cancelable) e.preventDefault();
-                        // Clear the parent's touch ref so it doesn't fire
-                        touchStartRef.current = null;
-                        toggleInstrumentControlsModal();
-                        onInteraction?.();
-                    }}
-                >
-                    <Settings2
-                        size={variant === 'tiny' ? 12 : 14}
-                        className="opacity-60 hover:opacity-100 transition-opacity"
-                    />
-                </div>
+                {/* Settings icon - optional */}
+                {showSettingsIcon && (
+                    <div
+                        className="border-l border-white/10 pl-1.5 ml-1 p-1 -m-1"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            toggleInstrumentControlsModal();
+                            onInteraction?.();
+                        }}
+                        onTouchStart={(e) => {
+                            // Prevent the button's touch handlers from capturing this
+                            e.stopPropagation();
+                        }}
+                        onTouchEnd={(e) => {
+                            e.stopPropagation();
+                            if (e.cancelable) e.preventDefault();
+                            // Clear the parent's touch ref so it doesn't fire
+                            touchStartRef.current = null;
+                            toggleInstrumentControlsModal();
+                            onInteraction?.();
+                        }}
+                    >
+                        <Settings2
+                            size={variant === 'tiny' ? 12 : 14}
+                            className="opacity-60 hover:opacity-100 transition-opacity"
+                        />
+                    </div>
+                )}
             </button>
 
             {showMenu && createPortal(
