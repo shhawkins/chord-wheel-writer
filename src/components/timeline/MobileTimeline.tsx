@@ -265,8 +265,9 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
     const dragStartScrollLeft = useRef<number>(0); // Scroll position when chord drag started
     const sectionDragStartScrollLeft = useRef<number>(0); // Scroll position when section drag started
     const [scrollOffset, setScrollOffset] = useState(0); // Accumulated scroll during drag
-    const EDGE_THRESHOLD = 50; // pixels from edge to trigger scroll
-    const SCROLL_SPEED = 8; // pixels per frame
+    const EDGE_THRESHOLD = 35; // pixels from edge to trigger scroll - reduced from 50 to avoid accidental triggers
+    const SCROLL_SPEED = 12; // max pixels per frame - increases as you get closer to edge
+    const scrollIntensityRef = useRef<number>(0);
 
     // Custom collision detection using native DOM hit-testing for CHORDS
     // This bypasses dnd-kit's internal coordinate cache which can get out of sync during manual scrolling
@@ -339,23 +340,39 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
         scrollDirectionRef.current = null;
     };
 
-    // Start edge scrolling in a direction
-    const startEdgeScroll = (direction: 'left' | 'right', type: 'chord' | 'section') => {
-        if (scrollDirectionRef.current === direction) return; // Already scrolling this way
+    // Start edge scrolling in a direction with variable intensity (speed)
+    const startEdgeScroll = (direction: 'left' | 'right', type: 'chord' | 'section', intensity: number) => {
+        scrollIntensityRef.current = intensity;
+
+        if (scrollDirectionRef.current === direction) return; // Already scrolling this way, just update intensity
 
         stopEdgeScroll();
         scrollDirectionRef.current = direction;
 
         const scroll = () => {
             const container = type === 'chord' ? scrollRef.current : sectionTabsRef.current;
-            const startScroll = type === 'chord' ? dragStartScrollLeft.current : sectionDragStartScrollLeft.current;
-
             if (!container || !scrollDirectionRef.current) return;
 
-            const delta = scrollDirectionRef.current === 'left' ? -SCROLL_SPEED : SCROLL_SPEED;
+            // Check if we can actually scroll in the requested direction
+            const canScrollLeft = container.scrollLeft > 0;
+            const maxScroll = container.scrollWidth - container.clientWidth;
+            const canScrollRight = container.scrollLeft < maxScroll - 1;
+
+            if (scrollDirectionRef.current === 'left' && !canScrollLeft) {
+                stopEdgeScroll();
+                return;
+            }
+            if (scrollDirectionRef.current === 'right' && !canScrollRight) {
+                stopEdgeScroll();
+                return;
+            }
+
+            const speed = SCROLL_SPEED * scrollIntensityRef.current;
+            const delta = scrollDirectionRef.current === 'left' ? -speed : speed;
             container.scrollLeft += delta;
 
             // Update scroll offset for drag preview
+            const startScroll = type === 'chord' ? dragStartScrollLeft.current : sectionDragStartScrollLeft.current;
             const currentOffset = container.scrollLeft - startScroll;
             setScrollOffset(currentOffset);
 
@@ -392,15 +409,24 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
         if (event.active.data.current?.type !== 'chord') return;
 
         const containerRect = scrollRef.current.getBoundingClientRect();
-        const initialRect = event.active.rect.current.initial;
-        if (!initialRect) return;
 
-        const currentX = initialRect.left + initialRect.width / 2 + event.delta.x;
+        // Calculate current pointer position using activator event and delta
+        const pointerX = event.activatorEvent instanceof MouseEvent
+            ? event.activatorEvent.clientX + event.delta.x
+            : (event.activatorEvent instanceof TouchEvent && event.activatorEvent.touches.length > 0)
+                ? event.activatorEvent.touches[0].clientX + event.delta.x
+                : containerRect.left + containerRect.width / 2;
 
-        if (currentX < containerRect.left + EDGE_THRESHOLD) {
-            startEdgeScroll('left', 'chord');
-        } else if (currentX > containerRect.right - EDGE_THRESHOLD) {
-            startEdgeScroll('right', 'chord');
+        const distLeft = pointerX - containerRect.left;
+        const distRight = containerRect.right - pointerX;
+
+        if (distLeft < EDGE_THRESHOLD) {
+            // Speed increases as we get closer to or past the edge
+            const intensity = Math.max(0.1, 1 - Math.max(0, distLeft) / EDGE_THRESHOLD);
+            startEdgeScroll('left', 'chord', intensity);
+        } else if (distRight < EDGE_THRESHOLD) {
+            const intensity = Math.max(0.1, 1 - Math.max(0, distRight) / EDGE_THRESHOLD);
+            startEdgeScroll('right', 'chord', intensity);
         } else {
             stopEdgeScroll();
         }
@@ -412,15 +438,24 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
         if (event.active.data.current?.type !== 'section') return;
 
         const containerRect = sectionTabsRef.current.getBoundingClientRect();
-        const initialRect = event.active.rect.current.initial;
-        if (!initialRect) return;
 
-        const currentX = initialRect.left + initialRect.width / 2 + event.delta.x;
+        // Calculate current pointer position using activator event and delta
+        const pointerX = event.activatorEvent instanceof MouseEvent
+            ? event.activatorEvent.clientX + event.delta.x
+            : (event.activatorEvent instanceof TouchEvent && event.activatorEvent.touches.length > 0)
+                ? event.activatorEvent.touches[0].clientX + event.delta.x
+                : containerRect.left + containerRect.width / 2;
 
-        if (currentX < containerRect.left + EDGE_THRESHOLD) {
-            startEdgeScroll('left', 'section');
-        } else if (currentX > containerRect.right - EDGE_THRESHOLD) {
-            startEdgeScroll('right', 'section');
+        const distLeft = pointerX - containerRect.left;
+        const distRight = containerRect.right - pointerX;
+
+        if (distLeft < EDGE_THRESHOLD) {
+            // Speed increases as we get closer to or past the edge
+            const intensity = Math.max(0.1, 1 - Math.max(0, distLeft) / EDGE_THRESHOLD);
+            startEdgeScroll('left', 'section', intensity);
+        } else if (distRight < EDGE_THRESHOLD) {
+            const intensity = Math.max(0.1, 1 - Math.max(0, distRight) / EDGE_THRESHOLD);
+            startEdgeScroll('right', 'section', intensity);
         } else {
             stopEdgeScroll();
         }
