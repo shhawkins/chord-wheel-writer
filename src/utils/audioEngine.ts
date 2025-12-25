@@ -330,11 +330,11 @@ export const setToneControl = async (treble: number, bass: number) => {
 
 /**
  * Set the master gain/volume for all instruments.
- * @param gain - Volume level (0 to 1)
+ * @param gain - Volume level (0 to 2.0, where 1.0 = 100%)
  */
 export const setMasterGain = async (gain: number) => {
     await initMasterEffectsChain();
-    currentVolumeGain = Math.max(0, Math.min(1, gain));
+    currentVolumeGain = Math.max(0, Math.min(2.0, gain));
     if (masterGain) {
         masterGain.gain.rampTo(currentVolumeGain, 0.05);
     }

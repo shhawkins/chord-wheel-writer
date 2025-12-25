@@ -22,6 +22,7 @@ import { OnboardingTooltip } from './components/OnboardingTooltip';
 import { SongInfoModal } from './components/SongInfoModal';
 import { KeySelectorModal } from './components/KeySelectorModal';
 import { InstrumentManagerModal } from './components/playback/InstrumentManagerModal';
+import { InstrumentControls } from './components/playback/InstrumentControls';
 import { AuthModal } from './components/auth/AuthModal';
 import { useAuthStore } from './stores/authStore';
 import { User as UserIcon } from 'lucide-react';
@@ -1933,6 +1934,9 @@ function App() {
       {instrumentManagerModalVisible && (
         <InstrumentManagerModal onClose={() => toggleInstrumentManagerModal(false)} />
       )}
+
+      {/* Instrument Controls Modal - rendered at app level to persist through header/footer visibility changes */}
+      <InstrumentControls />
 
       {/* Toast Notification */}
       {notification && (

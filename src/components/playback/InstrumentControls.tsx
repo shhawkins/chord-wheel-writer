@@ -1,8 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useSongStore } from '../../store/useSongStore';
-import { X, Volume2, Music, Waves } from 'lucide-react';
+import { X, Volume2, Music, Waves, Play } from 'lucide-react';
 import { clsx } from 'clsx';
+import { playChord } from '../../utils/audioEngine';
+import {
+    getWheelColors,
+    getContrastingTextColor,
+    formatChordForDisplay,
+    invertChord
+} from '../../utils/musicTheory';
 
 // --- Knob Component ---
 interface KnobProps {
@@ -135,15 +142,37 @@ export const InstrumentControls: React.FC = () => {
         instrumentGain,
         setInstrumentGain,
         reverbMix,
-        setReverbMix
+        setReverbMix,
+        selectedChord,
+        chordInversion
     } = useSongStore();
 
     // -- Draggable Logic (Copied/Adapted from VoicingQuickPicker) --
     const modalRef = useRef<HTMLDivElement>(null);
-    const [modalPosition, setModalPosition] = useState<{ x: number; y: number } | null>(null);
+    // Initialize position to a sensible default (top-right) using transform from the start
+    const [modalPosition, setModalPosition] = useState<{ x: number; y: number }>({ x: -1, y: -1 });
+    const [initialized, setInitialized] = useState(false);
     const isDraggingModal = useRef(false);
     const dragOffset = useRef({ x: 0, y: 0 });
     const rafRef = useRef<number | null>(null);
+
+    // Initialize position after first render to avoid jitter
+    useEffect(() => {
+        if (instrumentControlsModalVisible && !initialized) {
+            // Calculate initial position (top-right corner with margins)
+            const initialX = window.innerWidth - 220; // 200px width + 20px margin
+            const initialY = 80;
+            setModalPosition({ x: initialX, y: initialY });
+            setInitialized(true);
+        }
+    }, [instrumentControlsModalVisible, initialized]);
+
+    // Reset initialization when modal closes so it reopens fresh
+    useEffect(() => {
+        if (!instrumentControlsModalVisible) {
+            setInitialized(false);
+        }
+    }, [instrumentControlsModalVisible]);
 
     const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
         if (!modalRef.current) return;
@@ -231,26 +260,35 @@ export const InstrumentControls: React.FC = () => {
         setToneControl(val, -val);
     };
 
+    // Get chord colors for badge
+    const colors = getWheelColors();
+    const chordColor = selectedChord ? colors[selectedChord.root as keyof typeof colors] || '#6366f1' : '#6366f1';
+    const contrastColor = getContrastingTextColor(chordColor);
+
+    const handlePlayChord = () => {
+        if (selectedChord?.notes) {
+            const invertedNotes = invertChord(selectedChord.notes, chordInversion);
+            playChord(invertedNotes);
+        }
+    };
+
+    // Don't render until position is initialized to prevent jitter
+    if (!initialized) return null;
+
     return createPortal(
         <div
             ref={modalRef}
             className={clsx(
                 "fixed z-50 flex flex-col items-center gap-4 p-4",
-                "bg-bg-elevated/80 backdrop-blur-md border border-white/10 rounded-2xl shadow-2xl",
-                "animate-in fade-in zoom-in-95 duration-200"
+                "bg-bg-elevated/80 backdrop-blur-md border border-white/10 rounded-2xl shadow-2xl"
             )}
             style={{
-                top: 80, // Initial position
-                right: 20,
+                left: 0,
+                top: 0,
                 width: 'auto',
                 minWidth: '200px',
-                transform: modalPosition
-                    ? `translate3d(${modalPosition.x}px, ${modalPosition.y}px, 0)`
-                    : undefined,
-                // If modalPosition is set, we need to unset top/right or use them as base?
-                // The dragging logic uses transform relative to viewport (0,0) if we use rect.left/top.
-                // So if modalPosition is set, we should set left:0, top:0 to allow transform to work absolutely.
-                ...(modalPosition ? { left: 0, top: 0, right: 'auto' } : {})
+                transform: `translate3d(${modalPosition.x}px, ${modalPosition.y}px, 0)`,
+                willChange: 'transform'
             }}
             onMouseDown={handleDragStart}
             onTouchStart={handleDragStart}
@@ -279,12 +317,12 @@ export const InstrumentControls: React.FC = () => {
 
             {/* Knobs Row */}
             <div className="flex items-center gap-6 px-2">
-                {/* Gain */}
+                {/* Gain - max 200% for louder output */}
                 <Knob
                     label="Gain"
                     value={instrumentGain}
                     min={0}
-                    max={1.5}
+                    max={2.0}
                     onChange={setInstrumentGain}
                     formatValue={(v) => `${Math.round(v * 100)}%`}
                     icon={<Volume2 />}
@@ -312,6 +350,35 @@ export const InstrumentControls: React.FC = () => {
                     icon={<Waves />}
                 />
             </div>
+
+            {/* Chord Preview Badge */}
+            {selectedChord && (
+                <button
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        handlePlayChord();
+                    }}
+                    onTouchEnd={(e) => {
+                        e.stopPropagation();
+                        if (e.cancelable) e.preventDefault();
+                        handlePlayChord();
+                    }}
+                    className={clsx(
+                        "flex items-center gap-2 px-4 py-2 rounded-xl transition-all active:scale-95",
+                        "border border-white/20 shadow-lg hover:shadow-xl"
+                    )}
+                    style={{
+                        background: chordColor,
+                        color: contrastColor
+                    }}
+                    title="Tap to preview chord with current settings"
+                >
+                    <Play size={14} fill="currentColor" />
+                    <span className="font-bold text-sm">
+                        {formatChordForDisplay(selectedChord.symbol)}
+                    </span>
+                </button>
+            )}
 
         </div>,
         document.body

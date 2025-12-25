@@ -4,7 +4,6 @@ import { useSongStore } from '../../store/useSongStore';
 import { Play, Pause, SkipBack, SkipForward, Repeat, Volume2, VolumeX, Loader2, Music } from 'lucide-react';
 import { playSong, pauseSong, skipToSection, scheduleSong, setTempo as setAudioTempo, toggleLoopMode, setInstrument as setAudioInstrument, unlockAudioForIOS, setToneControl as setAudioTone, setMasterGain as setAudioMasterGain, setReverbMix as setAudioReverbMix } from '../../utils/audioEngine';
 import { VoiceSelector } from './VoiceSelector';
-import { InstrumentControls } from './InstrumentControls';
 
 import { useMobileLayout } from '../../hooks/useIsMobile';
 
@@ -336,7 +335,6 @@ export const PlaybackControls: React.FC = () => {
                     <div className="w-32 h-1 rounded-full bg-white/5" />
                 </div>
             )}
-            <InstrumentControls />
         </div>
     );
 };

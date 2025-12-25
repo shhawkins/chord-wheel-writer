@@ -244,16 +244,24 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
 
                 {/* Settings icon - integrated into dropdown button */}
                 <div
-                    className="border-l border-white/10 pl-1.5 ml-1"
+                    className="border-l border-white/10 pl-1.5 ml-1 p-1 -m-1"
                     onClick={(e) => {
                         e.stopPropagation();
                         e.preventDefault();
                         toggleInstrumentControlsModal();
+                        onInteraction?.();
+                    }}
+                    onTouchStart={(e) => {
+                        // Prevent the button's touch handlers from capturing this
+                        e.stopPropagation();
                     }}
                     onTouchEnd={(e) => {
                         e.stopPropagation();
-                        e.preventDefault();
+                        if (e.cancelable) e.preventDefault();
+                        // Clear the parent's touch ref so it doesn't fire
+                        touchStartRef.current = null;
                         toggleInstrumentControlsModal();
+                        onInteraction?.();
                     }}
                 >
                     <Settings2
