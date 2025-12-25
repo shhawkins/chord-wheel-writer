@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { getSectionDisplayName, type Section as ISection } from '../../types';
 import { Measure } from './Measure';
 import { useSongStore } from '../../store/useSongStore';
-import { Trash2, Copy, GripVertical, ChevronUp, ChevronDown } from 'lucide-react';
+import { Trash2, Copy, GripVertical, ChevronUp, ChevronDown, Plus, Minus } from 'lucide-react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import clsx from 'clsx';
@@ -26,6 +26,24 @@ export const Section: React.FC<SectionProps> = ({ section, chordSize = 48, scale
         collapsedSections,
         toggleSectionCollapsed
     } = useSongStore();
+
+    const measuresScrollRef = useRef<HTMLDivElement>(null);
+    const prevMeasuresLengthRef = useRef<number>(section.measures.length);
+
+    useEffect(() => {
+        if (section.measures.length > prevMeasuresLengthRef.current && measuresScrollRef.current) {
+            // Auto-scroll to the end when adding bars
+            setTimeout(() => {
+                if (measuresScrollRef.current) {
+                    measuresScrollRef.current.scrollTo({
+                        left: measuresScrollRef.current.scrollWidth,
+                        behavior: 'smooth'
+                    });
+                }
+            }, 50);
+        }
+        prevMeasuresLengthRef.current = section.measures.length;
+    }, [section.measures.length]);
 
     // Get the dynamic display name based on section type and position
     const displayName = getSectionDisplayName(section, currentSong.sections);
@@ -249,7 +267,10 @@ export const Section: React.FC<SectionProps> = ({ section, chordSize = 48, scale
                     </div>
                 </div>
             ) : (
-                <div className="flex p-1.5 pt-3 gap-0 overflow-x-auto no-scrollbar flex-1">
+                <div
+                    ref={measuresScrollRef}
+                    className="flex p-1.5 pt-3 gap-0 overflow-x-auto no-scrollbar flex-1 items-center"
+                >
                     {section.measures.map((measure, idx) => (
                         <Measure
                             key={measure.id}
@@ -261,6 +282,32 @@ export const Section: React.FC<SectionProps> = ({ section, chordSize = 48, scale
                             scale={scale}
                         />
                     ))}
+
+                    {/* Add/Remove Bars Controls */}
+                    <div className="flex flex-col gap-1.5 px-4 justify-center border-l border-border-subtle/50 ml-2 py-1 shrink-0 h-[80%]">
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleMeasureCountChange(measureCount + 1);
+                            }}
+                            disabled={measureCount >= 32}
+                            className="w-7 h-7 rounded-full border border-dashed border-border-medium hover:border-accent-primary hover:bg-accent-primary/10 text-text-muted hover:text-accent-primary flex items-center justify-center transition-all disabled:opacity-20"
+                            title="Add bar"
+                        >
+                            <Plus size={14} />
+                        </button>
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleMeasureCountChange(measureCount - 1);
+                            }}
+                            disabled={measureCount <= 1}
+                            className="w-7 h-7 rounded-full border border-dashed border-border-medium hover:border-red-400/50 hover:bg-red-400/10 text-text-muted hover:text-red-400 flex items-center justify-center transition-all disabled:opacity-20"
+                            title="Remove last bar"
+                        >
+                            <Minus size={14} />
+                        </button>
+                    </div>
                 </div>
             )}
         </div>

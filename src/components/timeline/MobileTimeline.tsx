@@ -606,6 +606,28 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
         };
     }, [collapsedSwipeOffset, onToggle]);
 
+    // Track previous measures length to auto-scroll when adding bars
+    const prevMeasuresLengthRef = useRef<number>(0);
+    useEffect(() => {
+        const activeSection = currentSong.sections[activeSectionIndex];
+        if (activeSection && scrollRef.current && !isLandscape) {
+            const currentLength = activeSection.measures.length;
+            // Only scroll if length increased (adding bars)
+            if (currentLength > prevMeasuresLengthRef.current) {
+                // Small delay to ensure the new bar is in the DOM
+                setTimeout(() => {
+                    if (scrollRef.current) {
+                        scrollRef.current.scrollTo({
+                            left: scrollRef.current.scrollWidth,
+                            behavior: 'smooth'
+                        });
+                    }
+                }, 50);
+            }
+            prevMeasuresLengthRef.current = currentLength;
+        }
+    }, [activeSectionIndex, currentSong.sections, isLandscape]);
+
     const navigateSection = (direction: 'prev' | 'next') => {
         const newIndex = direction === 'prev'
             ? Math.max(0, activeSectionIndex - 1)
@@ -1103,6 +1125,43 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
                                             )}
                                         </React.Fragment>
                                     ))}
+
+                                    {/* Bar Add/Remove buttons */}
+                                    <div className={clsx(
+                                        "flex shrink-0 items-center",
+                                        isLandscape
+                                            ? "justify-start pl-1 pt-1"
+                                            : isDesktop ? "gap-1.5 ml-2 mr-4" : "gap-1 ml-1 mr-2"
+                                    )}>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setSectionMeasures(section.id, Math.max(1, section.measures.length - 1));
+                                            }}
+                                            disabled={section.measures.length <= 1}
+                                            className={clsx(
+                                                "no-touch-enlarge rounded-full text-text-muted hover:text-red-400/80 touch-feedback shrink-0 border border-dashed border-border-medium hover:border-red-400/30 transition-all hover:bg-red-400/5 flex items-center justify-center disabled:opacity-20",
+                                                isDesktop ? "w-8 h-8" : (isLandscape ? "w-6 h-6" : "w-7 h-7")
+                                            )}
+                                            title="Remove last bar"
+                                        >
+                                            <Minus size={isDesktop ? 12 : 10} />
+                                        </button>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setSectionMeasures(section.id, Math.min(32, section.measures.length + 1));
+                                            }}
+                                            disabled={section.measures.length >= 32}
+                                            className={clsx(
+                                                "no-touch-enlarge rounded-full text-text-muted hover:text-accent-primary touch-feedback shrink-0 border border-dashed border-border-medium hover:border-accent-primary/50 transition-all hover:bg-accent-primary/10 flex items-center justify-center disabled:opacity-20",
+                                                isDesktop ? "w-8 h-8" : (isLandscape ? "w-6 h-6" : "w-7 h-7")
+                                            )}
+                                            title="Add bar"
+                                        >
+                                            <Plus size={isDesktop ? 12 : 10} />
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         )
