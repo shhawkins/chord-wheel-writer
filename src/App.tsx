@@ -1793,14 +1793,18 @@ function App() {
             <div
               className={`flex h-full ${chordPanelVisible ? 'flex-1' : ''} shrink-0`}
               style={{
-                minWidth: chordPanelVisible ? '100px' : '28px',
+                minWidth: chordPanelVisible ? (mobileTimelineOpen ? '140px' : '0px') : '28px',
                 transition: 'all 0.25s ease-out'
               }}
             >
               {/* Chord Details Content - compact when both open, expanded horizontal layout when alone */}
+              {/* If timeline is closed, force expanded layout regardless of "mobileTimelineOpen" state logic if it were mismatched */}
               {chordPanelVisible && (
-                <div className="flex-1 h-full bg-bg-secondary overflow-hidden border-l border-border-subtle" data-chord-details>
-                  <ChordDetails variant={mobileTimelineOpen ? 'landscape-panel' : 'landscape-expanded'} />
+                <div className="flex-1 h-full bg-bg-secondary overflow-y-auto overflow-x-hidden min-w-0">
+                  <ChordDetails
+                    variant={mobileTimelineOpen ? "landscape-panel" : "landscape-expanded"}
+                    onClose={useSongStore.getState().toggleChordPanel}
+                  />
                 </div>
               )}
               {/* Chord Details Handle */}

@@ -12,6 +12,7 @@ import { useMobileLayout } from '../../hooks/useIsMobile';
 
 interface ChordDetailsProps {
     variant?: 'sidebar' | 'drawer' | 'landscape-panel' | 'landscape-expanded';
+    onClose?: () => void;
     onScrollChange?: (scrolledToBottom: boolean) => void;
     forceVisible?: boolean; // Force panel to render as visible (for drag preview)
 }
@@ -652,9 +653,9 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar',
     return (
         <div
             className={`chord-details-drawer ${isLandscapeExpanded
-                ? "h-full w-full flex flex-col bg-bg-secondary overflow-hidden"
+                ? "h-full w-full max-w-full flex flex-col bg-bg-secondary overflow-hidden"
                 : isLandscapePanel
-                    ? "h-full w-full flex flex-col bg-bg-secondary overflow-hidden"
+                    ? "h-full w-full max-w-full flex flex-col bg-bg-secondary overflow-hidden"
                     : isDrawer
                         ? `${isMobile ? 'relative w-full' : 'fixed inset-x-3 bottom-[88px]'} ${isMobile ? 'max-h-[60vh]' : 'max-h-[70vh]'} bg-bg-secondary ${isMobile ? 'border-t-2 border-border-subtle' : 'border-2 border-border-subtle rounded-2xl'} shadow-2xl overflow-hidden ${isMobile ? '' : 'z-40'} flex select-none`
                         : "h-full flex bg-bg-secondary border-l border-border-subtle overflow-x-hidden select-none"
@@ -676,7 +677,7 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar',
             }}
         >
             {/* Resize handle (sidebar only) - supports touch for mobile */}
-            {!isDrawer && !isLandscapePanel && (
+            {!isDrawer && !isLandscapePanel && !isLandscapeExpanded && (
                 <div
                     className={`w-3 flex items-center justify-center cursor-ew-resize hover:bg-bg-tertiary active:bg-accent-primary/20 transition-colors ${isResizing ? 'bg-accent-primary/20' : ''} relative z-40 touch-none`}
                     onMouseDown={handleResizeStart}
@@ -687,7 +688,7 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar',
             )}
 
             {/* Panel content */}
-            <div className="flex-1 flex flex-col overflow-hidden min-w-0 relative">
+            <div className="flex-1 flex flex-col overflow-hidden min-w-0 max-w-full relative">
                 {/* Swipe handle area - only this part responds to swipe gestures */}
                 {/* Title hidden when open to save vertical space */}
                 {isDrawer && isMobile && (
@@ -898,9 +899,9 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar',
                         </div>
                     </div>
                 ) : (
-                    <div ref={scrollContainerRef} className={`flex-1 ${isLandscapeExpanded ? 'flex flex-row overflow-hidden' : 'overflow-y-auto overflow-x-hidden'} min-h-0 overscroll-contain ${isMobile ? 'pb-32' : 'pb-8'}`}>
-                        {/* Piano & Voicing Section - hidden in landscape-expanded to save space */}
-                        {!isLandscapeExpanded && (
+                    <div ref={scrollContainerRef} className={`flex-1 ${isLandscapeExpanded ? 'flex flex-col overflow-y-auto overflow-x-hidden max-w-full' : 'overflow-y-auto overflow-x-hidden'} min-h-0 min-w-0 max-w-full overscroll-contain ${isCompactLandscape ? 'pb-20' : isMobile ? 'pb-32' : 'pb-8'}`}>
+                        {/* Piano & Voicing Section */}
+                        {!isCompactLandscape && (
                             <div className={`${isMobile ? 'px-5 pt-4 pb-4' : 'px-5 py-4'} border-b border-border-subtle`}>
                                 <PianoKeyboard
                                     highlightedNotes={displayNotes}
@@ -910,56 +911,58 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar',
                                     octave={pianoOctave}
                                     onNotePlay={handleNotePlay}
                                 />
-                                {/* Notes display with CSS Grid for proper column alignment */}
-                                <div className={`${isMobile ? 'mt-4' : 'mt-5'} w-full`}>
-                                    <div
-                                        className="grid gap-1"
-                                        style={{
-                                            gridTemplateColumns: `${isMobile ? '56px' : '72px'} repeat(${displayNotes.length}, minmax(0, 1fr))`
-                                        }}
-                                    >
-                                        {/* Notes row - fixed height to prevent layout shift */}
-                                        <div className="text-[10px] font-semibold uppercase tracking-wide text-text-muted flex items-center" style={{ height: '16px' }}>Notes</div>
-                                        {displayNotes.map((note, i) => (
-                                            <div
-                                                key={`note-${i}`}
-                                                className={`text-center ${isMobile ? 'text-xs' : 'text-sm'} font-bold text-text-primary flex items-center justify-center`}
-                                                style={{ height: '16px' }}
-                                            >
-                                                {note}
-                                            </div>
-                                        ))}
+                                {/* Notes display - ONLY show if not in compact landscape */}
+                                {!isCompactLandscape && (
+                                    <div className={`${isMobile ? 'mt-4' : 'mt-5'} w-full`}>
+                                        <div
+                                            className="grid gap-1"
+                                            style={{
+                                                gridTemplateColumns: `${isMobile ? '56px' : '72px'} repeat(${displayNotes.length}, minmax(0, 1fr))`
+                                            }}
+                                        >
+                                            {/* Notes row - fixed height to prevent layout shift */}
+                                            <div className="text-[10px] font-semibold uppercase tracking-wide text-text-muted flex items-center" style={{ height: '16px' }}>Notes</div>
+                                            {displayNotes.map((note, i) => (
+                                                <div
+                                                    key={`note-${i}`}
+                                                    className={`text-center ${isMobile ? 'text-xs' : 'text-sm'} font-bold text-text-primary flex items-center justify-center`}
+                                                    style={{ height: '16px' }}
+                                                >
+                                                    {note}
+                                                </div>
+                                            ))}
 
-                                        {/* Absolute row - fixed height to prevent layout shift */}
-                                        <div className="text-[10px] font-semibold uppercase tracking-wide text-text-muted flex items-center" style={{ height: '16px' }}>Absolute</div>
-                                        {displayNotes.map((note, i) => (
-                                            <div
-                                                key={`abs-${i}`}
-                                                className={`text-center ${isMobile ? 'text-[11px]' : 'text-xs'} text-text-primary font-semibold flex items-center justify-center`}
-                                                style={{ height: '16px' }}
-                                            >
-                                                {getAbsoluteDegree(note)}
-                                            </div>
-                                        ))}
+                                            {/* Absolute row - fixed height to prevent layout shift */}
+                                            <div className="text-[10px] font-semibold uppercase tracking-wide text-text-muted flex items-center" style={{ height: '16px' }}>Absolute</div>
+                                            {displayNotes.map((note, i) => (
+                                                <div
+                                                    key={`abs-${i}`}
+                                                    className={`text-center ${isMobile ? 'text-[11px]' : 'text-xs'} text-text-primary font-semibold flex items-center justify-center`}
+                                                    style={{ height: '16px' }}
+                                                >
+                                                    {getAbsoluteDegree(note)}
+                                                </div>
+                                            ))}
 
-                                        {/* Relative to Key row - fixed height to prevent layout shift */}
-                                        <div className="text-[10px] font-semibold uppercase tracking-wide text-text-muted flex items-center" style={{ height: '16px' }}>Relative</div>
-                                        {displayNotes.map((note, i) => (
-                                            <div
-                                                key={`rel-${i}`}
-                                                className={`text-center ${isMobile ? 'text-[11px]' : 'text-xs'} text-text-secondary flex items-center justify-center`}
-                                                style={{ height: '16px' }}
-                                            >
-                                                {getIntervalFromKey(selectedKey, note).replace(/^1/, 'R')}
-                                            </div>
-                                        ))}
+                                            {/* Relative to Key row - fixed height to prevent layout shift */}
+                                            <div className="text-[10px] font-semibold uppercase tracking-wide text-text-muted flex items-center" style={{ height: '16px' }}>Relative</div>
+                                            {displayNotes.map((note, i) => (
+                                                <div
+                                                    key={`rel-${i}`}
+                                                    className={`text-center ${isMobile ? 'text-[11px]' : 'text-xs'} text-text-secondary flex items-center justify-center`}
+                                                    style={{ height: '16px' }}
+                                                >
+                                                    {getIntervalFromKey(selectedKey, note).replace(/^1/, 'R')}
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
-                                </div>
+                                )}
                             </div>
                         )}
 
                         {/* Collapsible Sections Container - vertical layout in all modes */}
-                        <div className={`flex flex-col ${isLandscapeExpanded ? 'flex-1 overflow-y-auto' : ''}`}>
+                        <div className="flex flex-col w-full min-w-0">
 
                             {/* Combined Guitar / Suggested section */}
                             <div
@@ -988,7 +991,7 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar',
                                 </button>
                                 {showGuitar && (
                                     <>
-                                        <div className={`flex items-start ${isCompactLandscape ? 'gap-1' : 'gap-2'} px-3`} style={{ marginTop: isCompactLandscape ? '4px' : '8px' }}>
+                                        <div className={`flex ${isCompactLandscape ? 'flex-col gap-2' : 'flex-row items-start gap-2'} px-3`} style={{ marginTop: isCompactLandscape ? '4px' : '8px' }}>
                                             {/* Left: Guitar diagram + voicing description below */}
                                             <div className="flex flex-col items-center shrink-0" style={{ minWidth: isCompactLandscape ? '70px' : '100px' }}>
                                                 <GuitarChord
@@ -1011,13 +1014,12 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar',
                                             <div className={`flex-1 flex flex-col ${isNarrowPanel ? 'justify-start' : 'justify-between'} pl-1`}>
                                                 {getSuggestedVoicings().extensions.length > 0 ? (
                                                     <>
-                                                        <div className={`grid ${isCompactLandscape || isNarrowPanel ? 'grid-cols-1' : 'grid-cols-2'}`} style={{ gap: isCompactLandscape ? '3px' : isNarrowPanel ? '4px' : isMobile ? '6px' : '5px', marginBottom: isCompactLandscape ? '2px' : '4px', marginRight: isNarrowPanel ? '12px' : undefined }}>
+                                                        <div className={`grid ${isCompactLandscape ? 'grid-cols-2' : isNarrowPanel ? 'grid-cols-1' : 'grid-cols-2'}`} style={{ gap: isCompactLandscape ? '4px' : isNarrowPanel ? '4px' : isMobile ? '6px' : '5px', marginBottom: isCompactLandscape ? '2px' : '4px', marginRight: isNarrowPanel ? '12px' : undefined }}>
                                                             {getSuggestedVoicings().extensions.map((ext) => (
                                                                 <button
                                                                     key={ext}
-                                                                    className={`relative group ${isCompactLandscape ? 'px-1 py-0.5 text-[8px] min-h-[20px]' : isNarrowPanel ? 'px-2 py-1.5 text-[9px] min-h-[26px]' : isMobile ? 'px-2 py-2 text-xs min-h-[36px]' : 'px-1.5 py-1 text-[10px]'} rounded font-semibold transition-colors touch-feedback text-center`}
+                                                                    className={`relative group ${isCompactLandscape ? 'px-1 py-1 text-[9px] min-h-[24px]' : isNarrowPanel ? 'px-2 py-1.5 text-[9px] min-h-[26px]' : isMobile ? 'px-2 py-2 text-xs min-h-[36px]' : 'px-1.5 py-1 text-[10px]'} rounded font-semibold transition-colors touch-feedback text-center w-full`}
                                                                     style={{
-                                                                        width: isCompactLandscape ? '60px' : isNarrowPanel ? '70px' : isMobile ? '80px' : '70px',
                                                                         ...(previewVariant === ext
                                                                             ? { backgroundColor: '#4f46e5', color: '#ffffff', border: '1px solid #4f46e5' }
                                                                             : { backgroundColor: '#282833', color: '#f0f0f5', border: '1px solid rgba(255,255,255,0.08)' })
@@ -1047,8 +1049,8 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar',
                                                                 </button>
                                                             ))}
                                                         </div>
-                                                        {/* Compact Musical Staff - below voicings, hidden when panel is narrow */}
-                                                        {!isNarrowPanel && (
+                                                        {/* Compact Musical Staff - below voicings, hidden when panel is narrow or compact landscape */}
+                                                        {!isNarrowPanel && !isCompactLandscape && (
                                                             <div className="mt-auto" style={{ paddingTop: isCompactLandscape ? '2px' : '6px' }}>
                                                                 <MusicStaff
                                                                     notes={displayNotes}
@@ -1109,7 +1111,7 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar',
                                     />
                                 </button>
                                 {showVariations && (
-                                    <div className={`grid ${isCompactLandscape ? 'grid-cols-4' : isMobile ? 'grid-cols-3' : 'grid-cols-2 sm:grid-cols-3'} ${isCompactLandscape ? 'gap-2' : isMobile ? 'gap-3' : 'gap-2.5'}`}>
+                                    <div className={`grid ${isCompactLandscape ? 'grid-cols-2 gap-1' : isMobile ? 'grid-cols-3 gap-3' : 'grid-cols-2 sm:grid-cols-3 gap-2.5'}`}>
                                         {voicingOptions.map((ext, idx) => {
                                             const isLeftCol = idx % 2 === 0;
                                             const tooltipPositionStyle = isLeftCol
@@ -1119,7 +1121,7 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar',
                                             return (
                                                 <button
                                                     key={ext}
-                                                    className={`relative group ${isCompactLandscape ? 'px-1.5 py-1 min-h-[22px] text-[8px]' : isMobile ? 'px-3 py-3 min-h-[48px] text-xs' : 'px-2 py-1.5 text-[10px]'} rounded font-medium transition-colors touch-feedback`}
+                                                    className={`relative group ${isCompactLandscape ? 'px-1 py-0.5 min-h-[18px] text-[7px]' : isMobile ? 'px-3 py-3 min-h-[48px] text-xs' : 'px-2 py-1.5 text-[10px]'} rounded font-medium transition-colors touch-feedback truncate`}
                                                     style={previewVariant === ext
                                                         ? { backgroundColor: '#4f46e5', color: '#ffffff', border: '1px solid #4f46e5' }
                                                         : { backgroundColor: '#282833', color: '#9898a6', border: '1px solid rgba(255,255,255,0.08)' }
@@ -1154,111 +1156,115 @@ export const ChordDetails: React.FC<ChordDetailsProps> = ({ variant = 'sidebar',
                                 )}
                             </div>
 
-                            {/* Theory Note - with proper text wrapping */}
-                            <div
-                                ref={theorySectionRef}
-                                className={`${isLandscapeExpanded ? 'px-3 py-1' : isMobile ? 'px-5 py-1 mt-2' : 'px-5 py-1'} rounded-none`}
-                                style={{ backgroundColor: '#1e1e28', borderBottom: '1px solid #3a3a4a', scrollMarginTop: '60px' }}
-                            >
-                                <button
-                                    onClick={() => {
-                                        const newState = !showTheory;
-                                        setShowTheory(newState);
-                                        if (newState) {
-                                            setTimeout(() => scrollSectionIntoView(theorySectionRef), 50);
-                                        }
-                                    }}
-                                    className={`w-full flex items-center justify-between cursor-pointer ${showTheory ? 'mb-3' : 'mb-0'} rounded-none`}
-                                    style={{ backgroundColor: 'transparent' }}
+                            {/* Theory Note - with proper text wrapping - Hide in compact landscape */}
+                            {!isCompactLandscape && (
+                                <div
+                                    ref={theorySectionRef}
+                                    className={`${isLandscapeExpanded ? 'px-3 py-1' : isMobile ? 'px-5 py-1 mt-2' : 'px-5 py-1'} rounded-none`}
+                                    style={{ backgroundColor: '#1e1e28', borderBottom: '1px solid #3a3a4a', scrollMarginTop: '60px' }}
                                 >
-                                    <h3 className={`${isCompactLandscape ? 'text-[9px]' : isMobile ? 'text-[11px]' : 'text-[10px]'} font-semibold text-text-secondary uppercase tracking-wide`}>
-                                        Theory
-                                    </h3>
-                                    <ChevronDown
-                                        size={isCompactLandscape ? 8 : isMobile ? 14 : 12}
-                                        className={`text-text-secondary transition-transform ${showTheory ? 'rotate-180' : ''}`}
-                                    />
-                                </button>
-                                {showTheory && (
-                                    <div className={`${isMobile ? 'p-3' : 'p-4'} bg-bg-elevated rounded-none`}>
-                                        <p className={`${isMobile ? 'text-sm' : 'text-xs'} text-text-secondary leading-relaxed`}>
-                                            {getSuggestedVoicings().description}
-                                        </p>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Scales - All modes in the current key */}
-                            <div
-                                ref={scalesSectionRef}
-                                className={`${isLandscapeExpanded ? 'px-3 py-1' : isMobile ? 'px-5 py-1 mt-2' : 'px-5 py-1'} rounded-none`}
-                                style={{ backgroundColor: '#1e1e28', borderBottom: '1px solid #3a3a4a', scrollMarginTop: '60px' }}
-                            >
-                                <button
-                                    onClick={() => {
-                                        const newState = !showScales;
-                                        setShowScales(newState);
-                                        if (newState) {
-                                            setTimeout(() => scrollSectionIntoView(scalesSectionRef), 50);
-                                        }
-                                    }}
-                                    className={`w-full flex items-center justify-between ${showScales ? 'mb-2' : 'mb-0'} cursor-pointer rounded-none`}
-                                    style={{ backgroundColor: 'transparent' }}
-                                >
-                                    <h3 className={`${isCompactLandscape ? 'text-[9px]' : isMobile ? 'text-[11px]' : 'text-[10px]'} font-semibold text-text-secondary uppercase tracking-wide`}>
-                                        Scales in {formatChordForDisplay(selectedKey)}
-                                    </h3>
-                                    <ChevronDown
-                                        size={isCompactLandscape ? 8 : isMobile ? 14 : 12}
-                                        className={`text-text-secondary transition-transform ${showScales ? 'rotate-180' : ''}`}
-                                    />
-                                </button>
-                                {showScales && (() => {
-                                    const scale = getMajorScale(selectedKey);
-                                    const getModeScale = (startDegree: number) => {
-                                        const rotated = [...scale.slice(startDegree), ...scale.slice(0, startDegree)];
-                                        return rotated.map(n => formatChordForDisplay(n)).join(' – ');
-                                    };
-                                    const modes = [
-                                        { name: 'Ionian (I)', degree: 0, quality: 'MAJ', color: '#EAB308', desc: 'Bright, happy' },
-                                        { name: 'Dorian (ii)', degree: 1, quality: 'min', color: '#8B5CF6', desc: 'Hopeful minor, jazzy' },
-                                        { name: 'Phrygian (iii)', degree: 2, quality: 'min', color: '#F97316', desc: 'Spanish, exotic' },
-                                        { name: 'Lydian (IV)', degree: 3, quality: 'MAJ', color: '#06B6D4', desc: 'Dreamy, floating' },
-                                        { name: 'Mixolydian (V)', degree: 4, quality: 'MAJ', color: '#10B981', desc: 'Bluesy, rock' },
-                                        { name: 'Aeolian (vi)', degree: 5, quality: 'min', color: '#3B82F6', desc: 'Sad, melancholic' },
-                                        { name: 'Locrian (vii°)', degree: 6, quality: 'dim', color: '#EF4444', desc: 'Dark, unstable' },
-                                    ];
-                                    return (
-                                        <div className="space-y-1.5 pb-2">
-                                            {modes.map((mode) => (
-                                                <div
-                                                    key={mode.name}
-                                                    className="bg-bg-tertiary/50 p-2 rounded"
-                                                    style={{ borderLeft: `2px solid ${mode.color}` }}
-                                                >
-                                                    <div className="flex items-center justify-between mb-0.5">
-                                                        <span className={`${isMobile ? 'text-[11px]' : 'text-[10px]'} font-medium text-white`}>
-                                                            {formatChordForDisplay(scale[mode.degree])} {mode.name.split(' ')[0]}
-                                                        </span>
-                                                        <span
-                                                            className="text-[8px] px-1 py-0.5 rounded"
-                                                            style={{ color: mode.color, backgroundColor: `${mode.color}15` }}
-                                                        >
-                                                            {mode.quality}
-                                                        </span>
-                                                    </div>
-                                                    <p className={`${isMobile ? 'text-[9px]' : 'text-[8px]'} text-gray-400 mb-1`}>
-                                                        {mode.desc}
-                                                    </p>
-                                                    <p className={`${isMobile ? 'text-[10px]' : 'text-[9px]'} text-gray-500 font-mono tracking-wide`}>
-                                                        {getModeScale(mode.degree)}
-                                                    </p>
-                                                </div>
-                                            ))}
+                                    <button
+                                        onClick={() => {
+                                            const newState = !showTheory;
+                                            setShowTheory(newState);
+                                            if (newState) {
+                                                setTimeout(() => scrollSectionIntoView(theorySectionRef), 50);
+                                            }
+                                        }}
+                                        className={`w-full flex items-center justify-between cursor-pointer ${showTheory ? 'mb-3' : 'mb-0'} rounded-none`}
+                                        style={{ backgroundColor: 'transparent' }}
+                                    >
+                                        <h3 className={`${isCompactLandscape ? 'text-[9px]' : isMobile ? 'text-[11px]' : 'text-[10px]'} font-semibold text-text-secondary uppercase tracking-wide`}>
+                                            Theory
+                                        </h3>
+                                        <ChevronDown
+                                            size={isCompactLandscape ? 8 : isMobile ? 14 : 12}
+                                            className={`text-text-secondary transition-transform ${showTheory ? 'rotate-180' : ''}`}
+                                        />
+                                    </button>
+                                    {showTheory && (
+                                        <div className={`${isMobile ? 'p-3 pr-4' : 'p-4'} bg-bg-elevated rounded-none overflow-hidden`}>
+                                            <p className={`${isMobile ? 'text-sm' : 'text-xs'} text-text-secondary leading-relaxed break-words`}>
+                                                {getSuggestedVoicings().description}
+                                            </p>
                                         </div>
-                                    );
-                                })()}
-                            </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Scales - All modes in the current key - Hide in compact landscape */}
+                            {!isCompactLandscape && (
+                                <div
+                                    ref={scalesSectionRef}
+                                    className={`${isLandscapeExpanded ? 'px-3 py-1' : isMobile ? 'px-5 py-1 mt-2' : 'px-5 py-1'} rounded-none`}
+                                    style={{ backgroundColor: '#1e1e28', borderBottom: '1px solid #3a3a4a', scrollMarginTop: '60px' }}
+                                >
+                                    <button
+                                        onClick={() => {
+                                            const newState = !showScales;
+                                            setShowScales(newState);
+                                            if (newState) {
+                                                setTimeout(() => scrollSectionIntoView(scalesSectionRef), 50);
+                                            }
+                                        }}
+                                        className={`w-full flex items-center justify-between ${showScales ? 'mb-2' : 'mb-0'} cursor-pointer rounded-none`}
+                                        style={{ backgroundColor: 'transparent' }}
+                                    >
+                                        <h3 className={`${isCompactLandscape ? 'text-[9px]' : isMobile ? 'text-[11px]' : 'text-[10px]'} font-semibold text-text-secondary uppercase tracking-wide`}>
+                                            Scales in {formatChordForDisplay(selectedKey)}
+                                        </h3>
+                                        <ChevronDown
+                                            size={isCompactLandscape ? 8 : isMobile ? 14 : 12}
+                                            className={`text-text-secondary transition-transform ${showScales ? 'rotate-180' : ''}`}
+                                        />
+                                    </button>
+                                    {showScales && (() => {
+                                        const scale = getMajorScale(selectedKey);
+                                        const getModeScale = (startDegree: number) => {
+                                            const rotated = [...scale.slice(startDegree), ...scale.slice(0, startDegree)];
+                                            return rotated.map(n => formatChordForDisplay(n)).join(' – ');
+                                        };
+                                        const modes = [
+                                            { name: 'Ionian (I)', degree: 0, quality: 'MAJ', color: '#EAB308', desc: 'Bright, happy' },
+                                            { name: 'Dorian (ii)', degree: 1, quality: 'min', color: '#8B5CF6', desc: 'Hopeful minor, jazzy' },
+                                            { name: 'Phrygian (iii)', degree: 2, quality: 'min', color: '#F97316', desc: 'Spanish, exotic' },
+                                            { name: 'Lydian (IV)', degree: 3, quality: 'MAJ', color: '#06B6D4', desc: 'Dreamy, floating' },
+                                            { name: 'Mixolydian (V)', degree: 4, quality: 'MAJ', color: '#10B981', desc: 'Bluesy, rock' },
+                                            { name: 'Aeolian (vi)', degree: 5, quality: 'min', color: '#3B82F6', desc: 'Sad, melancholic' },
+                                            { name: 'Locrian (vii°)', degree: 6, quality: 'dim', color: '#EF4444', desc: 'Dark, unstable' },
+                                        ];
+                                        return (
+                                            <div className="space-y-1.5 pb-2">
+                                                {modes.map((mode) => (
+                                                    <div
+                                                        key={mode.name}
+                                                        className="bg-bg-tertiary/50 p-2 rounded"
+                                                        style={{ borderLeft: `2px solid ${mode.color}` }}
+                                                    >
+                                                        <div className="flex items-center justify-between mb-0.5">
+                                                            <span className={`${isMobile ? 'text-[11px]' : 'text-[10px]'} font-medium text-white`}>
+                                                                {formatChordForDisplay(scale[mode.degree])} {mode.name.split(' ')[0]}
+                                                            </span>
+                                                            <span
+                                                                className="text-[8px] px-1 py-0.5 rounded"
+                                                                style={{ color: mode.color, backgroundColor: `${mode.color}15` }}
+                                                            >
+                                                                {mode.quality}
+                                                            </span>
+                                                        </div>
+                                                        <p className={`${isMobile ? 'text-[9px]' : 'text-[8px]'} text-gray-400 mb-1`}>
+                                                            {mode.desc}
+                                                        </p>
+                                                        <p className={`${isMobile ? 'text-[10px]' : 'text-[9px]'} text-gray-500 font-mono tracking-wide`}>
+                                                            {getModeScale(mode.degree)}
+                                                        </p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
+                            )}
 
                             {/* End of Collapsible Sections Container */}
                         </div>
