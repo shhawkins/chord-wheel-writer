@@ -134,8 +134,8 @@ const MobilePortraitDrawers: React.FC<MobilePortraitDrawersProps> = ({
       style={{
         // Normal state: 65vh, during close preview: reduce height
         maxHeight: isPreviewingClose
-          ? `calc(65vh - ${closingHeightReduction}px)`
-          : '65vh',
+          ? `calc(65dvh - ${closingHeightReduction}px)`
+          : '65dvh',
         opacity: isPreviewingClose ? Math.max(0.3, 1 - (closingHeightReduction / 500)) : 1,
         transition: isDragging ? 'none' : 'all 0.25s ease-out',
       }}
@@ -176,7 +176,7 @@ const MobilePortraitDrawers: React.FC<MobilePortraitDrawersProps> = ({
           data-chord-details
           className="shrink-0 bg-bg-secondary overflow-hidden"
           style={{
-            maxHeight: mobileTimelineOpen || isPreviewingOpen ? '45vh' : '55vh',
+            maxHeight: mobileTimelineOpen || isPreviewingOpen ? '45dvh' : '55dvh',
           }}
         >
           <ChordDetails
@@ -1858,7 +1858,7 @@ function App() {
       {/* Footer: Playback - hidden in mobile immersive mode or when chord panel is open (unless scrolled to bottom), BUT always show when playing */}
       {(isPlaying || !(isMobile && !isLandscape && (mobileImmersive || (chordPanelVisible && !chordPanelScrolledToBottom)))) && (
         <div
-          className="shrink-0 z-50 relative bg-bg-elevated transition-all duration-300 pb-[max(8px,env(safe-area-inset-bottom))]"
+          className="shrink-0 z-50 relative bg-bg-elevated transition-all duration-300"
         >
           <PlaybackControls />
         </div>
