@@ -152,7 +152,8 @@ export const InstrumentControls: React.FC = () => {
         stereoWidth,
         setStereoWidth,
         selectedChord,
-        chordInversion
+        chordInversion,
+        voicingPickerState
     } = useSongStore();
 
     // -- Draggable Logic (Copied/Adapted from VoicingQuickPicker) --
@@ -171,16 +172,27 @@ export const InstrumentControls: React.FC = () => {
                 // Use persisted position
                 setModalPosition(instrumentControlsPosition);
             } else {
-                // Calculate centered position
-                const width = Math.min(window.innerWidth - 40, 320); // Approx width
-                const height = 300; // Approx height
+                // Calculate smart position based on context
+                const width = Math.min(window.innerWidth - 40, 280); // Approx width
+                const height = 380; // Approx height (taller now with more knobs)
                 const initialX = Math.max(20, (window.innerWidth - width) / 2);
-                const initialY = Math.max(80, (window.innerHeight - height) / 2);
+
+                // If VoicingQuickPicker is open, position near the top to avoid overlap
+                // The picker is typically at the bottom of the screen
+                let initialY: number;
+                if (voicingPickerState.isOpen) {
+                    // Position near the top with some padding for header
+                    initialY = Math.max(60, 100);
+                } else {
+                    // Center vertically when no picker is open
+                    initialY = Math.max(80, (window.innerHeight - height) / 2);
+                }
+
                 setModalPosition({ x: initialX, y: initialY });
             }
             setInitialized(true);
         }
-    }, [instrumentControlsModalVisible, initialized, instrumentControlsPosition]);
+    }, [instrumentControlsModalVisible, initialized, instrumentControlsPosition, voicingPickerState.isOpen]);
 
     // Reset initialization when modal closes so it reopens fresh?
     // Actually, we want to KEEP the position state alive if possible, or just rely on 'instrumentControlsPosition'

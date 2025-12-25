@@ -1,34 +1,28 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { clsx } from 'clsx';
 import { useSongStore } from '../../store/useSongStore';
 import { Play, Pause, SkipBack, SkipForward, Repeat, Volume2, VolumeX, Loader2, Music } from 'lucide-react';
-import { playSong, pauseSong, skipToSection, scheduleSong, setTempo as setAudioTempo, toggleLoopMode, setInstrument as setAudioInstrument, unlockAudioForIOS, setToneControl as setAudioTone, setMasterGain as setAudioMasterGain, setReverbMix as setAudioReverbMix, setDelayMix as setAudioDelayMix, setChorusMix as setAudioChorusMix, setStereoWidth as setAudioStereoWidth } from '../../utils/audioEngine';
+import { playSong, pauseSong, skipToSection, unlockAudioForIOS } from '../../utils/audioEngine';
 import { VoiceSelector } from './VoiceSelector';
 
 import { useMobileLayout } from '../../hooks/useIsMobile';
 
+// NOTE: Audio sync effects (song scheduling, tempo, instrument, loop mode, tone control,
+// gain, reverb, delay, chorus, stereo width, preload) have been moved to the useAudioSync hook.
+// That hook is called from App.tsx which never unmounts, ensuring audio settings always sync
+// even when this component is conditionally rendered (e.g., mobile immersive mode).
+
 export const PlaybackControls: React.FC = () => {
     const {
-        currentSong,
         isPlaying,
         tempo,
         volume,
         setTempo,
-        // Audio Controls
-        toneControl,
-        instrumentGain,
-        reverbMix,
-        delayMix,
-        chorusMix,
-        stereoWidth,
         setVolume,
-        instrument,
         isMuted,
         toggleMute,
         toggleLoop,
         isLooping,
-        playingSectionId,
-        selectedSectionId
     } = useSongStore();
 
     const { isMobile, isLandscape } = useMobileLayout();
@@ -43,61 +37,6 @@ export const PlaybackControls: React.FC = () => {
     const swipeStartX = useRef<number | null>(null);
     const swipeStartTempo = useRef<number>(tempo);
     const swipeTapTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-    // Sync song structure to audio engine
-    useEffect(() => {
-        scheduleSong(currentSong);
-    }, [currentSong]);
-
-    // Sync tempo to audio engine
-    useEffect(() => {
-        setAudioTempo(tempo);
-    }, [tempo]);
-
-    // Sync instrument to audio engine
-    useEffect(() => {
-        setAudioInstrument(instrument);
-    }, [instrument]);
-
-    // Sync looping state to audio engine
-    useEffect(() => {
-        toggleLoopMode();
-    }, [isLooping, currentSong, playingSectionId, selectedSectionId]);
-
-    // Sync audio controls
-    useEffect(() => {
-        setAudioTone(toneControl.treble, toneControl.bass);
-    }, [toneControl]);
-
-    useEffect(() => {
-        setAudioMasterGain(instrumentGain);
-    }, [instrumentGain]);
-
-    useEffect(() => {
-        setAudioReverbMix(reverbMix);
-    }, [reverbMix]);
-
-    // Sync new effect controls
-    useEffect(() => {
-        setAudioDelayMix(delayMix);
-    }, [delayMix]);
-
-    useEffect(() => {
-        setAudioChorusMix(chorusMix);
-    }, [chorusMix]);
-
-    useEffect(() => {
-        setAudioStereoWidth(stereoWidth);
-    }, [stereoWidth]);
-
-    // Preload audio on mount
-    useEffect(() => {
-        // Just call it immediately
-        import('../../utils/audioEngine').then(mod => {
-            setIsLoading(true);
-            mod.preloadAudio().finally(() => setIsLoading(false));
-        });
-    }, []);
 
     const handlePlayPause = async () => {
         try {

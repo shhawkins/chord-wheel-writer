@@ -26,6 +26,7 @@ import { InstrumentControls } from './components/playback/InstrumentControls';
 import { AuthModal } from './components/auth/AuthModal';
 import { useAuthStore } from './stores/authStore';
 import { User as UserIcon } from 'lucide-react';
+import { useAudioSync } from './hooks/useAudioSync';
 
 
 // Mobile Portrait Drawers Component - handles combined toggle bar with drag gesture
@@ -208,6 +209,14 @@ function App() {
   useEffect(() => {
     setMute(isMuted);
   }, [isMuted]);
+
+  // Audio effects sync - MUST be in App.tsx (always mounted)
+  // This hook syncs store values to the audio engine for effects like
+  // tone control, gain, reverb, delay, chorus, and stereo width.
+  // Previously this lived in PlaybackControls, but that component
+  // conditionally renders based on UI state (mobile immersive mode, etc.),
+  // causing audio settings to stop syncing when it was unmounted.
+  useAudioSync();
 
   const [showHelp, setShowHelp] = useState(false);
   const [showKeySelector, setShowKeySelector] = useState(false);
