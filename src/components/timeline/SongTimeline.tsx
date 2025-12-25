@@ -9,6 +9,7 @@
  */
 
 import React, { useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import clsx from 'clsx';
 import { Plus } from 'lucide-react';
 import type { Section } from '../../types';
@@ -378,34 +379,37 @@ export const SongTimeline: React.FC<SongTimelineProps> = ({
                             </div>
                         </SortableContext>
 
-                        <DragOverlay
-                            adjustScale={false}
-                            modifiers={[snapToPointer]}
-                            dropAnimation={{
-                                duration: 200,
-                                easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)',
-                            }}
-                            style={{ zIndex: 999999 }}
-                        >
-                            {activeSection ? (
-                                <div
-                                    className={clsx(
-                                        "h-[28px] flex items-center justify-center rounded-lg shadow-2xl ring-2 ring-white",
-                                        TIMELINE_COLORS[activeSection.type]?.bg || DEFAULT_COLORS.bg,
-                                        TIMELINE_COLORS[activeSection.type]?.text || DEFAULT_COLORS.text
-                                    )}
-                                    style={{
-                                        width: '60px',
-                                        minWidth: '60px',
-                                        boxShadow: '0 8px 32px rgba(0,0,0,0.5), 0 0 0 2px white',
-                                    }}
-                                >
-                                    <span className="text-[11px] font-bold uppercase tracking-tight">
-                                        {getSectionLabel(activeSection, sections)}
-                                    </span>
-                                </div>
-                            ) : null}
-                        </DragOverlay>
+                        {createPortal(
+                            <DragOverlay
+                                adjustScale={false}
+                                modifiers={[snapToPointer]}
+                                dropAnimation={{
+                                    duration: 200,
+                                    easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)',
+                                }}
+                                style={{ zIndex: 999999 }}
+                            >
+                                {activeSection ? (
+                                    <div
+                                        className={clsx(
+                                            "h-[28px] flex items-center justify-center rounded-lg shadow-2xl ring-2 ring-white",
+                                            TIMELINE_COLORS[activeSection.type]?.bg || DEFAULT_COLORS.bg,
+                                            TIMELINE_COLORS[activeSection.type]?.text || DEFAULT_COLORS.text
+                                        )}
+                                        style={{
+                                            width: '60px',
+                                            minWidth: '60px',
+                                            boxShadow: '0 8px 32px rgba(0,0,0,0.5), 0 0 0 2px white',
+                                        }}
+                                    >
+                                        <span className="text-[11px] font-bold uppercase tracking-tight">
+                                            {getSectionLabel(activeSection, sections)}
+                                        </span>
+                                    </div>
+                                ) : null}
+                            </DragOverlay>,
+                            document.body
+                        )}
                     </DndContext>
 
                     {/* Subtle top highlight for depth */}
