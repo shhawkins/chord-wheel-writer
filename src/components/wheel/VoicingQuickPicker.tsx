@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import clsx from 'clsx';
 import { playChord } from '../../utils/audioEngine';
 import { useMobileLayout } from '../../hooks/useIsMobile';
-import { Info, Plus, ChevronLeft, ChevronRight, GripHorizontal, MoveRight } from 'lucide-react';
+import { Info, Plus, ChevronLeft, ChevronRight, GripHorizontal, MoveRight, X } from 'lucide-react';
 import { VoiceSelector } from '../playback/VoiceSelector';
 import { useSongStore } from '../../store/useSongStore';
 import {
@@ -498,6 +498,25 @@ export const VoicingQuickPicker: React.FC<VoicingQuickPickerProps> = ({
                 <div className="w-12 h-1.5 rounded-full bg-text-muted/40" />
             </div>
 
+            {/* Close Button */}
+            <button
+                onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onClose();
+                }}
+                onPointerDown={(e) => e.stopPropagation()}
+                onTouchEnd={(e) => {
+                    if (e.cancelable) e.preventDefault();
+                    e.stopPropagation();
+                    onClose();
+                }}
+                className="absolute top-0.5 right-0.5 w-7 h-7 flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-white/10 rounded-full transition-colors z-20"
+                aria-label="Close"
+            >
+                <X size={14} />
+            </button>
+
             {/* ROW 1: VOICINGS & QUICK ACTIONS */}
             <div className={clsx("flex items-center gap-2 w-full shrink-0", isLandscapeMobile ? "h-10" : "h-11")}>
                 <div
@@ -705,6 +724,7 @@ export const VoicingQuickPicker: React.FC<VoicingQuickPickerProps> = ({
                     />
                 )}
             </div>
+
 
             {/* Corner Drag Handle - More conspicuous */}
             <div
