@@ -182,8 +182,33 @@ export const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, getPd
                 currentItem: 'Creating ZIP file...',
             });
 
+            // Generate ZIP as blob
             const zipBlob = await zip.generateAsync({ type: 'blob' });
-            saveAs(zipBlob, `${baseFilename}-export.zip`);
+            const filename = `${baseFilename}-export.zip`;
+
+            // Try using File System Access API (Chrome) for reliable filename
+            if ('showSaveFilePicker' in window) {
+                try {
+                    const handle = await (window as any).showSaveFilePicker({
+                        suggestedName: filename,
+                        types: [{
+                            description: 'ZIP Archive',
+                            accept: { 'application/zip': ['.zip'] }
+                        }]
+                    });
+                    const writable = await handle.createWritable();
+                    await writable.write(zipBlob);
+                    await writable.close();
+                } catch (e: any) {
+                    // User cancelled or API failed - fall back to saveAs
+                    if (e.name !== 'AbortError') {
+                        saveAs(zipBlob, filename);
+                    }
+                }
+            } else {
+                // Fallback for browsers without File System Access API
+                saveAs(zipBlob, filename);
+            }
 
             // Success - close modal
             onClose();

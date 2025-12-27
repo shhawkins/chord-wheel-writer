@@ -1661,7 +1661,7 @@ function App() {
                     className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-200 hover:bg-gray-800/50 transition-colors"
                   >
                     <FileText className="w-4 h-4 text-blue-400" />
-                    <span>Export as PDF</span>
+                    <span>Export PDF</span>
                   </button>
                   <button
                     onClick={() => {
