@@ -261,10 +261,12 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
 
     // Edge scroll state for custom auto-scroll behavior
     const edgeScrollRef = useRef<number | null>(null);
-    const scrollDirectionRef = useRef<'left' | 'right' | null>(null);
-    const dragStartScrollLeft = useRef<number>(0); // Scroll position when chord drag started
+    const scrollDirectionRef = useRef<'left' | 'right' | 'up' | 'down' | null>(null);
+    const dragStartScrollLeft = useRef<number>(0); // Scroll position when chord drag started (horizontal)
+    const dragStartScrollTop = useRef<number>(0); // Scroll position when chord drag started (vertical - for landscape)
     const sectionDragStartScrollLeft = useRef<number>(0); // Scroll position when section drag started
-    const [scrollOffset, setScrollOffset] = useState(0); // Accumulated scroll during drag
+    const [scrollOffsetX, setScrollOffsetX] = useState(0); // Accumulated horizontal scroll during drag
+    const [scrollOffsetY, setScrollOffsetY] = useState(0); // Accumulated vertical scroll during drag (for landscape)
     const EDGE_THRESHOLD = 35; // pixels from edge to trigger scroll - reduced from 50 to avoid accidental triggers
     const SCROLL_SPEED = 12; // max pixels per frame - increases as you get closer to edge
     const scrollIntensityRef = useRef<number>(0);
@@ -341,7 +343,8 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
     };
 
     // Start edge scrolling in a direction with variable intensity (speed)
-    const startEdgeScroll = (direction: 'left' | 'right', type: 'chord' | 'section', intensity: number) => {
+    // Supports both horizontal (left/right) and vertical (up/down) scrolling
+    const startEdgeScroll = (direction: 'left' | 'right' | 'up' | 'down', type: 'chord' | 'section', intensity: number) => {
         scrollIntensityRef.current = intensity;
 
         if (scrollDirectionRef.current === direction) return; // Already scrolling this way, just update intensity
@@ -349,32 +352,59 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
         stopEdgeScroll();
         scrollDirectionRef.current = direction;
 
+        const isVertical = direction === 'up' || direction === 'down';
+
         const scroll = () => {
             const container = type === 'chord' ? scrollRef.current : sectionTabsRef.current;
             if (!container || !scrollDirectionRef.current) return;
 
-            // Check if we can actually scroll in the requested direction
-            const canScrollLeft = container.scrollLeft > 0;
-            const maxScroll = container.scrollWidth - container.clientWidth;
-            const canScrollRight = container.scrollLeft < maxScroll - 1;
+            if (isVertical) {
+                // Vertical scrolling (for landscape mode)
+                const canScrollUp = container.scrollTop > 0;
+                const maxScrollY = container.scrollHeight - container.clientHeight;
+                const canScrollDown = container.scrollTop < maxScrollY - 1;
 
-            if (scrollDirectionRef.current === 'left' && !canScrollLeft) {
-                stopEdgeScroll();
-                return;
+                if (scrollDirectionRef.current === 'up' && !canScrollUp) {
+                    stopEdgeScroll();
+                    return;
+                }
+                if (scrollDirectionRef.current === 'down' && !canScrollDown) {
+                    stopEdgeScroll();
+                    return;
+                }
+
+                const speed = SCROLL_SPEED * scrollIntensityRef.current;
+                const delta = scrollDirectionRef.current === 'up' ? -speed : speed;
+                container.scrollTop += delta;
+
+                // Update vertical scroll offset for drag preview
+                const startScroll = dragStartScrollTop.current;
+                const currentOffset = container.scrollTop - startScroll;
+                setScrollOffsetY(currentOffset);
+            } else {
+                // Horizontal scrolling (for portrait mode)
+                const canScrollLeft = container.scrollLeft > 0;
+                const maxScrollX = container.scrollWidth - container.clientWidth;
+                const canScrollRight = container.scrollLeft < maxScrollX - 1;
+
+                if (scrollDirectionRef.current === 'left' && !canScrollLeft) {
+                    stopEdgeScroll();
+                    return;
+                }
+                if (scrollDirectionRef.current === 'right' && !canScrollRight) {
+                    stopEdgeScroll();
+                    return;
+                }
+
+                const speed = SCROLL_SPEED * scrollIntensityRef.current;
+                const delta = scrollDirectionRef.current === 'left' ? -speed : speed;
+                container.scrollLeft += delta;
+
+                // Update horizontal scroll offset for drag preview
+                const startScroll = type === 'chord' ? dragStartScrollLeft.current : sectionDragStartScrollLeft.current;
+                const currentOffset = container.scrollLeft - startScroll;
+                setScrollOffsetX(currentOffset);
             }
-            if (scrollDirectionRef.current === 'right' && !canScrollRight) {
-                stopEdgeScroll();
-                return;
-            }
-
-            const speed = SCROLL_SPEED * scrollIntensityRef.current;
-            const delta = scrollDirectionRef.current === 'left' ? -speed : speed;
-            container.scrollLeft += delta;
-
-            // Update scroll offset for drag preview
-            const startScroll = type === 'chord' ? dragStartScrollLeft.current : sectionDragStartScrollLeft.current;
-            const currentOffset = container.scrollLeft - startScroll;
-            setScrollOffset(currentOffset);
 
             edgeScrollRef.current = requestAnimationFrame(scroll);
         };
@@ -396,14 +426,16 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
     const handleChordDragStart = (event: any) => {
         setActiveDragId(event.active.id);
         setActiveDragType('chord');
-        // Capture initial scroll position of chords area for auto-scroll calc
+        // Capture initial scroll position of chords area for auto-scroll calc (both directions)
         if (scrollRef.current) {
             dragStartScrollLeft.current = scrollRef.current.scrollLeft;
+            dragStartScrollTop.current = scrollRef.current.scrollTop;
         }
-        setScrollOffset(0);
+        setScrollOffsetX(0);
+        setScrollOffsetY(0);
     };
 
-    // Chord drag move handles edge scrolling
+    // Chord drag move handles edge scrolling - supports both horizontal (portrait) and vertical (landscape) modes
     const handleChordDragMove = (event: DragMoveEvent) => {
         if (!scrollRef.current) return;
         if (event.active.data.current?.type !== 'chord') return;
@@ -411,24 +443,56 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
         const containerRect = scrollRef.current.getBoundingClientRect();
 
         // Calculate current pointer position using activator event and delta
-        const pointerX = event.activatorEvent instanceof MouseEvent
-            ? event.activatorEvent.clientX + event.delta.x
-            : (event.activatorEvent instanceof TouchEvent && event.activatorEvent.touches.length > 0)
-                ? event.activatorEvent.touches[0].clientX + event.delta.x
-                : containerRect.left + containerRect.width / 2;
+        const getPointerPosition = () => {
+            if (event.activatorEvent instanceof MouseEvent) {
+                return {
+                    x: event.activatorEvent.clientX + event.delta.x,
+                    y: event.activatorEvent.clientY + event.delta.y
+                };
+            } else if (event.activatorEvent instanceof TouchEvent && event.activatorEvent.touches.length > 0) {
+                return {
+                    x: event.activatorEvent.touches[0].clientX + event.delta.x,
+                    y: event.activatorEvent.touches[0].clientY + event.delta.y
+                };
+            }
+            return {
+                x: containerRect.left + containerRect.width / 2,
+                y: containerRect.top + containerRect.height / 2
+            };
+        };
 
-        const distLeft = pointerX - containerRect.left;
-        const distRight = containerRect.right - pointerX;
+        const pointer = getPointerPosition();
 
-        if (distLeft < EDGE_THRESHOLD) {
-            // Speed increases as we get closer to or past the edge
-            const intensity = Math.max(0.1, 1 - Math.max(0, distLeft) / EDGE_THRESHOLD);
-            startEdgeScroll('left', 'chord', intensity);
-        } else if (distRight < EDGE_THRESHOLD) {
-            const intensity = Math.max(0.1, 1 - Math.max(0, distRight) / EDGE_THRESHOLD);
-            startEdgeScroll('right', 'chord', intensity);
+        // In landscape mode, use vertical edge scrolling (up/down)
+        // In portrait mode, use horizontal edge scrolling (left/right)
+        if (isLandscape) {
+            // Vertical edge scrolling for landscape grid layout
+            const distTop = pointer.y - containerRect.top;
+            const distBottom = containerRect.bottom - pointer.y;
+
+            if (distTop < EDGE_THRESHOLD) {
+                const intensity = Math.max(0.1, 1 - Math.max(0, distTop) / EDGE_THRESHOLD);
+                startEdgeScroll('up', 'chord', intensity);
+            } else if (distBottom < EDGE_THRESHOLD) {
+                const intensity = Math.max(0.1, 1 - Math.max(0, distBottom) / EDGE_THRESHOLD);
+                startEdgeScroll('down', 'chord', intensity);
+            } else {
+                stopEdgeScroll();
+            }
         } else {
-            stopEdgeScroll();
+            // Horizontal edge scrolling for portrait horizontal scroll
+            const distLeft = pointer.x - containerRect.left;
+            const distRight = containerRect.right - pointer.x;
+
+            if (distLeft < EDGE_THRESHOLD) {
+                const intensity = Math.max(0.1, 1 - Math.max(0, distLeft) / EDGE_THRESHOLD);
+                startEdgeScroll('left', 'chord', intensity);
+            } else if (distRight < EDGE_THRESHOLD) {
+                const intensity = Math.max(0.1, 1 - Math.max(0, distRight) / EDGE_THRESHOLD);
+                startEdgeScroll('right', 'chord', intensity);
+            } else {
+                stopEdgeScroll();
+            }
         }
     };
 
@@ -1007,7 +1071,7 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
                         return (
                             <div
                                 className="opacity-80 scale-105"
-                                style={{ transform: `translateX(${scrollOffset}px)` }}
+                                style={{ transform: `translateX(${scrollOffsetX}px)` }}
                             >
                                 <SortableSectionTab
                                     section={section}
@@ -1365,7 +1429,7 @@ export const MobileTimeline: React.FC<MobileTimelineProps> = ({ isOpen, onToggle
                         return (
                             <div
                                 className="opacity-90 scale-110 pointer-events-none"
-                                style={{ transform: `translateX(${scrollOffset}px)` }}
+                                style={{ transform: isLandscape ? `translateY(${scrollOffsetY}px)` : `translateX(${scrollOffsetX}px)` }}
                             >
                                 <ChordSlot
                                     slot={{ id: slotId, chord: foundChord, duration: 1 }}

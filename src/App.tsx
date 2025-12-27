@@ -6,7 +6,7 @@ import { ChordDetails } from './components/panel/ChordDetails';
 import { PlaybackControls } from './components/playback/PlaybackControls';
 import { SongOverview } from './components/timeline/SongOverview';
 import { useSongStore } from './store/useSongStore';
-import { Download, Save, ChevronDown, ChevronUp, Plus, Minus, Clock, FolderOpen, FilePlus, Trash2, HelpCircle } from 'lucide-react';
+import { Download, Save, ChevronDown, ChevronUp, Plus, Minus, Clock, FolderOpen, FilePlus, Trash2, HelpCircle, FileAudio, FileText } from 'lucide-react';
 import { Logo } from './components/Logo';
 import * as Tone from 'tone';
 import jsPDF from 'jspdf';
@@ -24,6 +24,7 @@ import { SongInfoModal } from './components/SongInfoModal';
 import { KeySelectorModal } from './components/KeySelectorModal';
 import { InstrumentManagerModal } from './components/playback/InstrumentManagerModal';
 import { InstrumentControls } from './components/playback/InstrumentControls';
+import { ExportModal } from './components/ExportModal';
 import { AuthModal } from './components/auth/AuthModal';
 import { useAuthStore } from './stores/authStore';
 import { User as UserIcon } from 'lucide-react';
@@ -221,6 +222,8 @@ function App() {
 
   const [showHelp, setShowHelp] = useState(false);
   const [showKeySelector, setShowKeySelector] = useState(false);
+  const [downloadMenuOpen, setDownloadMenuOpen] = useState(false);
+  const [exportModalOpen, setExportModalOpen] = useState(false);
   const [songTitleInput, setSongTitleInput] = useState<{ isOpen: boolean; value: string; onSubmit: (title: string) => void }>({
     isOpen: false,
     value: '',
@@ -1608,13 +1611,52 @@ function App() {
           </div>
 
 
-          <button
-            onClick={handleExport}
-            className={`flex items-center justify-center ${isMobile ? 'text-xs px-3 py-1.5 min-w-[44px] min-h-[44px] gap-1' : 'text-[11px] px-2.5 py-1 gap-1.5'} bg-text-primary text-bg-primary rounded font-medium hover:bg-white transition-colors touch-feedback`}
-          >
-            <Download size={isMobile ? 16 : 12} />
-            <span className={isMobile ? 'text-[10px] font-bold' : 'hidden sm:inline'}>PDF</span>
-          </button>
+          {/* Download dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setDownloadMenuOpen(!downloadMenuOpen)}
+              className={`flex items-center justify-center ${isMobile ? 'text-xs px-3 py-1.5 min-w-[44px] min-h-[44px] gap-1' : 'text-[11px] px-2.5 py-1 gap-1.5'} bg-text-primary text-bg-primary rounded font-medium hover:bg-white transition-colors touch-feedback`}
+            >
+              <Download size={isMobile ? 16 : 12} />
+              <span className={isMobile ? 'text-[10px] font-bold' : 'hidden sm:inline'}>Export</span>
+              <ChevronDown size={isMobile ? 12 : 10} className={`transition-transform ${downloadMenuOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {/* Dropdown menu */}
+            {downloadMenuOpen && (
+              <>
+                {/* Backdrop */}
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setDownloadMenuOpen(false)}
+                />
+
+                {/* Menu */}
+                <div className="absolute right-0 top-full mt-1 w-48 bg-gray-900/95 backdrop-blur-sm border border-gray-700/50 rounded-lg shadow-xl z-50 overflow-hidden">
+                  <button
+                    onClick={() => {
+                      setDownloadMenuOpen(false);
+                      handleExport();
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-200 hover:bg-gray-800/50 transition-colors"
+                  >
+                    <FileText className="w-4 h-4 text-blue-400" />
+                    <span>Export as PDF</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setDownloadMenuOpen(false);
+                      setExportModalOpen(true);
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-200 hover:bg-gray-800/50 transition-colors border-t border-gray-700/50"
+                  >
+                    <FileAudio className="w-4 h-4 text-emerald-400" />
+                    <span>Export Audio / MIDI</span>
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </header>
 
@@ -2012,6 +2054,12 @@ function App() {
           )}
         </div>
       )}
+
+      {/* Export Modal */}
+      <ExportModal
+        isOpen={exportModalOpen}
+        onClose={() => setExportModalOpen(false)}
+      />
 
       {/* Auth Modal */}
       <AuthModal isOpen={isAuthModalOpen} onClose={() => useAuthStore.getState().setAuthModalOpen(false)} />
