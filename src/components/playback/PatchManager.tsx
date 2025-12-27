@@ -4,11 +4,17 @@ import { useSongStore } from '../../store/useSongStore';
 import type { InstrumentPatch } from '../../types';
 import { Save, Folder, Trash2, Check, X } from 'lucide-react';
 
+import { useMobileLayout } from '../../hooks/useIsMobile';
+
 interface PatchManagerProps {
     onClose: () => void;
+    initialView?: 'list' | 'save';
 }
 
-export const PatchManager: React.FC<PatchManagerProps> = ({ onClose }) => {
+export const PatchManager: React.FC<PatchManagerProps> = ({ onClose, initialView = 'list' }) => {
+    const { isMobile, isLandscape } = useMobileLayout();
+    const isCompact = isMobile && isLandscape;
+
     const {
         userPatches,
         fetchUserPatches,
@@ -17,7 +23,7 @@ export const PatchManager: React.FC<PatchManagerProps> = ({ onClose }) => {
         applyPatch
     } = useSongStore();
 
-    const [view, setView] = useState<'list' | 'save'>('list');
+    const [view, setView] = useState<'list' | 'save'>(initialView);
     const [newPatchName, setNewPatchName] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
@@ -89,7 +95,7 @@ export const PatchManager: React.FC<PatchManagerProps> = ({ onClose }) => {
     };
 
     return (
-        <div className="absolute inset-0 z-50 bg-bg-elevated/98 backdrop-blur-xl flex flex-col p-4 pt-3 animate-in fade-in duration-150">
+        <div className={`absolute inset-0 z-50 bg-bg-elevated/98 backdrop-blur-xl flex flex-col p-4 pt-3 animate-in fade-in duration-150 ${isCompact ? 'rounded-xl' : 'rounded-2xl'}`}>
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-bold uppercase tracking-wider text-text-secondary">
@@ -118,14 +124,14 @@ export const PatchManager: React.FC<PatchManagerProps> = ({ onClose }) => {
                                     key={patch.id}
                                     onClick={() => confirmingDeleteId !== patch.id && handleApply(patch)}
                                     className={`group flex items-center justify-between p-3 rounded-lg border transition-all cursor-pointer active:scale-[0.98] ${confirmingDeleteId === patch.id
-                                            ? 'bg-red-500/10 border-red-500/30'
-                                            : 'bg-white/5 border-white/5 hover:border-accent-primary/50 hover:bg-white/10'
+                                        ? 'bg-red-500/10 border-red-500/30'
+                                        : 'bg-white/5 border-white/5 hover:border-accent-primary/50 hover:bg-white/10'
                                         }`}
                                 >
                                     <div className="flex flex-col">
                                         <span className={`text-sm font-medium transition-colors ${confirmingDeleteId === patch.id
-                                                ? 'text-red-400'
-                                                : 'text-text-primary group-hover:text-accent-primary'
+                                            ? 'text-red-400'
+                                            : 'text-text-primary group-hover:text-accent-primary'
                                             }`}>
                                             {confirmingDeleteId === patch.id ? `Delete "${patch.name}"?` : patch.name}
                                         </span>
@@ -194,7 +200,13 @@ export const PatchManager: React.FC<PatchManagerProps> = ({ onClose }) => {
 
                     <div className="flex items-center gap-2 mt-auto">
                         <button
-                            onClick={() => setView('list')}
+                            onClick={() => {
+                                if (initialView === 'save') {
+                                    onClose();
+                                } else {
+                                    setView('list');
+                                }
+                            }}
                             className="flex-1 py-2 bg-white/10 text-text-secondary text-xs font-bold uppercase tracking-wide rounded-lg hover:bg-white/20 transition-all"
                         >
                             Cancel

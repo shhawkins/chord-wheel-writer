@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useSongStore } from '../../store/useSongStore';
-import { X, Volume2, Music, Waves, Play, Radio, Disc3, ChevronLeft, ChevronRight, RotateCcw, Folder } from 'lucide-react';
+import { X, Volume2, Music, Waves, Play, Radio, Disc3, ChevronLeft, ChevronRight, RotateCcw, Folder, Save } from 'lucide-react';
 import { clsx } from 'clsx';
 import { playChord, setInstrument as setAudioInstrument } from '../../utils/audioEngine';
 import { VoiceSelector } from './VoiceSelector';
@@ -256,6 +256,7 @@ export const InstrumentControls: React.FC = () => {
 
     // State for Patch Manager visibility
     const [showPatchManager, setShowPatchManager] = useState(false);
+    const [patchManagerInitialView, setPatchManagerInitialView] = useState<'list' | 'save'>('list');
 
     // Instrument options for cycling (same list as VoiceSelector)
     const instrumentOptions: { value: InstrumentType, label: string }[] = [
@@ -502,7 +503,7 @@ export const InstrumentControls: React.FC = () => {
         <>
             {/* Title / Instrument Selector with Cycling Arrows */}
             <div className="text-center mb-2 w-full flex flex-col items-center">
-                <div className="text-[10px] uppercase tracking-widest text-text-tertiary font-bold mb-1.5">Instrument</div>
+                <div className="text-[10px] uppercase tracking-widest text-text-tertiary font-bold mb-1.5">Effects</div>
                 <div className="flex items-center gap-2 relative z-20">
                     <button
                         onClick={(e) => { e.stopPropagation(); cycleInstrument('prev'); }}
@@ -557,7 +558,7 @@ export const InstrumentControls: React.FC = () => {
             ref={modalRef}
             data-instrument-controls
             className={clsx(
-                "fixed z-50 flex flex-col items-center gap-4",
+                "fixed z-[120] flex flex-col items-center gap-4",
                 isCompact ? "p-3 bg-bg-elevated/90 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl" :
                     "p-4 bg-bg-elevated/80 backdrop-blur-md border border-white/10 rounded-2xl shadow-2xl"
             )}
@@ -611,6 +612,19 @@ export const InstrumentControls: React.FC = () => {
                 </button>
             )}
 
+            {/* Save Button (Lower Left) */}
+            <button
+                onClick={(e) => {
+                    e.stopPropagation();
+                    setPatchManagerInitialView('save');
+                    setShowPatchManager(true);
+                }}
+                className="absolute bottom-2 left-2 p-1.5 text-text-muted hover:text-text-primary rounded-full hover:bg-white/10 transition-colors"
+                title="Save Current Sound"
+            >
+                <Save size={14} />
+            </button>
+
             {/* Reset Button (Lower Right) */}
             <button
                 onClick={(e) => {
@@ -624,24 +638,29 @@ export const InstrumentControls: React.FC = () => {
             </button>
 
             {/* Patch Manager Toggle (Header Left) */}
-            <button
-                onClick={(e) => {
-                    e.stopPropagation();
-                    setShowPatchManager(!showPatchManager);
-                }}
-                className={clsx(
-                    "absolute left-2 p-1.5 rounded-full transition-colors z-50",
-                    isCompact ? "-top-1" : "top-2",
-                    showPatchManager ? "bg-accent-primary text-white" : "text-text-muted hover:text-accent-primary hover:bg-white/10"
-                )}
-                title="Presets / Patches"
-            >
-                <Folder size={16} />
-            </button>
+            <div className={clsx(
+                "absolute left-2 flex items-center gap-1 z-50",
+                isCompact ? "-top-1" : "top-2"
+            )}>
+                <button
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        setPatchManagerInitialView('list');
+                        setShowPatchManager(true);
+                    }}
+                    className="p-1.5 text-text-muted hover:text-accent-primary hover:bg-white/10 rounded-full transition-colors"
+                    title="Presets / Patches"
+                >
+                    <Folder size={16} />
+                </button>
+            </div>
 
             {/* Patch Manager Overlay */}
             {showPatchManager && (
-                <PatchManager onClose={() => setShowPatchManager(false)} />
+                <PatchManager
+                    onClose={() => setShowPatchManager(false)}
+                    initialView={patchManagerInitialView}
+                />
             )}
 
         </div>,

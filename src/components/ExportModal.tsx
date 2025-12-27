@@ -226,7 +226,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, getPd
     const canExport = (exportAudio || exportMidi) && selectedInstruments.length > 0;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/60 backdrop-blur-sm">
             <div
                 className="relative w-full max-w-lg mx-4 bg-gray-900/95 border border-gray-700/50 rounded-2xl shadow-2xl overflow-hidden"
                 onClick={(e) => e.stopPropagation()}

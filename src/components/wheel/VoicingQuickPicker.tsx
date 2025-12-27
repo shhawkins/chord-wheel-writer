@@ -41,7 +41,7 @@ interface VoicingQuickPickerProps {
 }
 
 // Auto-fade timeout in milliseconds
-const AUTO_FADE_TIMEOUT = 7000;
+const AUTO_FADE_TIMEOUT = 60000;
 
 /**
  * VoicingQuickPicker - A clean modal for selecting chord voicings, in-key chords, and inversions.
